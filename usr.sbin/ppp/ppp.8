@@ -25,7 +25,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd May 20, 2021
+.Dd March 2, 2022
 .Dt PPP 8
 .Os
 .Sh NAME
@@ -2170,13 +2170,15 @@ set device /dev/cuau0
 set speed 115200
 .Ed
 .Pp
-Cuad0 is the first serial port on
+.Pa cuau0
+is the first serial port on
 .Fx .
 If you are running
 .Nm
 on
 .Ox ,
-cua00 is the first.
+.Pa cua00
+is the first.
 A speed of 115200 should be specified
 if you have a modem capable of bit rates of 28800 or more.
 In general, the serial speed should be about four times the modem speed.
