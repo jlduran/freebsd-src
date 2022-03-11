@@ -146,7 +146,7 @@ end
 
 local function draw(x, y, logo)
 	for i = 1, #logo do
-		screen.setcursor(x, y + i - 1)
+		screen.setcursor(x - 1, y + i - 1)
 		printc(logo[i])
 	end
 end
