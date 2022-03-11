@@ -48,6 +48,8 @@ end
 -- here, so make sure we reset everything back to default.
 if color.isEnabled() then
 	printc(core.KEYSTR_RESET)
+	-- XXX Workaround to clear screen on some terminals
+	printc(core.KEYSTR_CSI .. "H" .. core.KEYSTR_CSI .. "J")
 end
 try_include("local")
 password.check()
