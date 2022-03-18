@@ -136,7 +136,7 @@ done
 # A longer test that simulates a more realistic send|receive that exceeds
 # the size of arc memory by 1/3 and gets interrupted a decent amount of
 # time after the start of the run.
-arcmem=$(sysctl -n vfs.zfs.arc_max)
+arcmem=$(sysctl -n vfs.zfs.arc.max)
 # ARC will use 2xdatasz memory since it caches both the src and dst copies
 datasz=$((arcmem / 1048576 * 2 / 3))
 log_note "Running longer test with ${datasz}MB of data"
