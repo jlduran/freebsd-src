@@ -38,7 +38,8 @@ vocabulary menu-command-helpers
 only forth also menu-infrastructure definitions
 
 f_double        \ Set frames to double (see frames.4th). Replace with
-                \ f_single if you want single frames.
+                \ f_single if you want single frames or
+                \ f_rounded if you want single frames with rounded borders.
 46 constant dot \ ASCII definition of a period (in decimal)
 
  5 constant menu_default_x         \ default column position of timeout
@@ -1004,11 +1005,13 @@ only forth definitions also menu-infrastructure
 		drop \ no custom frame type
 	else ( 1 )  2dup s" single" compare-insensitive 0= if ( 2 )
 		f_single ( see frames.4th )
-	else ( 2 )  2dup s" double" compare-insensitive 0= if ( 3 )
+	else ( 2 )  2dup s" rounded" compare-insensitive 0= if ( 3 )
+		f_rounded ( see frames.4th )
+	else ( 3 )  2dup s" double" compare-insensitive 0= if ( 4 )
 		f_double ( see frames.4th )
-	else ( 3 ) s" none" compare-insensitive 0= if ( 4 )
+	else ( 4 ) s" none" compare-insensitive 0= if ( 5 )
 		drop FALSE \ don't draw a box
-	( 4 ) then ( 3 ) then ( 2 )  then ( 1 ) then
+	( 5 ) then ( 4 ) then ( 3 ) then ( 2 )  then ( 1 ) then
 	if
 		42 13 menuX @ 3 - menuY @ 1- box \ Draw frame (w,h,x,y)
 	then

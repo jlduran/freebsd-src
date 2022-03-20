@@ -24,7 +24,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd August 6, 2013
+.Dd March 20, 2022
 .Dt MENU.4TH 8
 .Os
 .Sh NAME
@@ -126,11 +126,13 @@ The default is
 .It Va loader_menu_frame
 Sets the desired box style to draw around the boot menu.
 Possible values are:
-.Dq Li single
-.Pq the default ,
+.Dq Li single ,
+.Dq Li rounded ,
 .Dq Li double ,
 and
 .Dq Li none .
+The default is
+.Dq Li double .
 .It Va loader_menu_timeout_x
 Sets the desired column position of the timeout countdown text.
 Default is 4.
