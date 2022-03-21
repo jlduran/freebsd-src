@@ -28,7 +28,7 @@
 .\"     @(#)who.1	8.2 (Berkeley) 12/30/93
 .\" $FreeBSD$
 .\"
-.Dd August 30, 2020
+.Dd March 21, 2022
 .Dt WHO 1
 .Os
 .Sh NAME
@@ -36,6 +36,7 @@
 .Nd display who is on the system
 .Sh SYNOPSIS
 .Nm
+.Op Fl -libxo
 .Op Fl abHmqsTu
 .Op Cm am I
 .Op Ar file
@@ -48,6 +49,13 @@ remote hostname if not local.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl -libxo
+Generate output via
+.Xr libxo 3
+in a selection of different human and machine readable formats.
+See
+.Xr xo_parse_args 3
+for details on command line arguments.
 .It Fl a
 Equivalent to
 .Fl bTu ,
@@ -185,7 +193,9 @@ root             - ttyv2        Aug 26 16:23 00:01
 .Xr last 1 ,
 .Xr users 1 ,
 .Xr w 1 ,
-.Xr getutxent 3
+.Xr getutxent 3 ,
+.Xr libxo 3 ,
+.Xr xo_parse_args 3
 .Sh STANDARDS
 The
 .Nm

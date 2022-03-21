@@ -2,5 +2,6 @@
 # $FreeBSD$
 
 PROG=	who
+LIBADD=	xo
 
 .include <bsd.prog.mk>
