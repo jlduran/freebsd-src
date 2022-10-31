@@ -29,6 +29,7 @@
 # $FreeBSD$
 
 . $(atf_get_srcdir)/common.subr
+. $(atf_get_srcdir)/icmp_control_messages.subr
 
 atf_test_case ping_c1_s56_t1
 ping_c1_s56_t1_head()
@@ -143,6 +144,109 @@ ping6_46_body()
 	    ping6 -4 -6 localhost
 }
 
+atf_test_case pinger_reply cleanup
+pinger_reply_head()
+{
+	atf_set descr "Echo Reply packet using pinger.py"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_reply_body()
+{
+	require_ipv4
+	atf_check -s exit:0 \
+	    -o match:"1 packets transmitted, 1 packets received" \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 0 \
+	    --icmp_code 0
+}
+pinger_reply_cleanup()
+{
+	pinger_cleanup
+}
+
+atf_test_case pinger_reply_opts cleanup
+pinger_reply_opts_head()
+{
+	atf_set descr "Echo Reply packet with IP options"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_reply_opts_body()
+{
+	require_ipv4
+	atf_check -s exit:0 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 0 \
+	    --icmp_code 0 \
+	    --opts NOP
+	check_ping_statistics std.out $(atf_get_srcdir)/pinger_reply_opts.out
+}
+pinger_reply_opts_cleanup()
+{
+	pinger_cleanup
+}
+
+atf_test_case pinger_unreach_opts cleanup
+pinger_unreach_opts_head()
+{
+	atf_set descr \
+	    "Host Unreachable packet with IP options"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_unreach_opts_body()
+{
+	atf_skip "D37210"
+	require_ipv4
+	atf_check -s exit:2 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 3 \
+	    --icmp_code 1 \
+	    --opts NOP
+	atf_check -s exit:0 \
+	    diff -u std.out $(atf_get_srcdir)/pinger_unreach_opts.out
+}
+pinger_unreach_opts_cleanup()
+{
+	pinger_cleanup
+}
+
+atf_test_case pinger_pr_icmph cleanup
+pinger_pr_icmph_head()
+{
+	atf_set descr "ICMP header descriptive strings"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_pr_icmph_body()
+{
+	require_ipv4
+	icmp_control_messages | while read -r type code description; do
+		atf_check -s exit:2 \
+		    -o match:"$description" \
+		    $(atf_get_srcdir)/pinger.py \
+		    --iface tun0 \
+		    --src 192.0.2.1 \
+		    --dst 192.0.2.2 \
+		    --icmp_type "$type" \
+		    --icmp_code "$code"
+	done
+}
+pinger_pr_icmph_cleanup()
+{
+	pinger_cleanup
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case ping_c1_s56_t1
@@ -154,6 +258,10 @@ atf_init_test_cases()
 	atf_add_test_case ping6_c1t4
 	atf_add_test_case ping_46
 	atf_add_test_case ping6_46
+	atf_add_test_case pinger_reply
+	atf_add_test_case pinger_reply_opts
+	atf_add_test_case pinger_unreach_opts
+	atf_add_test_case pinger_pr_icmph
 }
 
 check_ping_statistics()
@@ -166,4 +274,17 @@ check_ping_statistics()
 	    -e '/round-trip/s/[0-9.]//g' \
 	    "$1" >"$1".filtered
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
+}
+
+pinger_cleanup()
+{
+	if [ -f created_interfaces.lst ]; then
+		for ifname in `cat created_interfaces.lst`
+		do
+			ifconfig ${ifname} destroy
+		done
+		rm created_interfaces.lst
+	fi
+	rm -f std.out
+	rm -f std.out.filtered
 }

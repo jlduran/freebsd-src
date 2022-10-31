@@ -1,0 +1,32 @@
+# $FreeBSD$
+
+icmp_control_messages()
+{
+	printf "%s\n" \
+	    "3 0 Destination Net Unreachable" \
+	    "3 1 Destination Host Unreachable" \
+	    "3 2 Destination Protocol Unreachable" \
+	    "3 3 Destination Port Unreachable" \
+	    "3 4 frag needed and DF set" \
+	    "3 5 Source Route Failed" \
+	    "3 13 Communication prohibited by filter" \
+	    "3 255 Dest Unreachable, Bad Code: 255" \
+	    "4 0 Source Quench" \
+	    "5 0 Redirect Network" \
+	    "5 1 Redirect Host" \
+	    "5 2 Redirect Type of Service and Network" \
+	    "5 3 Redirect Type of Service and Host" \
+	    "5 255 Redirect, Bad Code: 255" \
+	    "9 0 Router Advertisement" \
+	    "10 0 Router Solicitation" \
+	    "11 0 Time to live exceeded" \
+	    "11 1 Frag reassembly time exceeded" \
+	    "11 255 Time exceeded, Bad Code: 255" \
+	    "12 0 Parameter problem" \
+	    "14 0 Timestamp Reply" \
+	    "15 0 Information Request" \
+	    "16 0 Information Reply" \
+	    "17 0 Address Mask Request" \
+	    "18 0 Address Mask Reply" \
+	    "255 0 Bad ICMP type: 255"
+}
