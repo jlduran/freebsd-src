@@ -146,7 +146,7 @@ static int options;
 #define	F_AUDIBLE	0x2000
 #ifdef IPSEC
 #ifdef IPSEC_POLICY_IPSEC
-#define F_POLICY	0x4000
+#define	F_POLICY	0x4000
 #endif /*IPSEC_POLICY_IPSEC*/
 #endif /*IPSEC*/
 #define	F_TTL		0x8000
@@ -195,7 +195,7 @@ static long npackets;		/* max packets to transmit */
 static long nreceived;		/* # of packets we got back */
 static long nrepeats;		/* number of duplicates */
 static long ntransmitted;	/* sequence # for outbound packets = #sent */
-static long snpackets;			/* max packets to transmit in one sweep */
+static long snpackets;		/* max packets to transmit in one sweep */
 static long sntransmitted;	/* # of packets we sent in this sweep */
 static int sweepmax;		/* max value of payload in sweep */
 static int sweepmin = 0;	/* start value of payload in sweep */
@@ -355,30 +355,26 @@ ping(int argc, char *const *argv)
 			break;
 		case 'G': /* Maximum packet size for ping sweep */
 			ltmp = strtonum(optarg, 1, INT_MAX, &errstr);
-			if (errstr != NULL) {
+			if (errstr != NULL)
 				errx(EX_USAGE, "invalid packet size: `%s'",
 				    optarg);
-			}
 			sweepmax = (int)ltmp;
-			if (uid != 0 && sweepmax > DEFDATALEN) {
+			if (uid != 0 && sweepmax > DEFDATALEN)
 				errc(EX_NOPERM, EPERM,
 				    "packet size too large: %d > %u",
 				    sweepmax, DEFDATALEN);
-			}
 			options |= F_SWEEP;
 			break;
 		case 'g': /* Minimum packet size for ping sweep */
 			ltmp = strtonum(optarg, 1, INT_MAX, &errstr);
-			if (errstr != NULL) {
+			if (errstr != NULL)
 				errx(EX_USAGE, "invalid packet size: `%s'",
 				    optarg);
-			}
 			sweepmin = (int)ltmp;
-			if (uid != 0 && sweepmin > DEFDATALEN) {
+			if (uid != 0 && sweepmin > DEFDATALEN)
 				errc(EX_NOPERM, EPERM,
 				    "packet size too large: %d > %u",
 				    sweepmin, DEFDATALEN);
-			}
 			options |= F_SWEEP;
 			break;
 		case 'H':
@@ -386,16 +382,14 @@ ping(int argc, char *const *argv)
 			break;
 		case 'h': /* Packet size increment for ping sweep */
 			ltmp = strtonum(optarg, 1, INT_MAX, &errstr);
-			if (errstr != NULL) {
+			if (errstr != NULL)
 				errx(EX_USAGE, "invalid packet size: `%s'",
 				    optarg);
-			}
 			sweepincr = (int)ltmp;
-			if (uid != 0 && sweepincr > DEFDATALEN) {
+			if (uid != 0 && sweepincr > DEFDATALEN)
 				errc(EX_NOPERM, EPERM,
 				    "packet size too large: %d > %u",
 				    sweepincr, DEFDATALEN);
-			}
 			options |= F_SWEEP;
 			break;
 		case 'I':		/* multicast interface */
@@ -521,15 +515,13 @@ ping(int argc, char *const *argv)
 			if (alarmtimeout > MAXALARM)
 				errx(EX_USAGE, "invalid timeout: `%s' > %d",
 				    optarg, MAXALARM);
-			{
-				struct itimerval itv;
+			struct itimerval itv;
 
-				timerclear(&itv.it_interval);
-				timerclear(&itv.it_value);
-				itv.it_value.tv_sec = (time_t)alarmtimeout;
-				if (setitimer(ITIMER_REAL, &itv, NULL) != 0)
-					err(1, "setitimer");
-			}
+			timerclear(&itv.it_interval);
+			timerclear(&itv.it_value);
+			itv.it_value.tv_sec = (time_t)alarmtimeout;
+			if (setitimer(ITIMER_REAL, &itv, NULL) != 0)
+				err(1, "setitimer");
 			break;
 		case 'v':
 			options |= F_VERBOSE;
@@ -694,7 +686,7 @@ ping(int argc, char *const *argv)
 			if (buf == NULL)
 				errx(EX_CONFIG, "%s", ipsec_strerror());
 			if (setsockopt(srecv, IPPROTO_IP, IP_IPSEC_POLICY,
-					buf, ipsec_get_policylen(buf)) < 0)
+			    buf, ipsec_get_policylen(buf)) < 0)
 				err(EX_CONFIG,
 				    "ipsec policy cannot be configured");
 			free(buf);
@@ -705,7 +697,7 @@ ping(int argc, char *const *argv)
 			if (buf == NULL)
 				errx(EX_CONFIG, "%s", ipsec_strerror());
 			if (setsockopt(ssend, IPPROTO_IP, IP_IPSEC_POLICY,
-					buf, ipsec_get_policylen(buf)) < 0)
+			    buf, ipsec_get_policylen(buf)) < 0)
 				err(EX_CONFIG,
 				    "ipsec policy cannot be configured");
 			free(buf);
@@ -738,7 +730,7 @@ ping(int argc, char *const *argv)
 		ip.ip_src.s_addr = source ? sock_in.sin_addr.s_addr : INADDR_ANY;
 		ip.ip_dst = to->sin_addr;
 		memcpy(outpackhdr, &ip, sizeof(ip));
-        }
+	}
 
 	/*
 	 * Here we enter capability mode. Further down access to global
@@ -819,7 +811,7 @@ ping(int argc, char *const *argv)
 
 		if (datalen != DEFDATALEN)
 			errx(EX_USAGE,
-		    "Packet size and ping sweep are mutually exclusive");
+			    "Packet size and ping sweep are mutually exclusive");
 
 		if (npackets > 0) {
 			snpackets = npackets;
@@ -887,20 +879,18 @@ ping(int argc, char *const *argv)
 	si_sa.sa_flags = 0;
 
 	si_sa.sa_handler = stopit;
-	if (sigaction(SIGINT, &si_sa, 0) == -1) {
+	if (sigaction(SIGINT, &si_sa, 0) == -1)
 		err(EX_OSERR, "sigaction SIGINT");
-	}
 
 	si_sa.sa_handler = status;
-	if (sigaction(SIGINFO, &si_sa, 0) == -1) {
+	if (sigaction(SIGINFO, &si_sa, 0) == -1)
 		err(EX_OSERR, "sigaction");
-	}
 
-        if (alarmtimeout > 0) {
+	if (alarmtimeout > 0) {
 		si_sa.sa_handler = stopit;
 		if (sigaction(SIGALRM, &si_sa, 0) == -1)
 			err(EX_OSERR, "sigaction SIGALRM");
-        }
+	}
 
 	bzero(&msg, sizeof(msg));
 	msg.msg_name = (caddr_t)&from;
@@ -1030,7 +1020,6 @@ ping(int argc, char *const *argv)
 void
 stopit(int sig __unused)
 {
-
 	/*
 	 * When doing reverse DNS lookups, the finish_up flag might not
 	 * be noticed for a while.  Just exit if we get a second SIGINT.
@@ -1078,8 +1067,8 @@ pinger(void)
 		tv32.tv32_sec = (uint32_t)htonl(now.tv_sec);
 		tv32.tv32_nsec = (uint32_t)htonl(now.tv_nsec);
 		if (options & F_TIME)
-			icp.icmp_otime = htonl((now.tv_sec % (24*60*60))
-				* 1000 + now.tv_nsec / 1000000);
+			icp.icmp_otime = htonl((now.tv_sec % (24 * 60 * 60))
+			    * 1000 + now.tv_nsec / 1000000);
 		if (timing)
 			bcopy((void *)&tv32,
 			    (void *)&outpack[ICMP_MINLEN + phdr_len],
@@ -1120,7 +1109,7 @@ pinger(void)
 			warn("sendto");
 		} else {
 			warn("%s: partial write: %d of %d bytes",
-			     hostname, i, cc);
+			    hostname, i, cc);
 		}
 	}
 	ntransmitted++;
@@ -1168,7 +1157,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 	if (cc < hlen + ICMP_MINLEN) {
 		if (options & F_VERBOSE)
 			warn("packet too short (%zd bytes) from %s", cc,
-			     inet_ntoa(from->sin_addr));
+			    inet_ntoa(from->sin_addr));
 		return;
 	}
 
@@ -1200,7 +1189,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 				tv1.tv_sec = ntohl(tv32.tv32_sec);
 				tv1.tv_nsec = ntohl(tv32.tv32_nsec);
 				timespecsub(tv, &tv1, tv);
- 				triptime = ((double)tv->tv_sec) * 1000.0 +
+				triptime = ((double)tv->tv_sec) * 1000.0 +
 				    ((double)tv->tv_nsec) / 1000000.0;
 				tsum += triptime;
 				tsumsq += triptime * triptime;
@@ -1246,7 +1235,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 			if (options & F_MASK) {
 				/* Just prentend this cast isn't ugly */
 				(void)printf(" mask=%s",
-					inet_ntoa(*(struct in_addr *)&(icp.icmp_mask)));
+				    inet_ntoa(*(struct in_addr *)&(icp.icmp_mask)));
 			}
 			if (options & F_TIME) {
 				(void)printf(" tso=%s", pr_ntime(icp.icmp_otime));
@@ -1254,17 +1243,17 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 				(void)printf(" tst=%s", pr_ntime(icp.icmp_ttime));
 			}
 			if (recv_len != send_len) {
-                        	(void)printf(
-				     "\nwrong total length %d instead of %d",
-				     recv_len, send_len);
+				(void)printf(
+				    "\nwrong total length %d instead of %d",
+				    recv_len, send_len);
 			}
 			/* check the data */
 			cp = (u_char*)(buf + hlen + offsetof(struct icmp,
-				icmp_data) + phdr_len);
+			    icmp_data) + phdr_len);
 			dp = &outpack[ICMP_MINLEN + phdr_len];
 			cc -= ICMP_MINLEN + phdr_len;
 			i = 0;
-			if (timing) {   /* don't check variable timestamp */
+			if (timing) {	/* don't check variable timestamp */
 				cp += TIMEVAL_LEN;
 				dp += TIMEVAL_LEN;
 				cc -= TIMEVAL_LEN;
@@ -1313,13 +1302,13 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 
 		if (((options & F_VERBOSE) && uid == 0) ||
 		    (!(options & F_QUIET2) &&
-		     (oip.ip_dst.s_addr == whereto.sin_addr.s_addr) &&
-		     (oip.ip_p == IPPROTO_ICMP) &&
-		     (oicmp.icmp_type == ICMP_ECHO) &&
-		     (oicmp.icmp_id == ident))) {
-		    (void)printf("%zd bytes from %s: ", cc,
-			pr_addr(from->sin_addr));
-		    pr_icmph(&icp, &oip, oicmp_raw);
+		    (oip.ip_dst.s_addr == whereto.sin_addr.s_addr) &&
+		    (oip.ip_p == IPPROTO_ICMP) &&
+		    (oicmp.icmp_type == ICMP_ECHO) &&
+		    (oicmp.icmp_id == ident))) {
+			(void)printf("%zd bytes from %s: ", cc,
+			    pr_addr(from->sin_addr));
+			pr_icmph(&icp, &oip, oicmp_raw);
 		} else
 		    return;
 	}
@@ -1347,7 +1336,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 						(void)printf("\t0.0.0.0");
 					else
 						(void)printf("\t%s",
-						     pr_addr(ina));
+						    pr_addr(ina));
 					hlen -= INADDR_LEN;
 					cp += INADDR_LEN - 1;
 					j -= INADDR_LEN;
@@ -1389,7 +1378,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 						(void)printf("\t0.0.0.0");
 					else
 						(void)printf("\t%s",
-						     pr_addr(ina));
+						    pr_addr(ina));
 					hlen -= INADDR_LEN;
 					cp += INADDR_LEN - 1;
 					i -= INADDR_LEN;
@@ -1421,14 +1410,12 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 static void
 status(int sig __unused)
 {
-
 	siginfo_p = 1;
 }
 
 static void
 check_status(void)
 {
-
 	if (siginfo_p) {
 		siginfo_p = 0;
 		(void)fprintf(stderr, "\r%ld/%ld packets received (%.1f%%)",
@@ -1448,7 +1435,6 @@ check_status(void)
 static void
 finish(void)
 {
-
 	(void)signal(SIGINT, SIG_IGN);
 	(void)signal(SIGALRM, SIG_IGN);
 	(void)putchar('\n');
@@ -1491,7 +1477,6 @@ finish(void)
 static void
 pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 {
-
 	switch(icp->icmp_type) {
 	case ICMP_ECHOREPLY:
 		(void)printf("Echo Reply\n");
@@ -1633,7 +1618,7 @@ pr_iph(struct ip *ip)
 	    (u_long) (ntohl(ip->ip_off) & 0xe000) >> 13,
 	    (u_long) ntohl(ip->ip_off) & 0x1fff);
 	(void)printf("  %02x  %02x %04x", ip->ip_ttl, ip->ip_p,
-							    ntohs(ip->ip_sum));
+	    ntohs(ip->ip_sum));
 	memcpy(&ina, &ip->ip_src.s_addr, sizeof ina);
 	(void)printf(" %s ", inet_ntoa(ina));
 	memcpy(&ina, &ip->ip_dst.s_addr, sizeof ina);
@@ -1683,7 +1668,7 @@ pr_retip(struct ip *ip, const u_char *cp)
 		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
 	else if (ip->ip_p == 17)
 		(void)printf("UDP: from port %u, to port %u (decimal)\n",
-			(*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
+		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
 }
 
 static char *
