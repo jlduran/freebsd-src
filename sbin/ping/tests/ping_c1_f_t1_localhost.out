@@ -1,0 +1,5 @@
+PING localhost: 56 data bytes
+.
+--- localhost ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms

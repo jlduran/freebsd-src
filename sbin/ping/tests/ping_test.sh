@@ -233,6 +233,21 @@ ping_a_c1_t1_localhost_body()
 	    $(atf_get_srcdir)/ping_a_c1_t1_localhost.out
 }
 
+ping_c1_f_t1_localhost_head()
+{
+	atf_set "descr" "Flood ping"
+	atf_set require.user root
+	require_ipv4
+}
+ping_c1_f_t1_localhost_body()
+{
+	atf_check -s exit:0 \
+	    -o save:std.out \
+	    ping -c 1 -f -t 1 localhost
+	check_ping_statistics std.out \
+	    $(atf_get_srcdir)/ping_c1_f_t1_localhost.out
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case ping_c1_s56_t1
@@ -250,6 +265,7 @@ atf_init_test_cases()
 	atf_add_test_case ping6_unknown
 	atf_add_test_case ping_A_c2_t2_192_0_2_0
 	atf_add_test_case ping_a_c1_t1_localhost
+	atf_add_test_case ping_c1_f_t1_localhost
 }
 
 check_ping_statistics()
