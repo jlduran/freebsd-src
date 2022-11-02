@@ -180,6 +180,31 @@ ping_6_127_0_0_1_body()
 	    ping -6 127.0.0.1
 }
 
+ping_unknown_head()
+{
+	atf_set "descr" "Unknown host"
+	require_ipv4
+}
+ping_unknown_body()
+{
+	atf_check -s exit:1 \
+	    -e match:"Unknown host" \
+	    ping unknown
+}
+
+ping6_unknown_head()
+{
+	atf_set "descr" "Unknown host"
+	require_ipv6
+}
+ping6_unknown_body()
+{
+	atf_skip "WIP make an unknown host"
+	atf_check -s exit:1 \
+	    -e match:"Unknown host" \
+	    ping6 unknown
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case ping_c1_s56_t1
@@ -193,6 +218,8 @@ atf_init_test_cases()
 	atf_add_test_case ping6_4_6
 	atf_add_test_case ping_4__1
 	atf_add_test_case ping_6_127_0_0_1
+	atf_add_test_case ping_unknown
+	atf_add_test_case ping6_unknown
 }
 
 check_ping_statistics()
