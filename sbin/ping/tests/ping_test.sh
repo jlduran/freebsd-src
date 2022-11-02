@@ -205,6 +205,20 @@ ping6_unknown_body()
 	    ping6 unknown
 }
 
+ping_A_c2_t2_192_0_2_0_head()
+{
+	atf_set "descr" "Audible character when no packet is received"
+	require_ipv4
+}
+ping_A_c2_t2_192_0_2_0_body()
+{
+	atf_check -s exit:2 \
+	    -o save:std.out \
+	    ping -A -c 2 -t 2 192.0.2.0
+	check_ping_statistics std.out \
+	    $(atf_get_srcdir)/ping_A_c2_t2_192_0_2_0.out
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case ping_c1_s56_t1
@@ -220,6 +234,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_6_127_0_0_1
 	atf_add_test_case ping_unknown
 	atf_add_test_case ping6_unknown
+	atf_add_test_case ping_A_c2_t2_192_0_2_0
 }
 
 check_ping_statistics()
