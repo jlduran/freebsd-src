@@ -248,6 +248,20 @@ ping_c1_f_t1_localhost_body()
 	    $(atf_get_srcdir)/ping_c1_f_t1_localhost.out
 }
 
+ping_c1_H_t1_127_0_0_1_head()
+{
+	atf_set "descr" "Hostname output"
+	require_ipv4
+}
+ping_c1_H_t1_127_0_0_1_body()
+{
+	atf_check -s exit:0 \
+	    -o save:std.out \
+	    ping -c 1 -H -t 1 127.0.0.1
+	check_ping_statistics std.out \
+	    $(atf_get_srcdir)/ping_c1_H_t1_127_0_0_1.out
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case ping_c1_s56_t1
@@ -266,6 +280,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_A_c2_t2_192_0_2_0
 	atf_add_test_case ping_a_c1_t1_localhost
 	atf_add_test_case ping_c1_f_t1_localhost
+	atf_add_test_case ping_c1_H_t1_127_0_0_1
 }
 
 check_ping_statistics()
