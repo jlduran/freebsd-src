@@ -144,6 +144,20 @@ ping6_46_body()
 	    ping6 -4 -6 localhost
 }
 
+ping_A_c2_t2_head()
+{
+	atf_set descr "Audible character when no packet is received"
+}
+ping_A_c2_t2_body()
+{
+	require_ipv4
+	atf_check -s exit:2 \
+	    -o save:std.out \
+	    ping -A -c 2 -t 2 192.0.2.0
+	check_ping_statistics std.out \
+	    $(atf_get_srcdir)/ping_A_c2_t2.out
+}
+
 atf_test_case pinger_reply cleanup
 pinger_reply_head()
 {
@@ -284,6 +298,7 @@ atf_init_test_cases()
 	atf_add_test_case ping6_c1t4
 	atf_add_test_case ping_46
 	atf_add_test_case ping6_46
+	atf_add_test_case ping_A_c2_t2
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
