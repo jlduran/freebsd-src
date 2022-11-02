@@ -154,6 +154,32 @@ ping6_4_6_body()
 	    ping6 -4 -6 localhost
 }
 
+ping_4__1_head()
+{
+	atf_set "descr" "-4 cannot ping an IPv6 address"
+	require_ipv4
+	require_ipv6
+}
+ping_4__1_body()
+{
+	atf_check -s exit:1 \
+	    -e match:"IPv4 requested but IPv6 target address provided" \
+	    ping -4 ::1
+}
+
+ping_6_127_0_0_1_head()
+{
+	atf_set "descr" "-6 cannot ping an IPv4 address"
+	require_ipv4
+	require_ipv6
+}
+ping_6_127_0_0_1_body()
+{
+	atf_check -s exit:1 \
+	    -e match:"IPv6 requested but IPv4 target address provided" \
+	    ping -6 127.0.0.1
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case ping_c1_s56_t1
@@ -165,6 +191,8 @@ atf_init_test_cases()
 	atf_add_test_case ping6_c1_t4
 	atf_add_test_case ping_4_6
 	atf_add_test_case ping6_4_6
+	atf_add_test_case ping_4__1
+	atf_add_test_case ping_6_127_0_0_1
 }
 
 check_ping_statistics()
