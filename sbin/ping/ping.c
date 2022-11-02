@@ -1480,7 +1480,6 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 	switch(icp->icmp_type) {
 	case ICMP_ECHOREPLY:
 		(void)printf("Echo Reply\n");
-		/* XXX ID + Seq + Data */
 		break;
 	case ICMP_UNREACH:
 		switch(icp->icmp_code) {
@@ -1541,7 +1540,6 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 		break;
 	case ICMP_ECHO:
 		(void)printf("Echo Request\n");
-		/* XXX ID + Seq + Data */
 		break;
 	case ICMP_TIMXCEED:
 		switch(icp->icmp_code) {
@@ -1565,19 +1563,15 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 		break;
 	case ICMP_TSTAMP:
 		(void)printf("Timestamp\n");
-		/* XXX ID + Seq + 3 timestamps */
 		break;
 	case ICMP_TSTAMPREPLY:
 		(void)printf("Timestamp Reply\n");
-		/* XXX ID + Seq + 3 timestamps */
 		break;
 	case ICMP_IREQ:
 		(void)printf("Information Request\n");
-		/* XXX ID + Seq */
 		break;
 	case ICMP_IREQREPLY:
 		(void)printf("Information Reply\n");
-		/* XXX ID + Seq */
 		break;
 	case ICMP_MASKREQ:
 		(void)printf("Address Mask Request\n");
