@@ -39,6 +39,7 @@ SUBDIR=	\
 	${_amdsmn} \
 	${_amdtemp} \
 	${_aout} \
+	${_apple} \
 	${_arcmsr} \
 	${_allwinner} \
 	${_armv8crypto} \
@@ -644,6 +645,7 @@ _hyperv=  hyperv
 
 .if !empty(OPT_FDT)
 _allwinner=	allwinner
+_apple=		apple
 _dwwdt=		dwwdt
 _enetc=		enetc
 _felix=		felix

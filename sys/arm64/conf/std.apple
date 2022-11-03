@@ -1,0 +1,12 @@
+#
+# Apple SoC support
+#
+
+# SoC support
+options 	SOC_APPLE
+
+options 	FDT
+device		acpi
+
+# DTBs
+makeoptions	MODULES_EXTRA+="dtb/apple"
