@@ -9,7 +9,7 @@ DTS=	\
 DTS=	\
 	marvell/armada-3720-espressobin.dts \
 	marvell/armada-8040-clearfog-gt-8k.dts \
-	marvell/armada-8040-db \
+	marvell/armada-8040-db.dts \
 	marvell/armada-8040-mcbin.dts \
 	marvell/armada-8040-mcbin-singleshot.dts
 .endif
