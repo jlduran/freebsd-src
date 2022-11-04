@@ -27,19 +27,6 @@
 #
 # $FreeBSD$
 
-require_ipv4()
-{
-	if ! getaddrinfo -f inet localhost 1>/dev/null 2>&1; then
-		atf_skip "IPv4 is not configured"
-	fi
-}
-require_ipv6()
-{
-	if ! getaddrinfo -f inet6 localhost 1>/dev/null 2>&1; then
-		atf_skip "IPv6 is not configured"
-	fi
-}
-
 atf_test_case ping_c1_s56_t1
 ping_c1_s56_t1_head()
 {
@@ -283,6 +270,10 @@ atf_init_test_cases()
 	atf_add_test_case ping_c1_H_t1_127_0_0_1
 }
 
+# TODO: move to a ping.subr
+# XXX: Envision a way to declutter:
+#      ping  -c 1 -s 56 -t 1 -> ping
+#      ping6 -c 1 -s 8  -t 1 -> ping6
 check_ping_statistics()
 {
 	sed -e 's/0.[0-9]\{3\}//g' \
@@ -293,4 +284,18 @@ check_ping_statistics()
 	    -e 's/hlim=[0-9][0-9]*/hlim=/' \
 	    "$1" >"$1".filtered
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
+}
+
+# TODO: Move to a common.subr
+require_ipv4()
+{
+	if ! getaddrinfo -f inet localhost 1>/dev/null 2>&1; then
+		atf_skip "IPv4 is not configured"
+	fi
+}
+require_ipv6()
+{
+	if ! getaddrinfo -f inet6 localhost 1>/dev/null 2>&1; then
+		atf_skip "IPv6 is not configured"
+	fi
 }
