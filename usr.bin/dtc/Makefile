@@ -8,7 +8,7 @@ WARNS?=	3
 
 CXXFLAGS+=	-fno-rtti -fno-exceptions
 
-CXXSTD=	c++11
+CXXSTD=	c++14
 
 NO_SHARED?=NO
 
