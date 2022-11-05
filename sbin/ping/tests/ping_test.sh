@@ -411,7 +411,6 @@ pinger_unreach_opts_head()
 }
 pinger_unreach_opts_body()
 {
-	atf_skip "D37210"
 	require_ipv4
 	atf_check -s exit:2 -o save:std.out -e empty \
 	    $(atf_get_srcdir)/pinger.py \
