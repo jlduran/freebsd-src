@@ -226,7 +226,7 @@ static char *pr_ntime(n_time);
 static void pr_icmph(struct icmp *);
 static void pr_iph(struct ip *);
 static void pr_pack(char *, int, struct sockaddr_in *, struct timespec *);
-static void pr_retip(struct ip *);
+static void pr_retip(struct icmp *);
 static void status(int);
 static void stopit(int);
 
@@ -1040,7 +1040,7 @@ pinger(void)
 	u_char *packet;
 
 	packet = outpack;
-	icp = (struct icmp *)outpack;
+	memcpy(&icp, &outpack, sizeof(struct icmp *));
 	icp->icmp_type = icmp_type;
 	icp->icmp_code = 0;
 	icp->icmp_cksum = 0;
@@ -1111,8 +1111,8 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 {
 	struct in_addr ina;
 	u_char *cp, *dp;
-	struct icmp *icp;
-	struct ip *ip;
+	struct icmp *icp, *oicmp;
+	struct ip *ip, *oip;
 	const void *tp;
 	double triptime;
 	int dupflag, hlen, i, j, recv_len;
@@ -1121,7 +1121,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 	static char old_rr[MAX_IPOPTLEN];
 
 	/* Check the IP header */
-	ip = (struct ip *)buf;
+	memcpy(&ip, &buf, sizeof(struct ip *));
 	hlen = ip->ip_hl << 2;
 	recv_len = cc;
 	if (cc < hlen + ICMP_MINLEN) {
@@ -1254,8 +1254,8 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 		 * as root to avoid leaking information not normally
 		 * available to those not running as root.
 		 */
-		struct ip *oip = (struct ip *)icp->icmp_data;
-		struct icmp *oicmp = (struct icmp *)(oip + 1);
+		memcpy(&oip, icp->icmp_data, sizeof(struct ip *));
+		oicmp = (struct icmp *)(oip + 1);
 
 		if (((options & F_VERBOSE) && uid == 0) ||
 		    (!(options & F_QUIET2) &&
@@ -1489,11 +1489,11 @@ pr_icmph(struct icmp *icp)
 			break;
 		}
 		/* Print returned IP header information */
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(icp);
 		break;
 	case ICMP_SOURCEQUENCH:
 		printf("Source Quench\n");
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(icp);
 		break;
 	case ICMP_REDIRECT:
 		switch (icp->icmp_code) {
@@ -1516,7 +1516,7 @@ pr_icmph(struct icmp *icp)
 		if (icp->icmp_gwaddr.s_addr != 0)
 			printf("(New addr: %s)", inet_ntoa(icp->icmp_gwaddr));
 		putchar('\n');
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(icp);
 		break;
 	case ICMP_ECHO:
 		printf("Echo Request\n");
@@ -1541,7 +1541,7 @@ pr_icmph(struct icmp *icp)
 			    icp->icmp_code);
 			break;
 		}
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(icp);
 		break;
 	case ICMP_PARAMPROB:
 		switch (icp->icmp_code) {
@@ -1561,7 +1561,7 @@ pr_icmph(struct icmp *icp)
 			    icp->icmp_code);
 			break;
 		}
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(icp);
 		break;
 	case ICMP_TSTAMP:
 		printf("Timestamp\n");
@@ -1658,10 +1658,13 @@ pr_addr(struct in_addr ina)
  *	Dump some info on a returned (via ICMP) IP packet.
  */
 static void
-pr_retip(struct ip *ip)
+pr_retip(struct icmp *icp)
 {
 	u_char *cp;
 	int hlen;
+	struct ip *ip;
+
+	ip = (struct ip *)icp->icmp_data;
 
 	pr_iph(ip);
 	hlen = ip->ip_hl << 2;
