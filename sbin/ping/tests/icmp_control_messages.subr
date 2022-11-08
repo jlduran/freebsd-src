@@ -9,7 +9,14 @@ icmp_control_messages()
 	    "3 3 Destination Port Unreachable" \
 	    "3 4 frag needed and DF set" \
 	    "3 5 Source Route Failed" \
+	    "3 6 Destination Network Unknown" \
+	    "3 7 Destination Host Unknown" \
+	    "3 8 Source Host Isolated" \
+	    "3 11 Network Unreachable for Type of Service" \
+	    "3 12 Host Unreachable for Type of Service" \
 	    "3 13 Communication prohibited by filter" \
+	    "3 14 Host Precedence Violation" \
+	    "3 15 Precedence Cutoff in Effect" \
 	    "3 255 Dest Unreachable, Bad Code: 255" \
 	    "4 0 Source Quench" \
 	    "5 0 Redirect Network" \

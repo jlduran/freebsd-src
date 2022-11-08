@@ -1456,8 +1456,29 @@ pr_icmph(struct icmp *icp)
 		case ICMP_UNREACH_SRCFAIL:
 			printf("Source Route Failed\n");
 			break;
+		case ICMP_UNREACH_NET_UNKNOWN:
+			printf("Destination Network Unknown\n");
+			break;
+		case ICMP_UNREACH_HOST_UNKNOWN:
+			printf("Destination Host Unknown\n");
+			break;
+		case ICMP_UNREACH_ISOLATED:
+			printf("Source Host Isolated\n");
+			break;
+		case ICMP_UNREACH_TOSNET:
+			printf("Network Unreachable for Type of Service\n");
+			break;
+		case ICMP_UNREACH_TOSHOST:
+			printf("Host Unreachable for Type of Service\n");
+			break;
 		case ICMP_UNREACH_FILTER_PROHIB:
 			printf("Communication prohibited by filter\n");
+			break;
+		case ICMP_UNREACH_HOST_PRECEDENCE:
+			printf("Host Precedence Violation\n");
+			break;
+		case ICMP_UNREACH_PRECEDENCE_CUTOFF:
+			printf("Precedence Cutoff in Effect\n");
 			break;
 		default:
 			printf("Dest Unreachable, Bad Code: %d\n",
