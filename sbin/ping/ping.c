@@ -1536,8 +1536,11 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 			printf("Destination Port Unreachable\n");
 			break;
 		case ICMP_UNREACH_NEEDFRAG:
-			printf("frag needed and DF set (MTU %d)\n",
-			    ntohs(icp->icmp_nextmtu));
+			if (icp->icmp_nextmtu != 0)
+				printf("frag needed and DF set (MTU %d)\n",
+				    ntohs(icp->icmp_nextmtu));
+			else
+				printf("frag needed and DF set\n");
 			break;
 		case ICMP_UNREACH_SRCFAIL:
 			printf("Source Route Failed\n");
