@@ -175,7 +175,7 @@ main(int argc, char *argv[])
 void
 usage(void)
 {
-	(void)fprintf(stderr,
+	fprintf(stderr,
 	    "usage:\n"
 #ifdef INET
 	    "\tping [-4AaDdfHnoQqRrv] [-C pcp] [-c count] "
