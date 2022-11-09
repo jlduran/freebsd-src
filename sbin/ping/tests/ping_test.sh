@@ -316,6 +316,16 @@ pinger_redirect_reply_body()
 	    --icmp_gwaddr 192.0.2.10
 	atf_check -s exit:0 \
 	    diff -u std.out $(atf_get_srcdir)/pinger_redirect_reply.out
+
+	atf_check -s exit:2 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 5 \
+	    --icmp_code 0
+	atf_check -s exit:0 \
+	    diff -u std.out $(atf_get_srcdir)/pinger_redirect_reply_nogwaddr.out
 }
 pinger_redirect_reply_cleanup()
 {

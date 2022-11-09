@@ -18,6 +18,7 @@ ${PACKAGE}FILES+= ping_c1_s8_t1_S1.out
 ${PACKAGE}FILES+= pinger.py
 ${PACKAGE}FILES+= pinger_mask_reply.out
 ${PACKAGE}FILES+= pinger_redirect_reply.out
+${PACKAGE}FILES+= pinger_redirect_reply_nogwaddr.out
 ${PACKAGE}FILES+= pinger_reply_dup.out
 ${PACKAGE}FILES+= pinger_reply_opts.out
 ${PACKAGE}FILES+= pinger_timestamp_reply.out
