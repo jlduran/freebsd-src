@@ -1630,8 +1630,23 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 		pr_retip(oip, oicmp_raw);
 		break;
 	case ICMP_PARAMPROB:
-		printf("Parameter problem: pointer = 0x%02x\n",
-		    icp->icmp_hun.ih_pptr);
+		switch (icp->icmp_code) {
+		case ICMP_PARAMPROB_ERRATPTR:
+			printf("Parameter problem: pointer = 0x%02x\n",
+			    icp->icmp_hun.ih_pptr);
+			break;
+		case ICMP_PARAMPROB_OPTABSENT:
+			printf("Parameter Problem, Missing a Required "
+			    "Option\n");
+			break;
+		case ICMP_PARAMPROB_LENGTH:
+			printf("Parameter Problem, Bad Length\n");
+			break;
+		default:
+			printf("Parameter Problem, Bad Code: %d\n",
+			    icp->icmp_code);
+			break;
+		}
 		pr_retip(oip, oicmp_raw);
 		break;
 	case ICMP_TSTAMP:

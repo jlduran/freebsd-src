@@ -30,6 +30,9 @@ icmp_control_messages()
 	    "11 1 Frag reassembly time exceeded" \
 	    "11 255 Time exceeded, Bad Code: 255" \
 	    "12 0 Parameter problem" \
+	    "12 1 Missing a Required Option" \
+	    "12 2 Bad Length" \
+	    "12 255 Parameter Problem, Bad Code: 255" \
 	    "14 0 Timestamp Reply" \
 	    "15 0 Information Request" \
 	    "16 0 Information Reply" \
