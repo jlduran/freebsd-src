@@ -1675,7 +1675,10 @@ pr_iph(struct ip *ip)
 	hlen = ip->ip_hl << 2;
 	cp = (u_char *)ip + 20;		/* point to options */
 
-	printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst\n");
+	printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst");
+	if (hlen > (int)sizeof(struct ip))
+		printf(" Data");
+	putchar('\n');
 	printf(" %1x  %1x  %02x %04x %04x",
 	    ip->ip_v, ip->ip_hl, ip->ip_tos, ntohs(ip->ip_len),
 	    ntohs(ip->ip_id));

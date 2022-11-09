@@ -1,6 +1,6 @@
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 132 bytes from 192.0.2.2: Destination Host Unreachable
-Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst Data
  4  f  00 007c 0001   0 0000  40  01 d868 192.0.2.1  192.0.2.2 01010101010101010101010101010101010101010101010101010101010101010101010101010101
 
 
