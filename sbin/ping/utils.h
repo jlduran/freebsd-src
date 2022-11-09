@@ -29,7 +29,7 @@
  */
 
 #ifndef UTILS_H
-#define UTILS_H 1
+#define	UTILS_H 1
 
 #include <sys/types.h>
 
