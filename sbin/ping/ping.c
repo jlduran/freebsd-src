@@ -1544,8 +1544,23 @@ pr_icmph(struct icmp *icp)
 		pr_retip((struct ip *)icp->icmp_data);
 		break;
 	case ICMP_PARAMPROB:
-		printf("Parameter problem: pointer = 0x%02x\n",
-		    icp->icmp_hun.ih_pptr);
+		switch (icp->icmp_code) {
+		case ICMP_PARAMPROB_ERRATPTR:
+			printf("Parameter problem: pointer = 0x%02x\n",
+			    icp->icmp_hun.ih_pptr);
+			break;
+		case ICMP_PARAMPROB_OPTABSENT:
+			printf("Parameter Problem, Missing a Required "
+			    "Option\n");
+			break;
+		case ICMP_PARAMPROB_LENGTH:
+			printf("Parameter Problem, Bad Length\n");
+			break;
+		default:
+			printf("Parameter Problem, Bad Code: %d\n",
+			    icp->icmp_code);
+			break;
+		}
 		pr_retip((struct ip *)icp->icmp_data);
 		break;
 	case ICMP_TSTAMP:
