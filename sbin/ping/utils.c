@@ -60,8 +60,8 @@ in_cksum(u_char *addr, int len)
 	int nleft, sum;
 	u_char *w;
 	union {
-		u_short	us;
-		u_char	uc[2];
+		u_short us;
+		u_char uc[2];
 	} last;
 	u_short answer;
 

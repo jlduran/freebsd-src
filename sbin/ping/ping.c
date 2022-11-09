@@ -145,7 +145,7 @@ static int options;
 #define	F_AUDIBLE	0x2000
 #ifdef IPSEC
 #ifdef IPSEC_POLICY_IPSEC
-#define F_POLICY	0x4000
+#define	F_POLICY	0x4000
 #endif /*IPSEC_POLICY_IPSEC*/
 #endif /*IPSEC*/
 #define	F_TTL		0x8000
@@ -194,7 +194,7 @@ static long npackets;		/* max packets to transmit */
 static long nreceived;		/* # of packets we got back */
 static long nrepeats;		/* number of duplicates */
 static long ntransmitted;	/* sequence # for outbound packets = #sent */
-static long snpackets;			/* max packets to transmit in one sweep */
+static long snpackets;		/* max packets to transmit in one sweep */
 static long sntransmitted;	/* # of packets we sent in this sweep */
 static int sweepmax;		/* max value of payload in sweep */
 static int sweepmin = 0;	/* start value of payload in sweep */
@@ -275,8 +275,8 @@ ping(int argc, char *const *argv)
 	 * after arg parsing.
 	 *
 	 * Historicaly ping was using one socket 's' for sending and for
-	 * receiving. After capsicum(4) related changes we use two
-	 * sockets. It was done for special ping use case - when user
+	 * receiving.  After capsicum(4) related changes we use two
+	 * sockets.  It was done for special ping use case - when user
 	 * issue ping on multicast or broadcast address replies come
 	 * from different addresses, not from the address we
 	 * connect(2)'ed to, and send socket do not receive those
@@ -305,7 +305,7 @@ ping(int argc, char *const *argv)
 
 	outpack = outpackhdr + sizeof(struct ip);
 	while ((ch = getopt(argc, argv, PING4OPTS)) != -1) {
-		switch(ch) {
+		switch (ch) {
 		case '.':
 			options |= F_DOT;
 			if (optarg != NULL) {
@@ -433,7 +433,7 @@ ping(int argc, char *const *argv)
 			preload = (int)ltmp;
 			break;
 		case 'M':
-			switch(optarg[0]) {
+			switch (optarg[0]) {
 			case 'M':
 			case 'm':
 				options |= F_MASK;
@@ -521,15 +521,12 @@ ping(int argc, char *const *argv)
 			if (alarmtimeout > MAXALARM)
 				errx(EX_USAGE, "invalid timeout: `%s' > %d",
 				    optarg, MAXALARM);
-			{
-				struct itimerval itv;
-
-				timerclear(&itv.it_interval);
-				timerclear(&itv.it_value);
-				itv.it_value.tv_sec = (time_t)alarmtimeout;
-				if (setitimer(ITIMER_REAL, &itv, NULL) != 0)
-					err(1, "setitimer");
-			}
+			struct itimerval itv;
+			timerclear(&itv.it_interval);
+			timerclear(&itv.it_value);
+			itv.it_value.tv_sec = (time_t)alarmtimeout;
+			if (setitimer(ITIMER_REAL, &itv, NULL) != 0)
+				err(1, "setitimer");
 			break;
 		case 'v':
 			options |= F_VERBOSE;
@@ -594,15 +591,15 @@ ping(int argc, char *const *argv)
 	if (source) {
 		bzero((char *)&sock_in, sizeof(sock_in));
 		sock_in.sin_family = AF_INET;
-		if (inet_aton(source, &sock_in.sin_addr) != 0) {
+		if (inet_aton(source, &sock_in.sin_addr) != 0)
 			shostname = source;
-		} else {
+		else {
 			hp = cap_gethostbyname2(capdns, source, AF_INET);
 			if (!hp)
 				errx(EX_NOHOST, "cannot resolve %s: %s",
 				    source, hstrerror(h_errno));
 
-			sock_in.sin_len = sizeof sock_in;
+			sock_in.sin_len = sizeof(sock_in);
 			if ((unsigned)hp->h_length > sizeof(sock_in.sin_addr) ||
 			    hp->h_length < 0)
 				errx(1, "gethostbyname2: illegal address");
@@ -613,7 +610,7 @@ ping(int argc, char *const *argv)
 			snamebuf[sizeof(snamebuf) - 1] = '\0';
 			shostname = snamebuf;
 		}
-		if (bind(ssend, (struct sockaddr *)&sock_in, sizeof sock_in) ==
+		if (bind(ssend, (struct sockaddr *)&sock_in, sizeof(sock_in)) ==
 		    -1)
 			err(1, "bind");
 	}
@@ -621,10 +618,10 @@ ping(int argc, char *const *argv)
 	bzero(&whereto, sizeof(whereto));
 	to = &whereto;
 	to->sin_family = AF_INET;
-	to->sin_len = sizeof *to;
-	if (inet_aton(target, &to->sin_addr) != 0) {
+	to->sin_len = sizeof(*to);
+	if (inet_aton(target, &to->sin_addr) != 0)
 		hostname = target;
-	} else {
+	else {
 		hp = cap_gethostbyname2(capdns, target, AF_INET);
 		if (!hp)
 			errx(EX_NOHOST, "cannot resolve %s: %s",
@@ -632,7 +629,7 @@ ping(int argc, char *const *argv)
 
 		if ((unsigned)hp->h_length > sizeof(to->sin_addr))
 			errx(1, "gethostbyname2 returned an illegal address");
-		memcpy(&to->sin_addr, hp->h_addr_list[0], sizeof to->sin_addr);
+		memcpy(&to->sin_addr, hp->h_addr_list[0], sizeof(to->sin_addr));
 		(void)strncpy(hnamebuf, hp->h_name, sizeof(hnamebuf) - 1);
 		hnamebuf[sizeof(hnamebuf) - 1] = '\0';
 		hostname = hnamebuf;
@@ -681,10 +678,9 @@ ping(int argc, char *const *argv)
 	if (options & F_SO_DONTROUTE)
 		(void)setsockopt(ssend, SOL_SOCKET, SO_DONTROUTE, (char *)&hold,
 		    sizeof(hold));
-	if (options & F_IP_VLAN_PCP) {
+	if (options & F_IP_VLAN_PCP)
 		(void)setsockopt(ssend, IPPROTO_IP, IP_VLAN_PCP, (char *)&pcp,
 		    sizeof(pcp));
-	}
 #ifdef IPSEC
 #ifdef IPSEC_POLICY_IPSEC
 	if (options & F_POLICY) {
@@ -694,7 +690,7 @@ ping(int argc, char *const *argv)
 			if (buf == NULL)
 				errx(EX_CONFIG, "%s", ipsec_strerror());
 			if (setsockopt(srecv, IPPROTO_IP, IP_IPSEC_POLICY,
-					buf, ipsec_get_policylen(buf)) < 0)
+			    buf, ipsec_get_policylen(buf)) < 0)
 				err(EX_CONFIG,
 				    "ipsec policy cannot be configured");
 			free(buf);
@@ -705,14 +701,14 @@ ping(int argc, char *const *argv)
 			if (buf == NULL)
 				errx(EX_CONFIG, "%s", ipsec_strerror());
 			if (setsockopt(ssend, IPPROTO_IP, IP_IPSEC_POLICY,
-					buf, ipsec_get_policylen(buf)) < 0)
+			    buf, ipsec_get_policylen(buf)) < 0)
 				err(EX_CONFIG,
 				    "ipsec policy cannot be configured");
 			free(buf);
 		}
 	}
-#endif /*IPSEC_POLICY_IPSEC*/
-#endif /*IPSEC*/
+#endif /* IPSEC_POLICY_IPSEC */
+#endif /* IPSEC */
 
 	if (options & F_HDRINCL) {
 		ip = (struct ip*)outpackhdr;
@@ -735,11 +731,11 @@ ping(int argc, char *const *argv)
 		ip->ip_p = IPPROTO_ICMP;
 		ip->ip_src.s_addr = source ? sock_in.sin_addr.s_addr : INADDR_ANY;
 		ip->ip_dst = to->sin_addr;
-        }
+	}
 
 	/*
-	 * Here we enter capability mode. Further down access to global
-	 * namespaces (e.g filesystem) is restricted (see capsicum(4)).
+	 * Here we enter capability mode.  Further down access to global
+	 * namespaces (e.g., filesystem) is restricted (see capsicum(4)).
 	 * We must connect(2) our socket before this point.
 	 */
 	caph_cache_catpages();
@@ -772,39 +768,33 @@ ping(int argc, char *const *argv)
 
 	if (options & F_TTL) {
 		if (setsockopt(ssend, IPPROTO_IP, IP_TTL, &ttl,
-		    sizeof(ttl)) < 0) {
+		    sizeof(ttl)) < 0)
 			err(EX_OSERR, "setsockopt IP_TTL");
-		}
 	}
 	if (options & F_NOLOOP) {
 		if (setsockopt(ssend, IPPROTO_IP, IP_MULTICAST_LOOP, &loop,
-		    sizeof(loop)) < 0) {
+		    sizeof(loop)) < 0)
 			err(EX_OSERR, "setsockopt IP_MULTICAST_LOOP");
-		}
 	}
 	if (options & F_MTTL) {
 		if (setsockopt(ssend, IPPROTO_IP, IP_MULTICAST_TTL, &mttl,
-		    sizeof(mttl)) < 0) {
+		    sizeof(mttl)) < 0)
 			err(EX_OSERR, "setsockopt IP_MULTICAST_TTL");
-		}
 	}
 	if (options & F_MIF) {
 		if (setsockopt(ssend, IPPROTO_IP, IP_MULTICAST_IF, &ifaddr,
-		    sizeof(ifaddr)) < 0) {
+		    sizeof(ifaddr)) < 0)
 			err(EX_OSERR, "setsockopt IP_MULTICAST_IF");
-		}
 	}
 #ifdef SO_TIMESTAMP
-	{
-		int on = 1;
-		int ts_clock = SO_TS_MONOTONIC;
-		if (setsockopt(srecv, SOL_SOCKET, SO_TIMESTAMP, &on,
-		    sizeof(on)) < 0)
-			err(EX_OSERR, "setsockopt SO_TIMESTAMP");
-		if (setsockopt(srecv, SOL_SOCKET, SO_TS_CLOCK, &ts_clock,
-		    sizeof(ts_clock)) < 0)
-			err(EX_OSERR, "setsockopt SO_TS_CLOCK");
-	}
+	int on = 1;
+	int ts_clock = SO_TS_MONOTONIC;
+	if (setsockopt(srecv, SOL_SOCKET, SO_TIMESTAMP, &on,
+	    sizeof(on)) < 0)
+		err(EX_OSERR, "setsockopt SO_TIMESTAMP");
+	if (setsockopt(srecv, SOL_SOCKET, SO_TS_CLOCK, &ts_clock,
+	    sizeof(ts_clock)) < 0)
+		err(EX_OSERR, "setsockopt SO_TS_CLOCK");
 #endif
 	if (sweepmax) {
 		if (sweepmin > sweepmax)
@@ -866,17 +856,17 @@ ping(int argc, char *const *argv)
 			    sweepmin, sweepmax);
 		else
 			(void)printf(": %d data bytes\n", datalen);
-
 	} else {
 		if (sweepmax)
 			(void)printf("PING %s: (%d ... %d) data bytes\n",
 			    hostname, sweepmin, sweepmax);
 		else
-			(void)printf("PING %s: %d data bytes\n", hostname, datalen);
+			(void)printf("PING %s: %d data bytes\n",
+			    hostname, datalen);
 	}
 
 	/*
-	 * Use sigaction() instead of signal() to get unambiguous semantics,
+	 * Use sigaction(2) instead of signal(3) to get unambiguous semantics,
 	 * in particular with SA_RESTART not set.
 	 */
 
@@ -884,20 +874,18 @@ ping(int argc, char *const *argv)
 	si_sa.sa_flags = 0;
 
 	si_sa.sa_handler = stopit;
-	if (sigaction(SIGINT, &si_sa, 0) == -1) {
+	if (sigaction(SIGINT, &si_sa, 0) == -1)
 		err(EX_OSERR, "sigaction SIGINT");
-	}
 
 	si_sa.sa_handler = status;
-	if (sigaction(SIGINFO, &si_sa, 0) == -1) {
+	if (sigaction(SIGINFO, &si_sa, 0) == -1)
 		err(EX_OSERR, "sigaction");
-	}
 
-        if (alarmtimeout > 0) {
+	if (alarmtimeout > 0) {
 		si_sa.sa_handler = stopit;
 		if (sigaction(SIGALRM, &si_sa, 0) == -1)
 			err(EX_OSERR, "sigaction SIGALRM");
-        }
+	}
 
 	bzero(&msg, sizeof(msg));
 	msg.msg_name = (caddr_t)&from;
@@ -963,7 +951,7 @@ ping(int argc, char *const *argv)
 			if (cmsg != NULL &&
 			    cmsg->cmsg_level == SOL_SOCKET &&
 			    cmsg->cmsg_type == SCM_TIMESTAMP &&
-			    cmsg->cmsg_len == CMSG_LEN(sizeof *tv)) {
+			    cmsg->cmsg_len == CMSG_LEN(sizeof(*tv))) {
 				/* Copy to avoid alignment problems: */
 				memcpy(&now, CMSG_DATA(cmsg), sizeof(now));
 				tv = &now;
@@ -1026,7 +1014,6 @@ ping(int argc, char *const *argv)
 void
 stopit(int sig __unused)
 {
-
 	/*
 	 * When doing reverse DNS lookups, the finish_up flag might not
 	 * be noticed for a while.  Just exit if we get a second SIGINT.
@@ -1069,13 +1056,13 @@ pinger(void)
 		/*
 		 * Truncate seconds down to 32 bits in order
 		 * to fit the timestamp within 8 bytes of the
-		 * packet. We're only concerned with
+		 * packet.  We're only concerned with
 		 * durations, not absolute times.
 		 */
 		tv32.tv32_sec = (uint32_t)htonl(now.tv_sec);
 		tv32.tv32_nsec = (uint32_t)htonl(now.tv_nsec);
 		if (options & F_TIME)
-			icp->icmp_otime = htonl((now.tv_sec % (24*60*60))
+			icp->icmp_otime = htonl((now.tv_sec % (24 * 60 * 60))
 				* 1000 + now.tv_nsec / 1000000);
 		if (timing)
 			bcopy((void *)&tv32,
@@ -1105,7 +1092,7 @@ pinger(void)
 			warn("sendto");
 		} else {
 			warn("%s: partial write: %d of %d bytes",
-			     hostname, i, cc);
+			    hostname, i, cc);
 		}
 	}
 	ntransmitted++;
@@ -1142,7 +1129,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 	if (cc < hlen + ICMP_MINLEN) {
 		if (options & F_VERBOSE)
 			warn("packet too short (%d bytes) from %s", cc,
-			     inet_ntoa(from->sin_addr));
+			    inet_ntoa(from->sin_addr));
 		return;
 	}
 
@@ -1171,7 +1158,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 				tv1.tv_sec = ntohl(tv32.tv32_sec);
 				tv1.tv_nsec = ntohl(tv32.tv32_nsec);
 				timespecsub(tv, &tv1, tv);
- 				triptime = ((double)tv->tv_sec) * 1000.0 +
+				triptime = ((double)tv->tv_sec) * 1000.0 +
 				    ((double)tv->tv_nsec) / 1000000.0;
 				tsum += triptime;
 				tsumsq += triptime * triptime;
@@ -1217,7 +1204,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 			if (options & F_MASK) {
 				/* Just prentend this cast isn't ugly */
 				(void)printf(" mask=%s",
-					inet_ntoa(*(struct in_addr *)&(icp->icmp_mask)));
+				    inet_ntoa(*(struct in_addr *)&(icp->icmp_mask)));
 			}
 			if (options & F_TIME) {
 				(void)printf(" tso=%s", pr_ntime(icp->icmp_otime));
@@ -1225,9 +1212,9 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 				(void)printf(" tst=%s", pr_ntime(icp->icmp_ttime));
 			}
 			if (recv_len != send_len) {
-                        	(void)printf(
-				     "\nwrong total length %d instead of %d",
-				     recv_len, send_len);
+				(void)printf(
+				    "\nwrong total length %d instead of %d",
+				    recv_len, send_len);
 			}
 			/* check the data */
 			cp = (u_char*)&icp->icmp_data[phdr_len];
@@ -1282,15 +1269,15 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 
 		if (((options & F_VERBOSE) && uid == 0) ||
 		    (!(options & F_QUIET2) &&
-		     (oip->ip_dst.s_addr == whereto.sin_addr.s_addr) &&
-		     (oip->ip_p == IPPROTO_ICMP) &&
-		     (oicmp->icmp_type == ICMP_ECHO) &&
-		     (oicmp->icmp_id == ident))) {
-		    (void)printf("%d bytes from %s: ", cc,
-			pr_addr(from->sin_addr));
-		    pr_icmph(icp);
+		    (oip->ip_dst.s_addr == whereto.sin_addr.s_addr) &&
+		    (oip->ip_p == IPPROTO_ICMP) &&
+		    (oicmp->icmp_type == ICMP_ECHO) &&
+		    (oicmp->icmp_id == ident))) {
+			(void)printf("%d bytes from %s: ", cc,
+			    pr_addr(from->sin_addr));
+			pr_icmph(icp);
 		} else
-		    return;
+			return;
 	}
 
 	/* Display any IP options */
@@ -1316,7 +1303,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 						(void)printf("\t0.0.0.0");
 					else
 						(void)printf("\t%s",
-						     pr_addr(ina));
+						    pr_addr(ina));
 					hlen -= INADDR_LEN;
 					cp += INADDR_LEN - 1;
 					j -= INADDR_LEN;
@@ -1358,7 +1345,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 						(void)printf("\t0.0.0.0");
 					else
 						(void)printf("\t%s",
-						     pr_addr(ina));
+						    pr_addr(ina));
 					hlen -= INADDR_LEN;
 					cp += INADDR_LEN - 1;
 					i -= INADDR_LEN;
@@ -1386,18 +1373,15 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
  * status --
  *	Print out statistics when SIGINFO is received.
  */
-
 static void
 status(int sig __unused)
 {
-
 	siginfo_p = 1;
 }
 
 static void
 check_status(void)
 {
-
 	if (siginfo_p) {
 		siginfo_p = 0;
 		(void)fprintf(stderr, "\r%ld/%ld packets received (%.1f%%)",
@@ -1417,7 +1401,6 @@ check_status(void)
 static void
 finish(void)
 {
-
 	(void)signal(SIGINT, SIG_IGN);
 	(void)signal(SIGALRM, SIG_IGN);
 	(void)putchar('\n');
@@ -1460,14 +1443,13 @@ finish(void)
 static void
 pr_icmph(struct icmp *icp)
 {
-
-	switch(icp->icmp_type) {
+	switch (icp->icmp_type) {
 	case ICMP_ECHOREPLY:
 		(void)printf("Echo Reply\n");
 		/* XXX ID + Seq + Data */
 		break;
 	case ICMP_UNREACH:
-		switch(icp->icmp_code) {
+		switch (icp->icmp_code) {
 		case ICMP_UNREACH_NET:
 			(void)printf("Destination Net Unreachable\n");
 			break;
@@ -1482,7 +1464,7 @@ pr_icmph(struct icmp *icp)
 			break;
 		case ICMP_UNREACH_NEEDFRAG:
 			(void)printf("frag needed and DF set (MTU %d)\n",
-					ntohs(icp->icmp_nextmtu));
+			    ntohs(icp->icmp_nextmtu));
 			break;
 		case ICMP_UNREACH_SRCFAIL:
 			(void)printf("Source Route Failed\n");
@@ -1511,7 +1493,7 @@ pr_icmph(struct icmp *icp)
 #endif
 		break;
 	case ICMP_REDIRECT:
-		switch(icp->icmp_code) {
+		switch (icp->icmp_code) {
 		case ICMP_REDIRECT_NET:
 			(void)printf("Redirect Network");
 			break;
@@ -1540,7 +1522,7 @@ pr_icmph(struct icmp *icp)
 		/* XXX ID + Seq + Data */
 		break;
 	case ICMP_TIMXCEED:
-		switch(icp->icmp_code) {
+		switch (icp->icmp_code) {
 		case ICMP_TIMXCEED_INTRANS:
 			(void)printf("Time to live exceeded\n");
 			break;
@@ -1619,13 +1601,13 @@ pr_iph(struct ip *ip)
 	    ip->ip_v, ip->ip_hl, ip->ip_tos, ntohs(ip->ip_len),
 	    ntohs(ip->ip_id));
 	(void)printf("   %1lx %04lx",
-	    (u_long) (ntohl(ip->ip_off) & 0xe000) >> 13,
-	    (u_long) ntohl(ip->ip_off) & 0x1fff);
+	    (u_long)(ntohl(ip->ip_off) & 0xe000) >> 13,
+	    (u_long)ntohl(ip->ip_off) & 0x1fff);
 	(void)printf("  %02x  %02x %04x", ip->ip_ttl, ip->ip_p,
-							    ntohs(ip->ip_sum));
-	memcpy(&ina, &ip->ip_src.s_addr, sizeof ina);
+	    ntohs(ip->ip_sum));
+	memcpy(&ina, &ip->ip_src.s_addr, sizeof(ina));
 	(void)printf(" %s ", inet_ntoa(ina));
-	memcpy(&ina, &ip->ip_dst.s_addr, sizeof ina);
+	memcpy(&ina, &ip->ip_dst.s_addr, sizeof(ina));
 	(void)printf(" %s ", inet_ntoa(ina));
 	/* dump any option bytes */
 	while (hlen-- > 20) {
@@ -1677,7 +1659,7 @@ pr_retip(struct ip *ip)
 		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
 	else if (ip->ip_p == 17)
 		(void)printf("UDP: from port %u, to port %u (decimal)\n",
-			(*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
+		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
 }
 
 static char *
