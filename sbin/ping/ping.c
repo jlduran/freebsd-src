@@ -1586,7 +1586,8 @@ pr_icmph(struct icmp *icp)
 		printf("Address Mask Reply\n");
 		break;
 	default:
-		printf("Bad ICMP type: %d\n", icp->icmp_type);
+		printf("Bad ICMP type: %d, Code: %d\n",
+		    icp->icmp_type, icp->icmp_code);
 	}
 }
 
