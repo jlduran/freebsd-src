@@ -38,5 +38,5 @@ icmp_control_messages()
 	    "16 0 Information Reply" \
 	    "17 0 Address Mask Request" \
 	    "18 0 Address Mask Reply" \
-	    "255 0 Bad ICMP type: 255"
+	    "255 255 Bad ICMP type: 255, Code: 255"
 }
