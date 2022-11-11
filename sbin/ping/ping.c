@@ -1501,6 +1501,12 @@ pr_icmph(struct icmp *icp)
 		(void)printf("Echo Request\n");
 		/* XXX ID + Seq + Data */
 		break;
+	case ICMP_ROUTERADVERT:
+		(void)printf("Router Advertisement\n");
+		break;
+	case ICMP_ROUTERSOLICIT:
+		(void)printf("Router Solicitation\n");
+		break;
 	case ICMP_TIMXCEED:
 		switch (icp->icmp_code) {
 		case ICMP_TIMXCEED_INTRANS:
@@ -1542,12 +1548,6 @@ pr_icmph(struct icmp *icp)
 		break;
 	case ICMP_MASKREPLY:
 		(void)printf("Address Mask Reply\n");
-		break;
-	case ICMP_ROUTERADVERT:
-		(void)printf("Router Advertisement\n");
-		break;
-	case ICMP_ROUTERSOLICIT:
-		(void)printf("Router Solicitation\n");
 		break;
 	default:
 		(void)printf("Bad ICMP type: %d\n", icp->icmp_type);
