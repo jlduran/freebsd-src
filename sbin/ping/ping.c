@@ -1626,10 +1626,10 @@ pr_retip(struct ip *ip)
 	hlen = ip->ip_hl << 2;
 	cp = (u_char *)ip + hlen;
 
-	if (ip->ip_p == 6)
+	if (ip->ip_p == IPPROTO_TCP)
 		(void)printf("TCP: from port %u, to port %u (decimal)\n",
 		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
-	else if (ip->ip_p == 17)
+	else if (ip->ip_p == IPPROTO_UDP)
 		(void)printf("UDP: from port %u, to port %u (decimal)\n",
 		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
 }
