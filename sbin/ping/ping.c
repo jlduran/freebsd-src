@@ -1609,7 +1609,9 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 		/* XXX ID + Seq + Data */
 		break;
 	case ICMP_ROUTERADVERT:
-		printf("Router Advertisement\n");
+		printf("Router Advertisement");
+		printf(" (%d entries, lifetime %d seconds)\n",
+		    icp->icmp_num_addrs, ntohs(icp->icmp_lifetime));
 		break;
 	case ICMP_ROUTERSOLICIT:
 		printf("Router Solicitation\n");
