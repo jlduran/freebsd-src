@@ -1707,10 +1707,10 @@ pr_retip(struct ip *ip, const u_char *cp)
 {
 	pr_iph(ip);
 
-	if (ip->ip_p == 6)
+	if (ip->ip_p == IPPROTO_TCP)
 		(void)printf("TCP: from port %u, to port %u (decimal)\n",
 		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
-	else if (ip->ip_p == 17)
+	else if (ip->ip_p == IPPROTO_UDP)
 		(void)printf("UDP: from port %u, to port %u (decimal)\n",
 		    (*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
 }
