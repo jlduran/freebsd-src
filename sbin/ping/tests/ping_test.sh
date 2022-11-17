@@ -401,6 +401,32 @@ pinger_wrong_reply_cleanup()
 	pinger_cleanup
 }
 
+atf_test_case pinger_unreach_df cleanup
+pinger_unreach_df_head()
+{
+	atf_set descr "Fragmentation Needed and DF Set"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_unreach_df_body()
+{
+	require_ipv4
+	atf_check -s exit:2 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 3 \
+	    --icmp_code 4 \
+	    --flags DF
+	atf_check -s exit:0 \
+	    diff -u std.out $(atf_get_srcdir)/pinger_unreach_df.out
+}
+pinger_unreach_df_cleanup()
+{
+	pinger_cleanup
+}
+
 atf_test_case pinger_unreach_opts cleanup
 pinger_unreach_opts_head()
 {
@@ -531,6 +557,7 @@ atf_init_test_cases()
 	atf_add_test_case pinger_redirect_reply
 	atf_add_test_case pinger_warp_reply
 	atf_add_test_case pinger_wrong_reply
+	atf_add_test_case pinger_unreach_df
 	atf_add_test_case pinger_unreach_opts
 	atf_add_test_case pinger_unreach_tcp
 	atf_add_test_case pinger_unreach_udp
