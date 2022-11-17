@@ -21,6 +21,7 @@ ${PACKAGE}FILES+= pinger_redirect_reply.out
 ${PACKAGE}FILES+= pinger_reply_dup.out
 ${PACKAGE}FILES+= pinger_reply_opts.out
 ${PACKAGE}FILES+= pinger_timestamp_reply.out
+${PACKAGE}FILES+= pinger_unreach_df.out
 ${PACKAGE}FILES+= pinger_unreach_opts.out
 ${PACKAGE}FILES+= pinger_unreach_tcp.out
 ${PACKAGE}FILES+= pinger_unreach_udp.out
