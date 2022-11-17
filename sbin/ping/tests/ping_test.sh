@@ -28,18 +28,7 @@
 #
 # $FreeBSD$
 
-require_ipv4()
-{
-	if ! getaddrinfo -f inet localhost 1>/dev/null 2>&1; then
-		atf_skip "IPv4 is not configured"
-	fi
-}
-require_ipv6()
-{
-	if ! getaddrinfo -f inet6 localhost 1>/dev/null 2>&1; then
-		atf_skip "IPv6 is not configured"
-	fi
-}
+. $(atf_get_srcdir)/common.subr
 
 atf_test_case ping_c1_s56_t1
 ping_c1_s56_t1_head()
