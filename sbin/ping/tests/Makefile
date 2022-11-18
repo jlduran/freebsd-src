@@ -16,6 +16,7 @@ ${PACKAGE}FILES+= ping_c1_s56_t1.out
 ${PACKAGE}FILES+= ping_c1_s56_t1_S127.out
 ${PACKAGE}FILES+= ping_c1_s8_t1_S1.out
 ${PACKAGE}FILES+= pinger.py
+${PACKAGE}FILES+= pinger_mask_reply.out
 ${PACKAGE}FILES+= pinger_reply_dup.out
 ${PACKAGE}FILES+= pinger_reply_opts.out
 ${PACKAGE}FILES+= pinger_unreach_opts.out
