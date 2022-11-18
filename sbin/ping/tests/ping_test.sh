@@ -636,8 +636,8 @@ check_ping_statistics()
 	    -e 's/hlim=[0-9]*/hlim=/' \
 	    -e 's/ttl=[0-9]*/ttl=/' \
 	    -e 's/time=[0-9.-]*/time=/g' \
-	    -e 's/cp:.*$/cp: x  x  x  x  x  x  x  x /g' \
-	    -e 's/dp:.*$/dp: x  x  x  x  x  x  x  x /g' \
+	    -e 's/cp:.*$/cp:  x  x  x  x  x  x  x  x /g' \
+	    -e 's/dp:.*$/dp:  x  x  x  x  x  x  x  x /g' \
 	    -e '/round-trip/s/[0-9.]//g' \
 	    "$1" >"$1".filtered
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
