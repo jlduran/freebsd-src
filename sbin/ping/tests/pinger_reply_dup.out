@@ -1,0 +1,8 @@
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+64 bytes from: icmp_seq=0 ttl= time= ms (DUP!)
+64 bytes from: icmp_seq=1 ttl= time= ms
+
+--- 192.0.2.2 ping statistics ---
+2 packets transmitted, 2 packets received, +1 duplicates, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
