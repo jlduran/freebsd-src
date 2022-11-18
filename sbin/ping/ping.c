@@ -1273,7 +1273,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 				if (*cp != *dp) {
 	printf("\nwrong data byte #%d should be 0x%x but was 0x%x",
 	    i, *dp, *cp);
-					printf("\ncp:");
+					printf("\ncp: ");
 					cp = (u_char*)(buf + hlen +
 					    offsetof(struct icmp, icmp_data));
 					for (i = 0; i < datalen; ++i, ++cp) {
@@ -1281,7 +1281,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 							printf("\n\t");
 						printf("%2x ", *cp);
 					}
-					printf("\ndp:");
+					printf("\ndp: ");
 					cp = &outpack[ICMP_MINLEN];
 					for (i = 0; i < datalen; ++i, ++cp) {
 						if ((i % 16) == 8)
