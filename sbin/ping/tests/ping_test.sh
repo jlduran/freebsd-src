@@ -1,3 +1,4 @@
+#!/usr/bin/env atf-sh
 #
 # SPDX-License-Identifier: BSD-2-Clause-FreeBSD
 #
