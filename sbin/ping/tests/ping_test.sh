@@ -158,12 +158,12 @@ atf_init_test_cases()
 
 check_ping_statistics()
 {
-	sed -e 's/0.[0-9]\{3\}//g' \
-	    -e 's/[1-9][0-9]*.[0-9]\{3\}//g' \
-	    -e 's/localhost ([0-9]\{1,3\}\(\.[0-9]\{1,3\}\)\{1,3\})/localhost/' \
+	sed -e 's/localhost ([0-9]\{1,3\}\(\.[0-9]\{1,3\}\)\{1,3\})/localhost/' \
 	    -e 's/from [0-9]\{1,3\}\(\.[0-9]\{1,3\}\)\{1,3\}/from/' \
 	    -e 's/ttl=[0-9][0-9]*/ttl=/' \
+	    -e 's/time=[0-9.-]*/time=/g' \
 	    -e 's/hlim=[0-9][0-9]*/hlim=/' \
+	    -e '/round-trip/s/[0-9.]//g' \
 	    "$1" >"$1".filtered
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
 }
