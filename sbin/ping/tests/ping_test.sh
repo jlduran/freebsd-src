@@ -273,6 +273,35 @@ pinger_mask_reply_cleanup()
 	pinger_cleanup
 }
 
+atf_test_case pinger_timestamp_reply cleanup
+pinger_timestamp_reply_head()
+{
+	atf_set descr "Timestamp Reply packet"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_timestamp_reply_body()
+{
+	require_ipv4
+	atf_check -s exit:0 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 14 \
+	    --icmp_code 0 \
+	    --icmp_otime 1000 \
+	    --icmp_rtime 2000 \
+	    --icmp_ttime 3000 \
+	    --request timestamp
+	check_ping_statistics std.out \
+	    $(atf_get_srcdir)/pinger_timestamp_reply.out
+}
+pinger_timestamp_reply_cleanup()
+{
+	pinger_cleanup
+}
+
 atf_test_case pinger_unreach_opts cleanup
 pinger_unreach_opts_head()
 {
@@ -344,6 +373,7 @@ atf_init_test_cases()
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
 	atf_add_test_case pinger_mask_reply
+	atf_add_test_case pinger_timestamp_reply
 	atf_add_test_case pinger_unreach_opts
 	atf_add_test_case pinger_pr_icmph
 }
