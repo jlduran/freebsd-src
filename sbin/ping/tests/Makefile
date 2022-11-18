@@ -19,6 +19,7 @@ ${PACKAGE}FILES+= pinger.py
 ${PACKAGE}FILES+= pinger_mask_reply.out
 ${PACKAGE}FILES+= pinger_reply_dup.out
 ${PACKAGE}FILES+= pinger_reply_opts.out
+${PACKAGE}FILES+= pinger_timestamp_reply.out
 ${PACKAGE}FILES+= pinger_unreach_opts.out
 
 ${PACKAGE}FILESMODE_pinger.py=	0555

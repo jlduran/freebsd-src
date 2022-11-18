@@ -1,0 +1,7 @@
+ICMP_TSTAMP
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+76 bytes from: icmp_seq=0 ttl= time= ms tso=00:00:01 tsr=00:00:02 tst=00:00:03
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
