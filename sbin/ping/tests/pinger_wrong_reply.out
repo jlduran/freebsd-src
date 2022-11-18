@@ -1,0 +1,16 @@
+PATTERN: 0x01
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+wrong data byte #55 should be 0x1 but was 0x0
+cp: x  x  x  x  x  x  x  x 
+	 1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1 
+	 1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1 
+	 1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  0 
+dp: x  x  x  x  x  x  x  x 
+	 1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1 
+	 1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1 
+	 1  1  1  1  1  1  1  1  1  1  1  1  1  1  1  1 
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms

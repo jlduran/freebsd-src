@@ -314,6 +314,31 @@ pinger_timestamp_reply_cleanup()
 	pinger_cleanup
 }
 
+atf_test_case pinger_wrong_reply cleanup
+pinger_wrong_reply_head()
+{
+	atf_set descr "Malformed Echo Reply packet"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_wrong_reply_body()
+{
+	require_ipv4
+	atf_check -s exit:0 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 0 \
+	    --icmp_code 0 \
+	    --special wrong
+	check_ping_statistics std.out $(atf_get_srcdir)/pinger_wrong_reply.out
+}
+pinger_wrong_reply_cleanup()
+{
+	pinger_cleanup
+}
+
 atf_test_case pinger_unreach_opts cleanup
 pinger_unreach_opts_head()
 {
@@ -387,6 +412,7 @@ atf_init_test_cases()
 	atf_add_test_case pinger_reply_opts
 	atf_add_test_case pinger_mask_reply
 	atf_add_test_case pinger_timestamp_reply
+	atf_add_test_case pinger_wrong_reply
 	atf_add_test_case pinger_unreach_opts
 	atf_add_test_case pinger_pr_icmph
 }
@@ -398,6 +424,8 @@ check_ping_statistics()
 	    -e 's/hlim=[0-9]*/hlim=/' \
 	    -e 's/ttl=[0-9]*/ttl=/' \
 	    -e 's/time=[0-9.-]*/time=/g' \
+	    -e 's/cp:.*$/cp: x  x  x  x  x  x  x  x /g' \
+	    -e 's/dp:.*$/dp: x  x  x  x  x  x  x  x /g' \
 	    -e '/round-trip/s/[0-9.]//g' \
 	    "$1" >"$1".filtered
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
