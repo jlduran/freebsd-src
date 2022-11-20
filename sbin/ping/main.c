@@ -216,12 +216,13 @@ usage(void)
 	    "[-b bufsiz] [-c count] [-e gateway]\n"
 	    "\t    [-I interface] [-i wait] [-k addrtype] [-l preload] "
 	    "[-m hoplimit]\n"
-	    "\t    [-p pattern]"
+	    "\t    "
 #if defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
-	    " [-P policy]"
+	    "[-P policy] "
 #endif
-	    " [-S sourceaddr] [-s packetsize] [-t timeout]\n"
-	    "\t    [-W waittime] [-z tclass] [IPv6-hops ...] IPv6-host\n"
+	    "[-p pattern] [-S sourceaddr] [-s packetsize]\n"
+	    "\t    [-t timeout] [-W waittime] [-z tclass] [IPv6-hops ...] "
+	    "IPv6-host\n"
 #endif	/* INET6 */
 	    );
 
