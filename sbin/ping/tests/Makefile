@@ -23,6 +23,7 @@ ${PACKAGE}FILES+= pinger_reply_opts.out
 ${PACKAGE}FILES+= pinger_timestamp_reply.out
 ${PACKAGE}FILES+= pinger_unreach_opts.out
 ${PACKAGE}FILES+= pinger_unreach_tcp.out
+${PACKAGE}FILES+= pinger_unreach_udp.out
 ${PACKAGE}FILES+= pinger_warp_reply.out
 ${PACKAGE}FILES+= pinger_wrong_reply.out
 
