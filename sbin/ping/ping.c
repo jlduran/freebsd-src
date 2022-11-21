@@ -1489,9 +1489,12 @@ check_status(void)
 		(void)fprintf(stderr, "\r%ld/%ld packets received (%.1f%%)",
 		    nreceived, ntransmitted,
 		    ntransmitted ? nreceived * 100.0 / ntransmitted : 0.0);
-		if (nreceived && timing)
-			(void)fprintf(stderr, " %.3f min / %.3f avg / %.3f max",
-			    tmin, tsum / (nreceived + nrepeats), tmax);
+		if (nreceived && timing) {
+			double n = nreceived + nrepeats;
+			double avg = tsum / n;
+			(void)fprintf(stderr, " round-trip min/avg/max = "
+			    "%.3f/%.3f/%.3f ms", tmin, avg, tmax);
+		}
 		(void)fprintf(stderr, "\n");
 	}
 }
