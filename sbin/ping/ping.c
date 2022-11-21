@@ -1461,8 +1461,9 @@ check_status(void)
 		    nreceived, ntransmitted,
 		    ntransmitted ? nreceived * 100.0 / ntransmitted : 0.0);
 		if (nreceived && timing)
-			fprintf(stderr, " %.3f min / %.3f avg / %.3f max",
-			    tmin, tsum / (nreceived + nrepeats), tmax);
+			fprintf(stderr, " round-trip min/avg/max = "
+			    "%.3f/%.3f/%.3f ms", tmin,
+			    tsum / (nreceived + nrepeats), tmax);
 		fprintf(stderr, "\n");
 	}
 }
