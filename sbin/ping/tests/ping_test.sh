@@ -270,6 +270,32 @@ pinger_reply_opts_cleanup()
 	pinger_cleanup
 }
 
+atf_test_case pinger_reply_unk_opts cleanup
+pinger_reply_unk_opts_head()
+{
+	atf_set descr "Echo Reply packet with unknown IP options"
+	atf_set require.user root
+	atf_set require.progs scapy
+}
+pinger_reply_unk_opts_body()
+{
+	require_ipv4
+	atf_check -s exit:0 -o save:std.out -e empty \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 0 \
+	    --icmp_code 0 \
+	    --opts unk
+	check_ping_statistics std.out \
+	    $(atf_get_srcdir)/pinger_reply_unk_opts.out
+}
+pinger_reply_unk_opts_cleanup()
+{
+	pinger_cleanup
+}
+
 atf_test_case pinger_mask_reply cleanup
 pinger_mask_reply_head()
 {
@@ -615,6 +641,7 @@ atf_init_test_cases()
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
+	atf_add_test_case pinger_reply_unk_opts
 	atf_add_test_case pinger_mask_reply
 	atf_add_test_case pinger_paramprob_reply
 	atf_add_test_case pinger_timestamp_reply

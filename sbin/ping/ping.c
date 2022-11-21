@@ -1351,7 +1351,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 			printf("\nNOP");
 			break;
 		default:
-			printf("\nunknown option %x", *cp);
+			printf("\nunknown option 0x%x", *cp);
 			break;
 		}
 	if (!(options & F_DOT)) {
