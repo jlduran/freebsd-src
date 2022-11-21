@@ -1682,7 +1682,7 @@ pr_iph(struct ip *ip)
 	printf(" %*s  %*s", (int)strlen(inet_ntoa(src_ina)), "Src",
 	    (int)strlen(inet_ntoa(dst_ina)), "Dst");
 	if (hlen > (int)sizeof(struct ip))
-		printf(" Data");
+		printf(" Opts");
 	putchar('\n');
 	printf(" %1x  %1x  %02x %04x %04x",
 	    ip->ip_v, ip->ip_hl, ip->ip_tos, ntohs(ip->ip_len),
