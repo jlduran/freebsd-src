@@ -1617,20 +1617,19 @@ pr_iph(struct ip *ip)
 	memcpy(&src_ina, &ip->ip_src.s_addr, sizeof(src_ina));
 	memcpy(&dst_ina, &ip->ip_dst.s_addr, sizeof(dst_ina));
 
-	printf("Vr HL TOS  Len   ID Flg  off TTL Pro  cks");
-	printf(" %*s  %*s", (int)strlen(inet_ntoa(src_ina)), "Src",
-	    (int)strlen(inet_ntoa(dst_ina)), "Dst");
+	printf("Vr HL TOS Len  ID   Flg Off  TTL Pro Cksm");
+	printf(" %s %*s", "Src", (int)strlen(inet_ntoa(src_ina)), "Dst");
 	if (hlen > (int)sizeof(struct ip))
-		printf(" Opts");
+		printf("  %*s", (int)strlen(inet_ntoa(dst_ina)), "Opts");
 	putchar('\n');
-	printf(" %1x  %1x  %02x %04x %04x",
+	printf("%1x  %1x  %02x  %04x %04x",
 	    ip->ip_v, ip->ip_hl, ip->ip_tos, ntohs(ip->ip_len),
 	    ntohs(ip->ip_id));
-	printf("   %1x %04x",
+	printf(" %1x   %04x",
 	    (ntohs(ip->ip_off) & 0xe000) >> 13,
 	    ntohs(ip->ip_off) & 0x1fff);
-	printf("  %02x  %02x %04x", ip->ip_ttl, ip->ip_p, ntohs(ip->ip_sum));
-	printf(" %s ", inet_ntoa(src_ina));
+	printf(" %02x  %02x  %04x", ip->ip_ttl, ip->ip_p, ntohs(ip->ip_sum));
+	printf(" %s", inet_ntoa(src_ina));
 	printf(" %s ", inet_ntoa(dst_ina));
 	/* dump any option bytes */
 	while (hlen-- > 20) {
