@@ -30,6 +30,7 @@
 
 . $(atf_get_srcdir)/common.subr
 . $(atf_get_srcdir)/icmp_control_messages.subr
+. $(atf_get_srcdir)/vnet.subr
 
 atf_test_case ping_c1_s56_t1
 ping_c1_s56_t1_head()
@@ -205,10 +206,14 @@ pinger_reply_head()
 pinger_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 \
 	    -o match:"1 packets transmitted, 1 packets received" \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
@@ -229,9 +234,13 @@ pinger_reply_dup_head()
 pinger_reply_dup_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
@@ -255,9 +264,13 @@ pinger_reply_opts_head()
 pinger_reply_opts_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
@@ -280,9 +293,13 @@ pinger_reply_unk_opts_head()
 pinger_reply_unk_opts_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
@@ -306,9 +323,13 @@ pinger_mask_reply_head()
 pinger_mask_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 18 \
@@ -332,9 +353,13 @@ pinger_redirect_reply_head()
 pinger_redirect_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 5 \
@@ -344,8 +369,8 @@ pinger_redirect_reply_body()
 	    diff -u std.out $(atf_get_srcdir)/pinger_redirect_reply.out
 
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 5 \
@@ -368,9 +393,13 @@ pinger_paramprob_reply_head()
 pinger_paramprob_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 12 \
@@ -394,9 +423,13 @@ pinger_timestamp_reply_head()
 pinger_timestamp_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 14 \
@@ -423,9 +456,13 @@ pinger_warp_reply_head()
 pinger_warp_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
@@ -448,9 +485,13 @@ pinger_wrong_reply_head()
 pinger_wrong_reply_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:0 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
@@ -473,9 +514,13 @@ pinger_unreach_df_head()
 pinger_unreach_df_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 3 \
@@ -499,9 +544,13 @@ pinger_unreach_nextmtu_head()
 pinger_unreach_nextmtu_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 3 \
@@ -528,9 +577,13 @@ pinger_unreach_opts_body()
 {
 	atf_skip "D37210"
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 3 \
@@ -555,9 +608,13 @@ pinger_unreach_tcp_head()
 pinger_unreach_tcp_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 3 \
@@ -582,9 +639,13 @@ pinger_unreach_udp_head()
 pinger_unreach_udp_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	atf_check -s exit:2 -o save:std.out -e empty \
-	    $(atf_get_srcdir)/pinger.py \
-	    --iface tun0 \
+	    jexec BRL $(atf_get_srcdir)/pinger.py \
+	    --iface $tun \
 	    --src 192.0.2.1 \
 	    --dst 192.0.2.2 \
 	    --icmp_type 3 \
@@ -608,11 +669,15 @@ pinger_pr_icmph_head()
 pinger_pr_icmph_body()
 {
 	require_ipv4
+	pinger_init
+
+	tun=$(vnet_mktun)
+	vnet_mkjail BRL $tun
 	icmp_control_messages | while read -r type code description; do
 		atf_check -s exit:2 \
 		    -o match:"$description" \
-		    $(atf_get_srcdir)/pinger.py \
-		    --iface tun0 \
+		    jexec BRL $(atf_get_srcdir)/pinger.py \
+		    --iface $tun \
 		    --src 192.0.2.1 \
 		    --dst 192.0.2.2 \
 		    --icmp_type "$type" \
@@ -671,15 +736,15 @@ check_ping_statistics()
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
 }
 
+pinger_init()
+{
+	vnet_init
+}
+
 pinger_cleanup()
 {
-	if [ -f created_interfaces.lst ]; then
-		for ifname in `cat created_interfaces.lst`
-		do
-			ifconfig ${ifname} destroy
-		done
-		rm created_interfaces.lst
-	fi
+	vnet_cleanup
+
 	rm -f std.out
 	rm -f std.out.filtered
 }
