@@ -31,6 +31,7 @@ ${PACKAGE}FILES+= pinger_unreach_tcp.out
 ${PACKAGE}FILES+= pinger_unreach_udp.out
 ${PACKAGE}FILES+= pinger_warp_reply.out
 ${PACKAGE}FILES+= pinger_wrong_reply.out
+${PACKAGE}FILES+= vnet.subr
 
 ${PACKAGE}FILESMODE_pinger.py=	0555
 
