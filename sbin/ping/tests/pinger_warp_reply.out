@@ -4,4 +4,4 @@ PING 192.0.2.2 (192.0.2.2): 56 data bytes
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss
-round-trip min/avg/max/stddev = -/-// ms
+round-trip min/avg/max/stddev = /// ms
