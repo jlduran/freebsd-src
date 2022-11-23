@@ -460,7 +460,8 @@ pinger_warp_reply_body()
 
 	tun=$(vnet_mktun)
 	vnet_mkjail BRL $tun
-	atf_check -s exit:0 -o save:std.out -e empty \
+	atf_check -s exit:0 -o save:std.out \
+	    -e match:"time of day goes back" \
 	    jexec BRL $(atf_get_srcdir)/pinger.py \
 	    --iface $tun \
 	    --src 192.0.2.1 \

@@ -1158,6 +1158,12 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 				timespecsub(tv, &tv1, tv);
 				triptime = ((double)tv->tv_sec) * 1000.0 +
 				    ((double)tv->tv_nsec) / 1000000.0;
+				if (triptime < 0) {
+					warnx("time of day goes back (%.3f ms),"
+					    " taking countermeasures",
+					    triptime);
+					triptime = 0;
+				}
 				tsum += triptime;
 				tsumsq += triptime * triptime;
 				if (triptime < tmin)
