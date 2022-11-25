@@ -1719,7 +1719,8 @@ fill(char *bp, char *patp)
 	for (cp = patp; *cp; cp++) {
 		if (!isxdigit(*cp))
 			errx(EX_USAGE,
-			    "patterns must be specified as hex digits");
+			    "patterns must be specified as hex digits: `%s'",
+			    cp);
 
 	}
 	ii = sscanf(patp,
