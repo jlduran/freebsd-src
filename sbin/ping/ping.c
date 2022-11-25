@@ -351,7 +351,7 @@ ping(int argc, char *const *argv)
 			}
 			options |= F_FLOOD;
 			options |= F_DOT;
-			setbuf(stdout, (char *)NULL);
+			setbuf(stdout, NULL);
 			break;
 		case 'G': /* Maximum packet size for ping sweep */
 			ltmp = strtonum(optarg, 1, INT_MAX, &errstr);
@@ -1596,7 +1596,7 @@ pr_addr(struct in_addr ina)
 	if (options & F_NUMERIC)
 		return inet_ntoa(ina);
 
-	hp = cap_gethostbyaddr(capdns, (char *)&ina, 4, AF_INET);
+	hp = cap_gethostbyaddr(capdns, &ina, 4, AF_INET);
 
 	if (hp == NULL)
 		return inet_ntoa(ina);
