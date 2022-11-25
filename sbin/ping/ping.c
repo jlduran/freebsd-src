@@ -1618,7 +1618,7 @@ pr_iph(struct ip *ip)
 	int hlen;
 
 	hlen = ip->ip_hl << 2;
-	cp = (u_char *)ip + 20;		/* point to options */
+	cp = (u_char *)ip + sizeof(struct ip);	/* point to options */
 
 	memcpy(&src_ina, &ip->ip_src.s_addr, sizeof(src_ina));
 	memcpy(&dst_ina, &ip->ip_dst.s_addr, sizeof(dst_ina));
@@ -1638,7 +1638,7 @@ pr_iph(struct ip *ip)
 	printf(" %s", inet_ntoa(src_ina));
 	printf(" %s ", inet_ntoa(dst_ina));
 	/* dump any option bytes */
-	while (hlen-- > 20) {
+	while (hlen-- > (int)sizeof(struct ip)) {
 		printf("%02x", *cp++);
 	}
 	putchar('\n');
@@ -1658,7 +1658,7 @@ pr_addr(struct in_addr ina)
 	if (options & F_NUMERIC)
 		return inet_ntoa(ina);
 
-	hp = cap_gethostbyaddr(capdns, &ina, 4, AF_INET);
+	hp = cap_gethostbyaddr(capdns, &ina, sizeof(struct in_addr), AF_INET);
 
 	if (hp == NULL)
 		return inet_ntoa(ina);
