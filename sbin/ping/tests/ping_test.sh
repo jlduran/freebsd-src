@@ -196,6 +196,17 @@ ping_Cx_body()
 	    ping -Cx localhost
 }
 
+ping_cx_head()
+{
+	atf_set descr "invalid count of packets to transmit"
+}
+ping_cx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid count of packets to transmit" \
+	    ping -cx localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -715,6 +726,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_a_c1_t1
 	atf_add_test_case ping_Mm_Mt
 	atf_add_test_case ping_Cx
+	atf_add_test_case ping_cx
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
