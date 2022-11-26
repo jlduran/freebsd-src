@@ -294,6 +294,17 @@ ping_h57_body()
 	    ping -h${sweepmin_1} localhost
 }
 
+ping_Iunknown_head()
+{
+	atf_set descr "invalid multicast interface"
+}
+ping_Iunknown_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid multicast interface" \
+	    ping -Iunknown localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -821,6 +832,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_g57
 	atf_add_test_case ping_hx
 	atf_add_test_case ping_h57
+	atf_add_test_case ping_Iunknown
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
