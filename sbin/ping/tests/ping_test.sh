@@ -338,6 +338,17 @@ ping_Mm_Mt_body()
 	    ping -Mm -Mt localhost
 }
 
+ping_mx_head()
+{
+	atf_set descr "invalid TTL"
+}
+ping_mx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid TTL" \
+	    ping -Mx localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -869,6 +880,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_l100
 	atf_add_test_case ping_Mx
 	atf_add_test_case ping_Mm_Mt
+	atf_add_test_case ping_mx
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
