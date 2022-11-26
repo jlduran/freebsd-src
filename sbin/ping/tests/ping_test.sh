@@ -218,6 +218,7 @@ ping_f_uid_body()
 	    ping -f localhost
 }
 
+# IPv4 only options
 ping_Gx_head()
 {
 	atf_set descr "invalid packet size"
@@ -227,6 +228,20 @@ ping_Gx_body()
 	atf_check -s exit:64 \
 	    -e match:"invalid packet size" \
 	    ping -Gx localhost
+}
+
+ping_G57_head()
+{
+	atf_set descr "packet size too large"
+}
+ping_G57_body()
+{
+	#sweepmax_1=$((DEFDATALEN + 1))
+	sweepmax_1=57
+
+	atf_check -s exit:66 \
+	    -e match:"packet size too large" \
+	    ping -G${sweepmax_1} localhost
 }
 
 ping_px_head()
@@ -751,6 +766,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_cx
 	atf_add_test_case ping_f_uid
 	atf_add_test_case ping_Gx
+	atf_add_test_case ping_G57
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
