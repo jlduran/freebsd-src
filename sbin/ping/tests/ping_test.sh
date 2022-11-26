@@ -244,6 +244,31 @@ ping_G57_body()
 	    ping -G${sweepmax_1} localhost
 }
 
+ping_gx_head()
+{
+	atf_set descr "invalid packet size"
+}
+ping_gx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid packet size" \
+	    ping -gx localhost
+}
+
+ping_g57_head()
+{
+	atf_set descr "packet size too large"
+}
+ping_g57_body()
+{
+	#sweepmin_1=$((DEFDATALEN + 1))
+	sweepmin_1=57
+
+	atf_check -s exit:66 \
+	    -e match:"packet size too large" \
+	    ping -g${sweepmin_1} localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
