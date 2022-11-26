@@ -28,7 +28,7 @@
 .\"     @(#)ping.8	8.2 (Berkeley) 12/11/93
 .\" $FreeBSD$
 .\"
-.Dd November 20, 2022
+.Dd January 10, 2023
 .Dt PING 8
 .Os
 .Sh NAME
@@ -429,6 +429,20 @@ Set the IP Time To Live for multicasted packets.
 This flag only applies if the ping destination is a multicast address.
 .It Fl z Ar tos
 Use the specified type of service.
+.Ar tos
+may be given as one of
+.Ar critical ,
+.Ar inetcontrol ,
+.Ar lowdelay ,
+.Ar netcontrol ,
+.Ar throughput ,
+.Ar reliability ,
+or one of the DiffServ Code Points:
+.Ar ef ,
+.Ar va ,
+.Ar af11 No ... Ar af43 ,
+.Ar cs0 No ... Ar cs7 ;
+or as either hex or decimal.
 .It Ar IPv4-host
 hostname or IPv4 address of the final destination node.
 .It Ar IPv4-mcast-group

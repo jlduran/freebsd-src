@@ -698,6 +698,63 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
             },
             id="_q_c3_2001_db8__2",
         ),
+        pytest.param(
+            {
+                "args": "ping -4 -zx localhost",
+                "returncode": os.EX_USAGE,
+                "stdout": "",
+                "stderr": "ping: invalid TOS: `x'\n",
+            },
+            id="_4_zx_localhost",
+        ),
+        pytest.param(
+            {
+                "args": "ping -4 -c1 -z48 localhost",
+                "returncode": 0,
+                "stdout": """\
+PING localhost: 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+
+--- localhost ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
+""",
+                "stderr": "",
+            },
+            id="_4_c1_z48_localhost",
+        ),
+        pytest.param(
+            {
+                "args": "ping -4 -c1 -z0x30 localhost",
+                "returncode": 0,
+                "stdout": """\
+PING localhost: 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+
+--- localhost ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
+""",
+                "stderr": "",
+            },
+            id="_4_c1_z0x30_localhost",
+        ),
+        pytest.param(
+            {
+                "args": "ping -4 -c1 -zinetcontrol localhost",
+                "returncode": 0,
+                "stdout": """\
+PING localhost: 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+
+--- localhost ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
+""",
+                "stderr": "",
+            },
+            id="_4_c1_zinetcontrol_localhost",
+        ),
     ]
 
     @pytest.mark.parametrize("expected", testdata)

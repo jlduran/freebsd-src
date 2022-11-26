@@ -128,6 +128,11 @@ struct tv32 {
 	int32_t tv32_nsec;
 };
 
+struct keywords {
+	const char	*k_name;
+	int		 k_val;
+};
+
 /* various options */
 static int options;
 #define	F_FLOOD		0x0001
@@ -226,6 +231,8 @@ static char *pr_addr(struct in_addr);
 static char *pr_ntime(n_time);
 static void pr_icmph(struct icmp *, struct ip *, const u_char *const);
 static void pr_iph(struct ip *);
+static int kw_casecmp(const void *, const void *);
+static int map_tos(char *string, int *);
 static void pr_pack(char *, ssize_t, struct sockaddr_in *, struct timespec *);
 static void pr_retip(struct ip *, const u_char *);
 static void status(int);
@@ -544,8 +551,15 @@ ping(int argc, char *const *argv)
 			break;
 		case 'z':
 			options |= F_HDRINCL;
-			ltmp = strtol(optarg, &ep, 0);
-			if (*ep || ep == optarg || ltmp > MAXTOS || ltmp < 0)
+			if (map_tos(optarg, &tos))
+				break;
+			if (strlen(optarg) > 1 && optarg[0] == '0' &&
+			    optarg[1] == 'x')
+				ltmp = strtol(optarg, &ep, 16);
+			else
+				ltmp = strtonum(optarg, 0, MAXTOS, &errstr);
+			if (*ep || ep == optarg || ltmp > MAXTOS || ltmp < 0 ||
+			    errstr || errno)
 				errx(EX_USAGE, "invalid TOS: `%s'", optarg);
 			tos = ltmp;
 			break;
@@ -1735,6 +1749,58 @@ pr_retip(struct ip *ip, const u_char *cp)
 	else if (ip->ip_p == 17)
 		(void)printf("UDP: from port %u, to port %u (decimal)\n",
 			(*cp * 256 + *(cp + 1)), (*(cp + 2) * 256 + *(cp + 3)));
+}
+
+static int
+kw_casecmp(const void *k, const void *e)
+{
+	return (strcasecmp(k, ((const struct keywords *)e)->k_name));
+}
+
+static int
+map_tos(char *s, int *val)
+{
+	/* DiffServ Codepoints and other TOS mappings */
+	const struct keywords	 toswords[] = {
+		{ "af11",		IPTOS_DSCP_AF11 },
+		{ "af12",		IPTOS_DSCP_AF12 },
+		{ "af13",		IPTOS_DSCP_AF13 },
+		{ "af21",		IPTOS_DSCP_AF21 },
+		{ "af22",		IPTOS_DSCP_AF22 },
+		{ "af23",		IPTOS_DSCP_AF23 },
+		{ "af31",		IPTOS_DSCP_AF31 },
+		{ "af32",		IPTOS_DSCP_AF32 },
+		{ "af33",		IPTOS_DSCP_AF33 },
+		{ "af41",		IPTOS_DSCP_AF41 },
+		{ "af42",		IPTOS_DSCP_AF42 },
+		{ "af43",		IPTOS_DSCP_AF43 },
+		{ "critical",		IPTOS_PREC_CRITIC_ECP },
+		{ "cs0",		IPTOS_DSCP_CS0 },
+		{ "cs1",		IPTOS_DSCP_CS1 },
+		{ "cs2",		IPTOS_DSCP_CS2 },
+		{ "cs3",		IPTOS_DSCP_CS3 },
+		{ "cs4",		IPTOS_DSCP_CS4 },
+		{ "cs5",		IPTOS_DSCP_CS5 },
+		{ "cs6",		IPTOS_DSCP_CS6 },
+		{ "cs7",		IPTOS_DSCP_CS7 },
+		{ "ef",			IPTOS_DSCP_EF },
+		{ "inetcontrol",	IPTOS_PREC_INTERNETCONTROL },
+		{ "lowdelay",		IPTOS_LOWDELAY },
+		{ "netcontrol",		IPTOS_PREC_NETCONTROL },
+		{ "reliability",	IPTOS_RELIABILITY },
+		{ "throughput",		IPTOS_THROUGHPUT },
+		{ "va",			IPTOS_DSCP_VA },
+	};
+	const struct keywords	*p;
+
+	p = bsearch(s, toswords, nitems(toswords), sizeof(toswords[0]),
+	    kw_casecmp);
+
+	if (p) {
+		*val = p->k_val;
+		return (1);
+	}
+	return (0);
 }
 
 static char *
