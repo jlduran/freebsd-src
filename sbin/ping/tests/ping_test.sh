@@ -32,6 +32,8 @@
 . $(atf_get_srcdir)/icmp_control_messages.subr
 . $(atf_get_srcdir)/vnet.subr
 
+MAXALARM=$((60 * 60))
+
 atf_test_case ping_c1_s56_t1
 ping_c1_s56_t1_head()
 {
@@ -392,6 +394,32 @@ ping_s57_body()
 	atf_check -s exit:66 \
 	    -e match:"packet size too large" \
 	    ping -s57 localhost
+}
+
+ping_Tx_head()
+{
+	atf_set descr "invalid multicast TTL"
+}
+ping_Tx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid multicast TTL" \
+	    ping -Tx localhost
+}
+
+ping_tx_head()
+{
+	atf_set descr "invalid timeout"
+}
+ping_tx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid timeout" \
+	    ping -tx localhost
+
+	atf_check -s exit:64 \
+	    -e match:"invalid timeout" \
+	    ping -t$((MAXALARM + 1)) localhost
 }
 
 atf_test_case pinger_reply cleanup
@@ -919,6 +947,8 @@ atf_init_test_cases()
 	atf_add_test_case ping_px
 	atf_add_test_case ping_sx
 	atf_add_test_case ping_s57
+	atf_add_test_case ping_Tx
+	atf_add_test_case ping_tx
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
