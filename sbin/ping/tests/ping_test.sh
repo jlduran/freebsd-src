@@ -305,6 +305,28 @@ ping_Iunknown_body()
 	    ping -Iunknown localhost
 }
 
+ping_lx_head()
+{
+	atf_set descr "invalid preload value"
+}
+ping_lx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid preload value" \
+	    ping -hx localhost
+}
+
+ping_l100_head()
+{
+	atf_set descr "-l flag"
+}
+ping_l100_body()
+{
+	atf_check -s exit:66 \
+	    -e match:"-l flag" \
+	    ping -l100 localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -833,6 +855,8 @@ atf_init_test_cases()
 	atf_add_test_case ping_hx
 	atf_add_test_case ping_h57
 	atf_add_test_case ping_Iunknown
+	atf_add_test_case ping_lx
+	atf_add_test_case ping_l100
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
