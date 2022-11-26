@@ -269,6 +269,31 @@ ping_g57_body()
 	    ping -g${sweepmin_1} localhost
 }
 
+ping_hx_head()
+{
+	atf_set descr "sweepincr invalid packet size"
+}
+ping_hx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid packet size" \
+	    ping -hx localhost
+}
+
+ping_h57_head()
+{
+	atf_set descr "sweepincr packet size too large"
+}
+ping_h57_body()
+{
+	#sweepmin_1=$((DEFDATALEN + 1))
+	sweepmin_1=57
+
+	atf_check -s exit:66 \
+	    -e match:"packet size too large" \
+	    ping -h${sweepmin_1} localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -792,6 +817,10 @@ atf_init_test_cases()
 	atf_add_test_case ping_f_uid
 	atf_add_test_case ping_Gx
 	atf_add_test_case ping_G57
+	atf_add_test_case ping_gx
+	atf_add_test_case ping_g57
+	atf_add_test_case ping_hx
+	atf_add_test_case ping_h57
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
