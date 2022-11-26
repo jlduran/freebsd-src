@@ -422,6 +422,17 @@ ping_tx_body()
 	    ping -t$((MAXALARM + 1)) localhost
 }
 
+ping_Wx_head()
+{
+	atf_set descr "invalid timing interval"
+}
+ping_Wx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid timing interval" \
+	    ping -Wx localhost
+}
+
 atf_test_case pinger_reply cleanup
 pinger_reply_head()
 {
@@ -949,6 +960,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_s57
 	atf_add_test_case ping_Tx
 	atf_add_test_case ping_tx
+	atf_add_test_case ping_Wx
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
