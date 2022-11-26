@@ -372,6 +372,28 @@ ping_px_body()
 	    ping -px localhost
 }
 
+ping_sx_head()
+{
+	atf_set descr "invalid packet size"
+}
+ping_sx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid packet size" \
+	    ping -sx localhost
+}
+
+ping_s57_head()
+{
+	atf_set descr "datalen packet size too large"
+}
+ping_s57_body()
+{
+	atf_check -s exit:66 \
+	    -e match:"packet size too large" \
+	    ping -s57 localhost
+}
+
 atf_test_case pinger_reply cleanup
 pinger_reply_head()
 {
@@ -895,6 +917,8 @@ atf_init_test_cases()
 	atf_add_test_case ping_mx
 	atf_add_test_case ping_Px
 	atf_add_test_case ping_px
+	atf_add_test_case ping_sx
+	atf_add_test_case ping_s57
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
