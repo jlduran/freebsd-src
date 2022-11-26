@@ -145,18 +145,6 @@ ping6_46_body()
 	    ping6 -4 -6 localhost
 }
 
-ping_Mm_Mt_head()
-{
-	atf_set descr "ICMP_TSTAMP and ICMP_MASKREQ are exclusive"
-}
-ping_Mm_Mt_body()
-{
-	require_ipv4
-	atf_check -s exit:64 \
-	    -e match:"ICMP_TSTAMP and ICMP_MASKREQ are exclusive." \
-	    ping -Mm -Mt localhost
-}
-
 ping_A_c2_t2_head()
 {
 	atf_set descr "Audible character when no packet is received"
@@ -325,6 +313,29 @@ ping_l100_body()
 	atf_check -s exit:66 \
 	    -e match:"-l flag" \
 	    ping -l100 localhost
+}
+
+ping_Mx_head()
+{
+	atf_set descr "invalid message"
+}
+ping_Mx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid message" \
+	    ping -Mx localhost
+}
+
+ping_Mm_Mt_head()
+{
+	atf_set descr "ICMP_TSTAMP and ICMP_MASKREQ are exclusive"
+}
+ping_Mm_Mt_body()
+{
+	require_ipv4
+	atf_check -s exit:64 \
+	    -e match:"ICMP_TSTAMP and ICMP_MASKREQ are exclusive." \
+	    ping -Mm -Mt localhost
 }
 
 ping_px_head()
@@ -844,7 +855,6 @@ atf_init_test_cases()
 	atf_add_test_case ping6_46
 	atf_add_test_case ping_A_c2_t2
 	atf_add_test_case ping_a_c1_t1
-	atf_add_test_case ping_Mm_Mt
 	atf_add_test_case ping_Cx
 	atf_add_test_case ping_cx
 	atf_add_test_case ping_f_uid
@@ -857,6 +867,8 @@ atf_init_test_cases()
 	atf_add_test_case ping_Iunknown
 	atf_add_test_case ping_lx
 	atf_add_test_case ping_l100
+	atf_add_test_case ping_Mx
+	atf_add_test_case ping_Mm_Mt
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
