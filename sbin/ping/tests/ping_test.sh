@@ -207,6 +207,17 @@ ping_cx_body()
 	    ping -cx localhost
 }
 
+ping_f_uid_head()
+{
+	atf_set descr "-f flag"
+}
+ping_f_uid_body()
+{
+	atf_check -s exit:66 \
+	    -e match:"-f flag" \
+	    ping -f localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -727,6 +738,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_Mm_Mt
 	atf_add_test_case ping_Cx
 	atf_add_test_case ping_cx
+	atf_add_test_case ping_f_uid
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
