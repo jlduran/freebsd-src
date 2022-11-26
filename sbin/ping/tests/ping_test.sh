@@ -433,6 +433,17 @@ ping_Wx_body()
 	    ping -Wx localhost
 }
 
+ping_zx_head()
+{
+	atf_set descr "invalid TOS"
+}
+ping_zx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid TOS" \
+	    ping -zx localhost
+}
+
 atf_test_case pinger_reply cleanup
 pinger_reply_head()
 {
@@ -961,6 +972,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_Tx
 	atf_add_test_case ping_tx
 	atf_add_test_case ping_Wx
+	atf_add_test_case ping_zx
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
 	atf_add_test_case pinger_reply_opts
