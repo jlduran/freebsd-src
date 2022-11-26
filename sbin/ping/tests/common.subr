@@ -1,5 +1,13 @@
 # Common utility functions
 
+require_ipsec()
+{
+	kldstat -q -n ipsec ||
+	    if ! kldload ipsec 1>/dev/null 2>&1; then
+		atf_skip "IPsec is not configured"
+	    fi
+}
+
 require_ipv4()
 {
 	if ! getaddrinfo -f inet localhost 1>/dev/null 2>&1; then
