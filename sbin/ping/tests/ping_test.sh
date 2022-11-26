@@ -218,6 +218,17 @@ ping_f_uid_body()
 	    ping -f localhost
 }
 
+ping_Gx_head()
+{
+	atf_set descr "invalid packet size"
+}
+ping_Gx_body()
+{
+	atf_check -s exit:64 \
+	    -e match:"invalid packet size" \
+	    ping -Gx localhost
+}
+
 ping_px_head()
 {
 	atf_set descr "patterns must be specified as hex digits"
@@ -739,6 +750,7 @@ atf_init_test_cases()
 	atf_add_test_case ping_Cx
 	atf_add_test_case ping_cx
 	atf_add_test_case ping_f_uid
+	atf_add_test_case ping_Gx
 	atf_add_test_case ping_px
 	atf_add_test_case pinger_reply
 	atf_add_test_case pinger_reply_dup
