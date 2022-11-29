@@ -2,7 +2,7 @@ net.inet.ip.process_options: 1 -> 0
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 wrong total length 88 instead of 84
-unknown option 0x99
+unknown option 0x9f
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss

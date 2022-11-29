@@ -120,23 +120,19 @@ def generate_ip_options(opts):
     elif opts == "NOP":
         options=sc.IPOption(b"\x01" * 40)
     elif opts == "RR":
-        options=sc.IPOption(b"\x07")
         # options.pointer=3  # same route
         #options.length=7 # truncated route
         #options[0].routers=routers_t # truncated route
-        options.pointer=40
-        options[0].routers=routers
+        options=sc.IPOption_RR(pointer=40, routers=routers)
     elif opts == "LSRR":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
-        options=sc.IPOption(b"\x83")
-        options[0].routers=routers
+        options=sc.IPOption_LSRR(routers=routers)
     elif opts == "SSRR":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
-        options=sc.IPOption(b"\x89")
-        options[0].routers=routers
+        options=sc.IPOption_SSRR(routers=routers)
     elif opts == "unk":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
-        options=sc.IPOption(b"\x99")
+        options=sc.IPOption(b"\x9f")
     else:
         options=""
     return options
