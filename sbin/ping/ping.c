@@ -225,7 +225,7 @@ static void pinger(void);
 static char *pr_addr(struct in_addr);
 static char *pr_ntime(n_time);
 static void pr_icmph(struct icmp *, struct ip *, const u_char *const);
-static void pr_iph(struct ip *);
+static void pr_iph(struct ip *, const u_char *);
 static void pr_pack(char *, ssize_t, struct sockaddr_in *, struct timespec *);
 static void pr_retip(struct ip *, const u_char *);
 static void status(int);
@@ -1132,7 +1132,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 	struct icmp icp;
 	struct ip ip;
 	const u_char *icmp_data_raw;
-	ssize_t icmp_data_raw_len;
+	ssize_t oip_header_len;
 	double triptime;
 	int dupflag, i, j, recv_len;
 	uint8_t hlen;
@@ -1140,7 +1140,6 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 	static int old_rrlen;
 	static char old_rr[MAX_IPOPTLEN];
 	struct ip oip;
-	u_char oip_header_len;
 	struct icmp oicmp;
 	const u_char *oicmp_raw;
 
@@ -1154,18 +1153,9 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 	 */
 	memcpy(&l, buf, sizeof(l));
 	hlen = (l & 0x0f) << 2;
-
-	/* Reject IP packets with a short header */
-	if (hlen < sizeof(struct ip)) {
-		if (options & F_VERBOSE)
-			warn("IHL too short (%d bytes) from %s", hlen,
-			    inet_ntoa(from->sin_addr));
-		return;
-	}
-
 	memcpy(&ip, buf, sizeof(struct ip));
 
-	/* Check packet has enough data to carry a valid ICMP header */
+	/* Check the IP header */
 	recv_len = cc;
 	if (cc < hlen + ICMP_MINLEN) {
 		if (options & F_VERBOSE)
@@ -1174,7 +1164,6 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 		return;
 	}
 
-	icmp_data_raw_len = cc - (hlen + offsetof(struct icmp, icmp_data));
 	icmp_data_raw = buf + hlen + offsetof(struct icmp, icmp_data);
 
 	/* Now the ICMP part */
@@ -1310,40 +1299,8 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 		 * available to those not running as root.
 		 */
 
-		/*
-		 * If we don't have enough bytes for a quoted IP header and an
-		 * ICMP header then stop.
-		 */
-		if (icmp_data_raw_len <
-				(ssize_t)(sizeof(struct ip) + sizeof(struct icmp))) {
-			if (options & F_VERBOSE)
-				warnx("quoted data too short (%zd bytes) from %s",
-					icmp_data_raw_len, inet_ntoa(from->sin_addr));
-			return;
-		}
-
-		memcpy(&oip_header_len, icmp_data_raw, sizeof(oip_header_len));
+		oip_header_len = sizeof(icmp_data_raw);
 		oip_header_len = (oip_header_len & 0x0f) << 2;
-
-		/* Reject IP packets with a short header */
-		if (oip_header_len < sizeof(struct ip)) {
-			if (options & F_VERBOSE)
-				warnx("inner IHL too short (%d bytes) from %s",
-					oip_header_len, inet_ntoa(from->sin_addr));
-			return;
-		}
-
-		/*
-		 * Check against the actual IHL length, to protect against
-		 * quoated packets carrying IP options.
-		 */
-		if (icmp_data_raw_len <
-				(ssize_t)(oip_header_len + sizeof(struct icmp))) {
-			if (options & F_VERBOSE)
-				warnx("inner packet too short (%zd bytes) from %s",
-				     icmp_data_raw_len, inet_ntoa(from->sin_addr));
-			return;
-		}
 
 		memcpy(&oip, icmp_data_raw, sizeof(struct ip));
 		oicmp_raw = icmp_data_raw + oip_header_len;
@@ -1357,7 +1314,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 		    (oicmp.icmp_id == ident))) {
 			printf("%zd bytes from %s: ", cc,
 			    pr_addr(from->sin_addr));
-			pr_icmph(&icp, &oip, oicmp_raw);
+			pr_icmph(&icp, &oip, icmp_data_raw);
 		} else
 			return;
 	}
@@ -1365,7 +1322,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 	/* Display any IP options */
 	cp = (u_char *)buf + sizeof(struct ip);
 
-	for (; hlen > (int)sizeof(struct ip); --hlen, ++cp)
+	for (; hlen > (int)sizeof(struct ip); ++cp)
 		switch (*cp) {
 		case IPOPT_EOL:
 			hlen = 0;
@@ -1691,14 +1648,12 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
  *	Print an IP header with options.
  */
 static void
-pr_iph(struct ip *ip)
+pr_iph(struct ip *ip, const u_char *cp)
 {
 	struct in_addr dst_ina, src_ina;
-	u_char *cp;
 	int hlen;
 
 	hlen = ip->ip_hl << 2;
-	cp = (u_char *)ip + sizeof(struct ip);	/* point to options */
 
 	memcpy(&src_ina, &ip->ip_src.s_addr, sizeof(src_ina));
 	memcpy(&dst_ina, &ip->ip_dst.s_addr, sizeof(dst_ina));
@@ -1756,7 +1711,9 @@ pr_addr(struct in_addr ina)
 static void
 pr_retip(struct ip *ip, const u_char *cp)
 {
-	pr_iph(ip);
+	cp = cp + sizeof(struct ip);		/* shift 20 octets */
+
+	pr_iph(ip, cp);
 
 	if (ip->ip_p == IPPROTO_TCP)
 		printf("TCP: from port %u, to port %u (decimal)\n",
