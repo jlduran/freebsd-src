@@ -66,46 +66,45 @@ def parse_args():
     parser.add_argument("--version", action="version", version='%(prog)s 1.0')
     return parser.parse_args()
 
-def construct_control_message(echo, ip, icmp):
+def construct_response_packet(echo, ip, icmp, special):
     icmp_id_seq_types = [0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
-    payload=echo.payload.payload
-    oip=sc.IP(src=ip.dst, dst=ip.src, flags=ip.flags, options=ip.options)
-    oicmp=sc.ICMP(type=0, code=0, id=echo.payload.id)
+    oip=echo[sc.IP]
+    oicmp=echo[sc.ICMP]
+    load=echo[sc.ICMP].payload
+    oip[sc.IP].remove_payload()
+    oicmp[sc.ICMP].remove_payload()
 
-    if icmp.type in icmp_id_seq_types:
-        icmp.id=echo.payload.id
-        icmp.seq=echo.seq
-        pkt=ip/icmp/payload
-    else:
-        pkt=ip/icmp/oip/oicmp/payload
+    # As if the original IP packet had these set
+    oip.flags=ip.flags
+    oip.options=ip.options
 
-    return pkt
-
-# fixme merge with previous function
-def construct_special_package(echo, ip, icmp, special):
-    icmp.id=echo.payload.id
-    icmp.seq=echo.seq
+    # Spacial options
     if special == "tcp":
-        oip=sc.IP(src=ip.dst, dst=ip.src)
         oip.proto="tcp"
         tcp=sc.TCP(sport=1234, dport=5678)
-        pkt=ip/icmp/oip/tcp
-    elif special == "udp":
-        oip=sc.IP(src=ip.dst, dst=ip.src)
+        return ip/icmp/oip/tcp
+
+    if special == "udp":
         oip.proto="udp"
         udp=sc.UDP(sport=1234, dport=5678)
-        pkt=ip/icmp/oip/udp
-    elif special == "warp":
+        return ip/icmp/oip/udp
+
+    if special == "warp":
         # Build a package with a timestamp of INT_MAX
         # (time-warped package)
-        payload_no_timestamp=sc.bytes_hex(echo.payload.payload)[16:]
-        pkt=ip/icmp/((b"\xff" * 8) + sc.hex_bytes(payload_no_timestamp))
-    elif special == "wrong":
+        payload_no_timestamp=sc.bytes_hex(load)[16:]
+        load=((b"\xff" * 8) + sc.hex_bytes(payload_no_timestamp))
+
+    if special == "wrong":
         # Build a package with a wrong last byte
-        payload_no_last_byte=sc.bytes_hex(echo.payload.payload)[:-2]
-        pkt=ip/icmp/((sc.hex_bytes(payload_no_last_byte)) + b"\x00")
+        payload_no_last_byte=sc.bytes_hex(load)[:-2]
+        load=((sc.hex_bytes(payload_no_last_byte)) + b"\x00")
+
+    if icmp.type in icmp_id_seq_types:
+        pkt=ip/icmp/load
     else:
-        pkt=ip/icmp
+        pkt=ip/icmp/oip/oicmp/load
+
     return pkt
 
 def generate_ip_options(opts):
@@ -138,11 +137,6 @@ def main():
     args=parse_args()
     opts=generate_ip_options(args.opts)
     ip=sc.IP(flags=args.flags, src=args.dst, dst=args.src, options=opts)
-    icmp=sc.ICMP(type=args.icmp_type, code=args.icmp_code,
-                 ts_ori=args.icmp_otime, ts_rx=args.icmp_rtime,
-                 ts_tx=args.icmp_ttime, gw=args.icmp_gwaddr,
-                 ptr= args.icmp_pptr, addr_mask=args.icmp_mask,
-                 nexthopmtu=args.icmp_nextmtu)
     tun=sc.TunTapInterface(args.iface)
     with open("created_interfaces.lst", "w", encoding="utf-8") as file:
         file.write(args.iface)
@@ -164,10 +158,13 @@ def main():
     ) as ping:
         for dummy in range(args.count):
             echo=tun.recv()
-            if args.special != "":
-                pkt=construct_special_package(echo, ip, icmp, args.special)
-            else:
-                pkt=construct_control_message(echo, ip, icmp)
+            icmp=sc.ICMP(type=args.icmp_type, code=args.icmp_code,
+                         id=echo[sc.ICMP].id, seq=echo[sc.ICMP].seq,
+                         ts_ori=args.icmp_otime, ts_rx=args.icmp_rtime,
+                         ts_tx=args.icmp_ttime, gw=args.icmp_gwaddr,
+                         ptr=args.icmp_pptr,
+                         addr_mask=args.icmp_mask, nexthopmtu=args.icmp_nextmtu)
+            pkt=construct_response_packet(echo, ip, icmp, args.special)
             tun.send(pkt)
             if args.dup is True:
                 tun.send(pkt)
