@@ -533,7 +533,7 @@ pinger_reply_opts_body()
 	    --dst 192.0.2.2 \
 	    --icmp_type 0 \
 	    --icmp_code 0 \
-	    --opts NOP
+	    --opts NOP-40
 	check_ping_statistics std.out $(atf_get_srcdir)/pinger_reply_opts.out
 }
 pinger_reply_opts_cleanup()
@@ -846,7 +846,7 @@ pinger_unreach_opts_body()
 	    --dst 192.0.2.2 \
 	    --icmp_type 3 \
 	    --icmp_code 1 \
-	    --opts NOP
+	    --opts NOP-40
 	atf_check -s exit:0 \
 	    diff -u std.out $(atf_get_srcdir)/pinger_unreach_opts.out
 }

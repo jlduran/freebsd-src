@@ -11,12 +11,16 @@ logging.getLogger("scapy").setLevel(logging.CRITICAL)
 
 import scapy.all as sc
 
+routing_options=["RR", "RR-same", "RR-trunc",
+                 "LSRR", "LSRR-trunc",
+                 "SSRR", "SSRR-trunc"]
+
 def parse_args():
-    parser = argparse.ArgumentParser(prog="pinger.py",
-                                     description="P I N G E R",
-                                     epilog="This utility creates a tun "
-                                     "interface, sends an echo request, and "
-                                     "forges the reply.")
+    parser=argparse.ArgumentParser(prog="pinger.py",
+                                   description="P I N G E R",
+                                   epilog="This utility creates a tun "
+                                   "interface, sends an echo request, and "
+                                   "forges the reply.")
     # Required arguments
     # Avoid setting defaults on these arguments,
     # as we want to set them explicitly in the tests
@@ -35,8 +39,8 @@ def parse_args():
                         choices=["MF", "DF", "evil"],
                         help="IP flags")
     parser.add_argument("--opts", type=str, default="",
-                        choices=["EOL", "NOP", "RR", "LSRR", "SSRR", "unk"],
-                        help="Include IP options")
+                        choices=["EOL", "NOP", "NOP-40", "unk"] +
+                        routing_options, help="Include IP options")
     parser.add_argument("--special", type=str, default="",
                         choices=["tcp", "udp", "wrong", "warp"],
                         help="Send a special packet")
@@ -67,34 +71,36 @@ def parse_args():
     return parser.parse_args()
 
 def construct_response_packet(echo, ip, icmp, special):
-    icmp_id_seq_types = [0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
+    icmp_id_seq_types=[0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
     oip=echo[sc.IP]
     oicmp=echo[sc.ICMP]
     load=echo[sc.ICMP].payload
     oip[sc.IP].remove_payload()
     oicmp[sc.ICMP].remove_payload()
+    oicmp.type=8
 
     # As if the original IP packet had these set
+    oip.ihl=None
+    oip.len=None
+    oip.id=1
     oip.flags=ip.flags
+    oip.chksum=None
     oip.options=ip.options
 
-    # Spacial options
+    # Special options
     if special == "tcp":
         oip.proto="tcp"
         tcp=sc.TCP(sport=1234, dport=5678)
         return ip/icmp/oip/tcp
-
     if special == "udp":
         oip.proto="udp"
         udp=sc.UDP(sport=1234, dport=5678)
         return ip/icmp/oip/udp
-
     if special == "warp":
         # Build a package with a timestamp of INT_MAX
         # (time-warped package)
         payload_no_timestamp=sc.bytes_hex(load)[16:]
         load=((b"\xff" * 8) + sc.hex_bytes(payload_no_timestamp))
-
     if special == "wrong":
         # Build a package with a wrong last byte
         payload_no_last_byte=sc.bytes_hex(load)[:-2]
@@ -110,21 +116,31 @@ def construct_response_packet(echo, ip, icmp, special):
 def generate_ip_options(opts):
     routers=["192.0.2.10", "192.0.2.20", "192.0.2.30", "192.0.2.40",
              "192.0.2.50", "192.0.2.60", "192.0.2.70", "192.0.2.80", 0]
+    routers_zero=[0, 0, 0, 0, 0, 0, 0, 0, 0]
     if opts == "EOL":
         options=sc.IPOption(b"\x00")
     elif opts == "NOP":
+        options=sc.IPOption(b"\x01")
+    elif opts == "NOP-40":
         options=sc.IPOption(b"\x01" * 40)
     elif opts == "RR":
-        # options.pointer=3  # same route
-        #options.length=7 # truncated route
-        #options[0].routers=routers_t # truncated route
         options=sc.IPOption_RR(pointer=40, routers=routers)
+    elif opts == "RR-same":
+        options=sc.IPOption_RR(pointer=3, routers=routers_zero)
+    elif opts == "RR-trunc":
+        options=sc.IPOption_RR(length=7, routers=routers_zero)
     elif opts == "LSRR":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
         options=sc.IPOption_LSRR(routers=routers)
+    elif opts == "LSRR-trunc":
+        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        options=sc.IPOption_LSRR(length=3, routers=routers_zero)
     elif opts == "SSRR":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
         options=sc.IPOption_SSRR(routers=routers)
+    elif opts == "SSRR-trunc":
+        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        options=sc.IPOption_SSRR(length=3, routers=routers)
     elif opts == "unk":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
         options=sc.IPOption(b"\x9f")
@@ -149,7 +165,7 @@ def main():
         command+=["-Mt"]
     if args.special != "":
         command+=["-p1"]
-    if args.opts in ("RR", "LSRR", "SSRR"):
+    if args.opts in routing_options:
         command+=["-R"]
     command+=[args.dst]
     with subprocess.Popen(
