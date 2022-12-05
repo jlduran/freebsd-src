@@ -225,8 +225,11 @@ Var(struct dataset *ds)
 }
 
 static double
-Stddev(struct dataset *ds)
+Stddev(struct dataset *ds, int pstdev)
 {
+
+	if (pstdev)
+		return sqrt(Var(ds)) * sqrt((ds->n - 1.0) / ds->n);
 
 	return sqrt(Var(ds));
 }
@@ -239,11 +242,11 @@ VitalsHead(void)
 }
 
 static void
-Vitals(struct dataset *ds, int flag)
+Vitals(struct dataset *ds, int flag, int pstdev)
 {
 
 	printf("%c %3zu %13.8g %13.8g %13.8g %13.8g %13.8g", symbol[flag],
-	    ds->n, Min(ds), Max(ds), Median(ds), Avg(ds), Stddev(ds));
+	    ds->n, Min(ds), Max(ds), Median(ds), Avg(ds), Stddev(ds, pstdev));
 	printf("\n");
 }
 
@@ -330,16 +333,16 @@ AdjPlot(double a)
 }
 
 static void
-DimPlot(struct dataset *ds)
+DimPlot(struct dataset *ds, int pstdev)
 {
 	AdjPlot(Min(ds));
 	AdjPlot(Max(ds));
-	AdjPlot(Avg(ds) - Stddev(ds));
-	AdjPlot(Avg(ds) + Stddev(ds));
+	AdjPlot(Avg(ds) - Stddev(ds, pstdev));
+	AdjPlot(Avg(ds) + Stddev(ds, pstdev));
 }
 
 static void
-PlotSet(struct dataset *ds, int val)
+PlotSet(struct dataset *ds, int val, int pstdev)
 {
 	struct plot *pl;
 	int i, x;
@@ -403,7 +406,7 @@ PlotSet(struct dataset *ds, int val)
 		pl->data[j * pl->width + x] |= val;
 	}
 	av = Avg(ds);
-	sd = Stddev(ds);
+	sd = Stddev(ds, pstdev);
 	if (!isnan(sd)) {
 		x = ((av - sd) - pl->x0) / pl->dx;
 		m = ((av + sd) - pl->x0) / pl->dx;
@@ -533,7 +536,7 @@ usage(char const *whine)
 
 	fprintf(stderr, "%s\n", whine);
 	fprintf(stderr,
-	    "Usage: ministat [-C column] [-c confidence] [-d delimiter(s)] [-Anqs] [-w width] [file [file ...]]\n");
+	    "Usage: ministat [-C column] [-c confidence] [-d delimiter(s)] [-AnPqs] [-w width] [file [file ...]]\n");
 	fprintf(stderr, "\tconfidence = {");
 	for (i = 0; i < NCONF; i++) {
 		fprintf(stderr, "%s%g%%",
@@ -545,6 +548,7 @@ usage(char const *whine)
 	fprintf(stderr, "\t-C : column number to extract (starts and defaults to 1)\n");
 	fprintf(stderr, "\t-d : delimiter(s) string, default to \" \\t\"\n");
 	fprintf(stderr, "\t-n : print summary statistics only, no graph/test\n");
+	fprintf(stderr, "\t-P : calculate the standard deviation from an entire population\n");
 	fprintf(stderr, "\t-q : suppress printing summary-statistics headers and data-set names\n");
 	fprintf(stderr, "\t-s : print avg/median/stddev bars on separate lines\n");
 	fprintf(stderr, "\t-w : width of graph/test output (default 74 or terminal width)\n");
@@ -565,6 +569,7 @@ main(int argc, char **argv)
 	int column = 1;
 	int flag_s = 0;
 	int flag_n = 0;
+	int pstdev = 0;
 	int flag_q = 0;
 	int termwidth = 74;
 	int suppress_plot = 0;
@@ -580,7 +585,7 @@ main(int argc, char **argv)
 	}
 
 	ci = -1;
-	while ((c = getopt(argc, argv, "AC:c:d:snqw:")) != -1)
+	while ((c = getopt(argc, argv, "AC:c:d:nPqsw:")) != -1)
 		switch (c) {
 		case 'A':
 			suppress_plot = 1;
@@ -609,6 +614,9 @@ main(int argc, char **argv)
 			break;
 		case 'n':
 			flag_n = 1;
+			break;
+		case 'P':
+			pstdev = 1;
 			break;
 		case 'q':
 			flag_q = 1;
@@ -677,16 +685,16 @@ main(int argc, char **argv)
 	if (!flag_n && !suppress_plot) {
 		SetupPlot(termwidth, flag_s, nds);
 		for (i = 0; i < nds; i++)
-			DimPlot(ds[i]);
+			DimPlot(ds[i], pstdev);
 		for (i = 0; i < nds; i++)
-			PlotSet(ds[i], i + 1);
+			PlotSet(ds[i], i + 1, pstdev);
 		DumpPlot();
 	}
 	if (!flag_q)
 		VitalsHead();
-	Vitals(ds[0], 1);
+	Vitals(ds[0], 1, pstdev);
 	for (i = 1; i < nds; i++) {
-		Vitals(ds[i], i + 1);
+		Vitals(ds[i], i + 1, pstdev);
 		if (!flag_n)
 			Relative(ds[i], ds[0], ci);
 	}
