@@ -147,6 +147,8 @@ struct dataset {
 	size_t n;
 };
 
+static int pstdev = 0;
+
 static struct dataset *
 NewSet(void)
 {
@@ -225,7 +227,7 @@ Var(struct dataset *ds)
 }
 
 static double
-Stddev(struct dataset *ds, int pstdev)
+Stddev(struct dataset *ds)
 {
 
 	if (pstdev)
@@ -242,11 +244,11 @@ VitalsHead(void)
 }
 
 static void
-Vitals(struct dataset *ds, int flag, int pstdev)
+Vitals(struct dataset *ds, int flag)
 {
 
 	printf("%c %3zu %13.8g %13.8g %13.8g %13.8g %13.8g", symbol[flag],
-	    ds->n, Min(ds), Max(ds), Median(ds), Avg(ds), Stddev(ds, pstdev));
+	    ds->n, Min(ds), Max(ds), Median(ds), Avg(ds), Stddev(ds));
 	printf("\n");
 }
 
@@ -274,14 +276,18 @@ Relative(struct dataset *ds, struct dataset *rs, int confidx)
 	re *= (ds->n + rs->n) / (ds->n * rs->n * (ds->n + rs->n - 2.0));
 	re = t * sqrt(re);
 
-	if (fabs(d) > e) {
-		printf("Difference at %.1f%% confidence\n", studentpct[confidx]);
-		printf("	%g +/- %g\n", d, e);
-		printf("	%g%% +/- %g%%\n", d * 100 / Avg(rs), re * 100 / Avg(rs));
-		printf("	(Student's t, pooled s = %g)\n", spool);
-	} else {
-		printf("No difference proven at %.1f%% confidence\n",
-		    studentpct[confidx]);
+	if (!pstdev) {
+		if (fabs(d) > e) {
+			printf("Difference at %.1f%% confidence\n",
+			    studentpct[confidx]);
+			printf("	%g +/- %g\n", d, e);
+			printf("	%g%% +/- %g%%\n", d * 100 / Avg(rs),
+			    re * 100 / Avg(rs));
+			printf("	(Student's t, pooled s = %g)\n", spool);
+		} else {
+			printf("No difference proven at %.1f%% confidence\n",
+			    studentpct[confidx]);
+		}
 	}
 }
 
@@ -333,16 +339,16 @@ AdjPlot(double a)
 }
 
 static void
-DimPlot(struct dataset *ds, int pstdev)
+DimPlot(struct dataset *ds)
 {
 	AdjPlot(Min(ds));
 	AdjPlot(Max(ds));
-	AdjPlot(Avg(ds) - Stddev(ds, pstdev));
-	AdjPlot(Avg(ds) + Stddev(ds, pstdev));
+	AdjPlot(Avg(ds) - Stddev(ds));
+	AdjPlot(Avg(ds) + Stddev(ds));
 }
 
 static void
-PlotSet(struct dataset *ds, int val, int pstdev)
+PlotSet(struct dataset *ds, int val)
 {
 	struct plot *pl;
 	int i, x;
@@ -406,7 +412,7 @@ PlotSet(struct dataset *ds, int val, int pstdev)
 		pl->data[j * pl->width + x] |= val;
 	}
 	av = Avg(ds);
-	sd = Stddev(ds, pstdev);
+	sd = Stddev(ds);
 	if (!isnan(sd)) {
 		x = ((av - sd) - pl->x0) / pl->dx;
 		m = ((av + sd) - pl->x0) / pl->dx;
@@ -569,7 +575,6 @@ main(int argc, char **argv)
 	int column = 1;
 	int flag_s = 0;
 	int flag_n = 0;
-	int pstdev = 0;
 	int flag_q = 0;
 	int termwidth = 74;
 	int suppress_plot = 0;
@@ -685,16 +690,16 @@ main(int argc, char **argv)
 	if (!flag_n && !suppress_plot) {
 		SetupPlot(termwidth, flag_s, nds);
 		for (i = 0; i < nds; i++)
-			DimPlot(ds[i], pstdev);
+			DimPlot(ds[i]);
 		for (i = 0; i < nds; i++)
-			PlotSet(ds[i], i + 1, pstdev);
+			PlotSet(ds[i], i + 1);
 		DumpPlot();
 	}
 	if (!flag_q)
 		VitalsHead();
-	Vitals(ds[0], 1, pstdev);
+	Vitals(ds[0], 1);
 	for (i = 1; i < nds; i++) {
-		Vitals(ds[i], i + 1, pstdev);
+		Vitals(ds[i], i + 1);
 		if (!flag_n)
 			Relative(ds[i], ds[0], ci);
 	}
