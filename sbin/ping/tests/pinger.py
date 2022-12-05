@@ -67,22 +67,18 @@ def parse_args():
     return parser.parse_args()
 
 def construct_control_message(echo, ip, icmp):
-    icmp.seq=echo.seq
+    icmp_id_seq_types = [0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
     payload=echo.payload.payload
     oip=sc.IP(src=ip.dst, dst=ip.src, flags=ip.flags, options=ip.options)
     oicmp=sc.ICMP(type=0, code=0, id=echo.payload.id)
 
-    if icmp.type == 0:
+    if icmp.type in icmp_id_seq_types:
         icmp.id=echo.payload.id
-        pkt=ip/icmp/payload
-    elif icmp.type in (3, 4, 5, 11, 12):
-        pkt=ip/icmp/oip/oicmp/payload
-    elif icmp.type in (13, 14, 17, 18):
-        icmp.id=echo.payload.id
+        icmp.seq=echo.seq
         pkt=ip/icmp/payload
     else:
-        icmp.id=echo.payload.id
         pkt=ip/icmp/oip/oicmp/payload
+
     return pkt
 
 # fixme merge with previous function
