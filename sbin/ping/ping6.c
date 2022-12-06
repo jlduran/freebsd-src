@@ -150,22 +150,22 @@ struct tv32 {
 	u_int32_t tv32_nsec;
 };
 
-#define MAXPACKETLEN	131072
+#define	MAXPACKETLEN	131072
 #define	IP6LEN		40
-#define ICMP6ECHOLEN	8	/* icmp echo header len excluding time */
-#define ICMP6ECHOTMLEN sizeof(struct tv32)
-#define ICMP6_NIQLEN	(ICMP6ECHOLEN + 8)
-# define CONTROLLEN	10240	/* ancillary data buffer size RFC3542 20.1 */
+#define	ICMP6ECHOLEN	8	/* icmp echo header len excluding time */
+#define	ICMP6ECHOTMLEN	sizeof(struct tv32)
+#define	ICMP6_NIQLEN	(ICMP6ECHOLEN + 8)
+#define	CONTROLLEN	10240	/* ancillary data buffer size RFC3542 20.1 */
 /* FQDN case, 64 bits of nonce + 32 bits ttl */
-#define ICMP6_NIRLEN	(ICMP6ECHOLEN + 12)
+#define	ICMP6_NIRLEN	(ICMP6ECHOLEN + 12)
 #define	EXTRA		256	/* for AH and various other headers. weird. */
 #define	DEFDATALEN	ICMP6ECHOTMLEN
-#define MAXDATALEN	MAXPACKETLEN - IP6LEN - ICMP6ECHOLEN
+#define	MAXDATALEN	MAXPACKETLEN - IP6LEN - ICMP6ECHOLEN
 #define	NROUTES		9		/* number of record route slots */
 #define	MAXWAIT		10000		/* max ms to wait for response */
 #define	MAXALARM	(60 * 60)	/* max seconds for alarm timeout */
 
-#define	A(bit)		rcvd_tbl[(bit)>>3]	/* identify byte in array */
+#define	A(bit)		rcvd_tbl[(bit) >> 3]	/* identify byte in array */
 #define	B(bit)		(1 << ((bit) & 0x07))	/* identify bit in byte */
 #define	SET(bit)	(A(bit) |= B(bit))
 #define	CLR(bit)	(A(bit) &= (~B(bit)))
@@ -182,38 +182,37 @@ struct tv32 {
 #ifdef IPSEC_POLICY_IPSEC
 #define	F_POLICY	0x0400
 #else
-#define F_AUTHHDR	0x0200
-#define F_ENCRYPT	0x0400
-#endif /*IPSEC_POLICY_IPSEC*/
-#endif /*IPSEC*/
-#define F_NODEADDR	0x0800
-#define F_FQDN		0x1000
-#define F_INTERFACE	0x2000
-#define F_SRCADDR	0x4000
-#define F_HOSTNAME	0x10000
-#define F_FQDNOLD	0x20000
-#define F_NIGROUP	0x40000
-#define F_SUPTYPES	0x80000
-#define F_NOMINMTU	0x100000
-#define F_ONCE		0x200000
-#define F_AUDIBLE	0x400000
-#define F_MISSED	0x800000
-#define F_DONTFRAG	0x1000000
-#define F_NOUSERDATA	(F_NODEADDR | F_FQDN | F_FQDNOLD | F_SUPTYPES)
+#define	F_AUTHHDR	0x0200
+#define	F_ENCRYPT	0x0400
+#endif /* IPSEC_POLICY_IPSEC */
+#endif /* IPSEC */
+#define	F_NODEADDR	0x0800
+#define	F_FQDN		0x1000
+#define	F_INTERFACE	0x2000
+#define	F_SRCADDR	0x4000
+#define	F_HOSTNAME	0x10000
+#define	F_FQDNOLD	0x20000
+#define	F_NIGROUP	0x40000
+#define	F_SUPTYPES	0x80000
+#define	F_NOMINMTU	0x100000
+#define	F_ONCE		0x200000
+#define	F_AUDIBLE	0x400000
+#define	F_MISSED	0x800000
+#define	F_DONTFRAG	0x1000000
+#define	F_NOUSERDATA	(F_NODEADDR | F_FQDN | F_FQDNOLD | F_SUPTYPES)
 #define	F_WAITTIME	0x2000000
 #define	F_DOT		0x4000000
 static u_int options;
 
-#define IN6LEN		sizeof(struct in6_addr)
-#define SA6LEN		sizeof(struct sockaddr_in6)
-#define DUMMY_PORT	10101
+#define	IN6LEN		sizeof(struct in6_addr)
+#define	SA6LEN		sizeof(struct sockaddr_in6)
+#define	DUMMY_PORT	10101
 
-#define SIN6(s)	((struct sockaddr_in6 *)(s))
+#define	SIN6(s)		((struct sockaddr_in6 *)(s))
 
 /*
- * MAX_DUP_CHK is the number of bits in received table, i.e. the maximum
- * number of received sequence numbers we can keep track of.  Change 128
- * to 8192 for complete accuracy...
+ * MAX_DUP_CHK is the number of bits in received table, i.e., the maximum
+ * number of received sequence numbers we can keep track of.
  */
 #define	MAX_DUP_CHK	(8 * 8192)
 static int mx_dup_ck = MAX_DUP_CHK;
@@ -399,11 +398,11 @@ ping6(int argc, char *argv[])
 #else
 					errx(1,
 "-a A is not supported on the platform");
-					/*NOTREACHED*/
+					/* NOTREACHED */
 #endif
 				default:
 					usage();
-					/*NOTREACHED*/
+					/* NOTREACHED */
 				}
 			}
 			break;
@@ -484,7 +483,7 @@ ping6(int argc, char *argv[])
 			    (long)((t - intvl.tv_sec) * 1000000000);
 			if (intvl.tv_sec < 0)
 				errx(1, "illegal timing interval %s", optarg);
-			/* less than 1/hz does not make sense */
+			/* less than 1/Hz does not make sense */
 			if (intvl.tv_sec == 0 && intvl.tv_nsec < 1000) {
 				warnx("too small interval, raised to .000001");
 				intvl.tv_nsec = 1000;
@@ -506,7 +505,7 @@ ping6(int argc, char *argv[])
 			break;
 #else
 			errx(1, "-%c is not supported on this platform", ch);
-			/*NOTREACHED*/
+			/* NOTREACHED */
 #endif
 		case 'n':
 			options &= ~F_HOSTNAME;
@@ -538,7 +537,8 @@ ping6(int argc, char *argv[])
 			hints.ai_socktype = SOCK_RAW;
 			hints.ai_protocol = IPPROTO_ICMPV6;
 
-			error = cap_getaddrinfo(capdns, optarg, NULL, &hints, &res);
+			error = cap_getaddrinfo(capdns, optarg, NULL, &hints,
+			    &res);
 			if (error) {
 				errx(1, "invalid source address: %s",
 				     gai_strerror(error));
@@ -631,11 +631,11 @@ ping6(int argc, char *argv[])
 		case 'E':
 			options |= F_ENCRYPT;
 			break;
-#endif /*IPSEC_POLICY_IPSEC*/
-#endif /*IPSEC*/
+#endif /* IPSEC_POLICY_IPSEC */
+#endif /* IPSEC */
 		default:
 			usage();
-			/*NOTREACHED*/
+			/* NOTREACHED */
 		}
 	}
 
@@ -644,7 +644,7 @@ ping6(int argc, char *argv[])
 
 	if (argc < 1) {
 		usage();
-		/*NOTREACHED*/
+		/* NOTREACHED */
 	}
 
 	if (argc > 1) {
@@ -656,7 +656,7 @@ ping6(int argc, char *argv[])
 #endif
 		if (rthlen == 0) {
 			errx(1, "too many intermediate hops");
-			/*NOTREACHED*/
+			/* NOTREACHED */
 		}
 		ip6optlen += rthlen;
 	}
@@ -665,7 +665,7 @@ ping6(int argc, char *argv[])
 		target = nigroup(argv[argc - 1], nig_oldmcprefix);
 		if (target == NULL) {
 			usage();
-			/*NOTREACHED*/
+			/* NOTREACHED */
 		}
 	} else
 		target = argv[argc - 1];
@@ -698,7 +698,7 @@ ping6(int argc, char *argv[])
 		err(1, "socket srecv");
 	freeaddrinfo(res);
 
-	/* set the source address if specified. */
+	/* set the source address if specified */
 	if ((options & F_SRCADDR) != 0) {
 		/* properly fill sin6_scope_id */
 		if (IN6_IS_ADDR_LINKLOCAL(&src.sin6_addr) && (
@@ -737,7 +737,7 @@ ping6(int argc, char *argv[])
 	}
 
 	/*
-	 * let the kerel pass extension headers of incoming packets,
+	 * let the kernel pass extension headers of incoming packets,
 	 * for privileged socket options
 	 */
 	if ((options & F_VERBOSE) != 0) {
@@ -783,7 +783,7 @@ ping6(int argc, char *argv[])
 			timing = 1;
 		} else
 			timing = 0;
-		/* in F_VERBOSE case, we may get non-echoreply packets*/
+		/* in F_VERBOSE case, we may get non-echoreply packets */
 		if (options & F_VERBOSE)
 			packlen = 2048 + IP6LEN + ICMP6ECHOLEN + EXTRA;
 		else
@@ -875,11 +875,10 @@ ping6(int argc, char *argv[])
 		    &optval, sizeof(optval)) == -1)
 			err(1, "setsockopt(IPV6_ESP_TRANS_LEVEL)");
 	}
-#endif /*IPSEC_POLICY_IPSEC*/
+#endif /* IPSEC_POLICY_IPSEC */
 #endif
 
 #ifdef ICMP6_FILTER
-    {
 	struct icmp6_filter filt;
 	if (!(options & F_VERBOSE)) {
 		ICMP6_FILTER_SETBLOCKALL(&filt);
@@ -894,7 +893,6 @@ ping6(int argc, char *argv[])
 	if (setsockopt(srecv, IPPROTO_ICMPV6, ICMP6_FILTER, &filt,
 	    sizeof(filt)) < 0)
 		err(1, "setsockopt(ICMP6_FILTER)");
-    }
 #endif /*ICMP6_FILTER*/
 
 	/* let the kerel pass extension headers of incoming packets */
@@ -920,7 +918,7 @@ ping6(int argc, char *argv[])
 			err(1, "IPV6_MULTICAST_LOOP");
 */
 
-	/* Specify the outgoing interface and/or the source address */
+	/* specify the outgoing interface and/or the source address */
 	if (usepktinfo)
 		ip6optlen += CMSG_SPACE(sizeof(struct in6_pktinfo));
 
@@ -993,8 +991,8 @@ ping6(int argc, char *argv[])
 			memset(&hints, 0, sizeof(hints));
 			hints.ai_family = AF_INET6;
 
-			if ((error = cap_getaddrinfo(capdns, argv[hops], NULL, &hints,
-			    &res)))
+			if ((error = cap_getaddrinfo(capdns, argv[hops], NULL,
+			    &hints, &res)))
 				errx(1, "%s", gai_strerror(error));
 			if (res->ai_addr->sa_family != AF_INET6)
 				errx(1,
@@ -1105,7 +1103,7 @@ ping6(int argc, char *argv[])
 			warnx("you need -b to increase socket buffer size");
 		/*
 		 * When pinging the broadcast address, you can get a lot of
-		 * answers. Doing something so evil is useful if you are trying
+		 * answers.  Doing something so evil is useful if you are trying
 		 * to stress the ethernet, or just want to fill the arp cache
 		 * to get some stuff for /etc/ethers.
 		 */
@@ -1231,7 +1229,7 @@ ping6(int argc, char *argv[])
 				int mtu;
 
 				/*
-				 * receive control messages only. Process the
+				 * receive control messages only.  Process the
 				 * exceptions (currently the only possibility is
 				 * a path MTU notification.)
 				 */
@@ -1292,8 +1290,8 @@ ping6(int argc, char *argv[])
 	sigaction(SIGALRM, &si_sa, 0);
 	summary();
 
-        if(packet != NULL)
-                free(packet);
+	if(packet != NULL)
+		free(packet);
 
 	if (nreceived > 0)
 		exit(0);
@@ -1306,7 +1304,6 @@ ping6(int argc, char *argv[])
 static void
 onsignal(int sig)
 {
-
 	switch (sig) {
 	case SIGINT:
 	case SIGALRM:
@@ -1320,14 +1317,6 @@ onsignal(int sig)
 	}
 }
 
-/*
- * pinger --
- *	Compose and transmit an ICMP ECHO REQUEST packet.  The IP packet
- * will be added on by the kernel.  The ID field is our UNIX process ID,
- * and the sequence number is an ascending integer.  The first 8 bytes
- * of the data portion are used to hold a UNIX "timespec" struct in VAX
- * byte-order, to compute the round-trip time.
- */
 static size_t
 pingerlen(void)
 {
@@ -1347,6 +1336,14 @@ pingerlen(void)
 	return l;
 }
 
+/*
+ * pinger --
+ *	Compose and transmit an ICMP ECHO REQUEST packet.  The IP packet
+ * will be added on by the kernel.  The ID field is our UNIX process ID,
+ * and the sequence number is an ascending integer.  The first 8 bytes
+ * of the data portion are used to hold a UNIX "timespec" struct in VAX
+ * byte-order, to compute the round-trip time.
+ */
 static int
 pinger(void)
 {
@@ -1443,7 +1440,7 @@ pinger(void)
 			/*
 			 * Truncate seconds down to 32 bits in order
 			 * to fit the timestamp within 8 bytes of the
-			 * packet. We're only concerned with
+			 * packet.  We're only concerned with
 			 * durations, not absolute times.
 			 */
 			tv32.tv32_sec = (uint32_t)htonl(tv.tv_sec);
@@ -1519,7 +1516,7 @@ mynireply(const struct icmp6_nodeinfo *nip)
  */
 static const char *
 dnsdecode(const u_char *sp, const u_char *ep, const u_char *base, char *buf,
-	size_t bufsiz)
+    size_t bufsiz)
 {
 	int i;
 	const u_char *cp;
@@ -1536,7 +1533,7 @@ dnsdecode(const u_char *sp, const u_char *ep, const u_char *base, char *buf,
 		i = *cp;
 		if (i == 0 || cp != sp) {
 			if (strlcat((char *)buf, ".", bufsiz) >= bufsiz)
-				return NULL;	/*result overrun*/
+				return NULL;	/* result overrun */
 		}
 		if (i == 0)
 			break;
@@ -1552,25 +1549,25 @@ dnsdecode(const u_char *sp, const u_char *ep, const u_char *base, char *buf,
 			    sizeof(cresult)) == NULL)
 				return NULL;
 			if (strlcat(buf, cresult, bufsiz) >= bufsiz)
-				return NULL;	/*result overrun*/
+				return NULL;	/* result overrun */
 			break;
 		} else if ((i & 0x3f) == i) {
 			if (i > ep - cp)
-				return NULL;	/*source overrun*/
+				return NULL;	/* source overrun */
 			while (i-- > 0 && cp < ep) {
 				l = snprintf(cresult, sizeof(cresult),
 				    isprint(*cp) ? "%c" : "\\%03o", *cp & 0xff);
 				if ((size_t)l >= sizeof(cresult) || l < 0)
 					return NULL;
 				if (strlcat(buf, cresult, bufsiz) >= bufsiz)
-					return NULL;	/*result overrun*/
+					return NULL;	/* result overrun */
 				cp++;
 			}
 		} else
-			return NULL;	/*invalid label*/
+			return NULL;	/* invalid label */
 	}
 	if (i != 0)
-		return NULL;	/*not terminated*/
+		return NULL;	/* not terminated */
 	cp++;
 	return cp;
 }
@@ -1791,7 +1788,7 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 				int32_t ttl;
 				int comma = 0;
 
-				(void)printf(" (");	/*)*/
+				(void)printf(" (");	/* ) */
 
 				switch (ni->ni_code) {
 				case ICMP6_NI_REFUSED:
@@ -1806,7 +1803,7 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 
 				if ((end - (u_char *)ni) < ICMP6_NIRLEN) {
 					/* case of refusion, unknown */
-					/*(*/
+					/* ( */
 					putchar(')');
 					goto fqdnend;
 				}
@@ -1850,7 +1847,7 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 					    (u_long)cc - off - ICMP6_NIRLEN - 1);
 					comma++;
 				}
-				/*(*/
+				/* ( */
 				putchar(')');
 			}
 		fqdnend:
@@ -1876,8 +1873,8 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 static void
 pr_exthdrs(struct msghdr *mhdr)
 {
-	ssize_t	bufsize;
-	void	*bufp;
+	ssize_t bufsize;
+	void *bufp;
 	struct cmsghdr *cm;
 
 	bufsize = 0;
@@ -1959,7 +1956,7 @@ pr_ip6opt(void *extbuf, size_t bufsize)
 		case IP6OPT_ROUTER_ALERT:
 			offset = 0;
 			offset = inet6_opt_get_val(databuf, offset,
-						   &value2, sizeof(value2));
+			    &value2, sizeof(value2));
 			printf("    Router Alert Opt: Type %u\n",
 			    ntohs(value2));
 			break;
@@ -2082,7 +2079,7 @@ pr_suptypes(struct icmp6_nodeinfo *ni, size_t nilen)
 	const u_char *cp, *end;
 	u_int16_t cur;
 	struct cbit {
-		u_int16_t words;	/*32bit count*/
+		u_int16_t words;	/* 32bit count */
 		u_int16_t skip;
 	} cbit;
 #define MAXQTYPES	(1 << 16)
@@ -2167,9 +2164,9 @@ pr_nodeaddr(struct icmp6_nodeinfo *ni, int nilen)
 
 	/*
 	 * In icmp-name-lookups 05 and later, TTL of each returned address
-	 * is contained in the resposne. We try to detect the version
+	 * is contained in the resposne.  We try to detect the version
 	 * by the length of the data, but note that the detection algorithm
-	 * is incomplete. We assume the latest draft by default.
+	 * is incomplete.  We assume the latest draft by default.
 	 */
 	if (nilen % (sizeof(u_int32_t) + sizeof(struct in6_addr)) == 0)
 		withttl = 1;
@@ -2193,7 +2190,7 @@ pr_nodeaddr(struct icmp6_nodeinfo *ni, int nilen)
 			if (ttl == 0xffffffff) {
 				/*
 				 * XXX: can this convention be applied to all
-				 * type of TTL (i.e. non-ND TTL)?
+				 * type of TTL (i.e., non-ND TTL)?
 				 */
 				printf("(TTL=infty)");
 			}
@@ -2278,28 +2275,28 @@ get_pathmtu(struct msghdr *mhdr)
 			 * in which case the scope ID value is 0.
 			 */
 			if (!IN6_ARE_ADDR_EQUAL(&mtuctl.ip6m_addr.sin6_addr,
-						&dst.sin6_addr) ||
+			    &dst.sin6_addr) ||
 			    (mtuctl.ip6m_addr.sin6_scope_id &&
 			     dst.sin6_scope_id &&
 			     mtuctl.ip6m_addr.sin6_scope_id !=
 			     dst.sin6_scope_id)) {
 				if ((options & F_VERBOSE) != 0) {
 					printf("path MTU for %s is notified. "
-					       "(ignored)\n",
-					   pr_addr((struct sockaddr *)&mtuctl.ip6m_addr,
-					   sizeof(mtuctl.ip6m_addr)));
+					    "(ignored)\n",
+					    pr_addr((struct sockaddr *)&mtuctl.ip6m_addr,
+					    sizeof(mtuctl.ip6m_addr)));
 				}
 				return(0);
 			}
 
 			/*
-			 * Ignore an invalid MTU. XXX: can we just believe
+			 * Ignore an invalid MTU.  XXX: can we just believe
 			 * the kernel check?
 			 */
 			if (mtuctl.ip6m_mtu < IPV6_MMTU)
 				return(0);
 
-			/* notification for our destination. return the MTU. */
+			/* notification for our destination.  return the MTU. */
 			return((int)mtuctl.ip6m_mtu);
 		}
 	}
@@ -2360,14 +2357,14 @@ summary(void)
 	(void)fflush(stdout);
 }
 
-/*subject type*/
+/* subject type */
 static const char *niqcode[] = {
 	"IPv6 address",
-	"DNS label",	/*or empty*/
+	"DNS label",	/* or empty */
 	"IPv4 address",
 };
 
-/*result code*/
+/* result code */
 static const char *nircode[] = {
 	"Success", "Refused", "Unknown",
 };
@@ -2813,7 +2810,7 @@ nigroup(char *name, int nig_oldmcprefix)
 		p = name + strlen(name);
 	l = p - name;
 	if (l > 63 || l > sizeof(hbuf) - 1)
-		return NULL;	/*label too long*/
+		return NULL;	/* label too long */
 	strncpy(hbuf, name, l);
 	hbuf[(int)l] = '\0';
 
@@ -2838,7 +2835,7 @@ nigroup(char *name, int nig_oldmcprefix)
 		valid = inet_pton(AF_INET6, "ff02::2:ff00:0000", &in6);
 	}
 	if (valid != 1)
-		return NULL;	/*XXX*/
+		return NULL;	/* XXX */
 
 	if (nig_oldmcprefix) {
 		/* draft-ietf-ipngwg-icmp-name-lookup */
