@@ -307,6 +307,7 @@ static const struct bge_revision {
 	{ BGE_CHIPID_BCM5717_B0,	"BCM5717 B0" },
 	{ BGE_CHIPID_BCM5717_C0,	"BCM5717 C0" },
 	{ BGE_CHIPID_BCM5719_A0,	"BCM5719 A0" },
+	{ BGE_CHIPID_BCM5719_A1,	"BCM5719 A1" },
 	{ BGE_CHIPID_BCM5720_A0,	"BCM5720 A0" },
 	{ BGE_CHIPID_BCM5755_A0,	"BCM5755 A0" },
 	{ BGE_CHIPID_BCM5755_A1,	"BCM5755 A1" },
@@ -2470,6 +2471,7 @@ bge_blockinit(struct bge_softc *sc)
 		 * fix internal FIFO overflow.
 		 */
 		if (sc->bge_chipid == BGE_CHIPID_BCM5719_A0 ||
+		    sc->bge_chipid == BGE_CHIPID_BCM5719_A1 ||
 		    sc->bge_asicrev == BGE_ASICREV_BCM5762) {
 			dmactl &= ~(BGE_RDMA_RSRVCTRL_FIFO_LWM_MASK |
 			    BGE_RDMA_RSRVCTRL_FIFO_HWM_MASK |
@@ -3392,7 +3394,8 @@ bge_attach(device_t dev)
 			 */
 			sc->bge_flags |= BGE_FLAG_RDMA_BUG;
 			if (sc->bge_asicrev == BGE_ASICREV_BCM5719 &&
-			    sc->bge_chipid == BGE_CHIPID_BCM5719_A0) {
+			    (sc->bge_chipid == BGE_CHIPID_BCM5719_A0 ||
+			     sc->bge_chipid == BGE_CHIPID_BCM5719_A1)) {
 				/* Jumbo frame on BCM5719 A0 does not work. */
 				sc->bge_flags &= ~BGE_FLAG_JUMBO;
 			}
@@ -3546,7 +3549,8 @@ bge_attach(device_t dev)
 		/* BCM5717 requires different TSO configuration. */
 		sc->bge_flags |= BGE_FLAG_TSO3;
 		if (sc->bge_asicrev == BGE_ASICREV_BCM5719 &&
-		    sc->bge_chipid == BGE_CHIPID_BCM5719_A0) {
+		    (sc->bge_chipid == BGE_CHIPID_BCM5719_A0 ||
+		     sc->bge_chipid == BGE_CHIPID_BCM5719_A1)) {
 			/* TSO on BCM5719 A0 does not work. */
 			sc->bge_flags &= ~BGE_FLAG_TSO3;
 		}
@@ -4903,6 +4907,7 @@ bge_stats_update_regs(struct bge_softc *sc)
 	 */
 	if (sc->bge_asicrev != BGE_ASICREV_BCM5717 &&
 	    sc->bge_chipid != BGE_CHIPID_BCM5719_A0 &&
+	    sc->bge_chipid != BGE_CHIPID_BCM5719_A1 &&
 	    sc->bge_chipid != BGE_CHIPID_BCM5720_A0)
 		stats->InputDiscards +=
 		    CSR_READ_4(sc, BGE_RXLP_LOCSTAT_IFIN_DROPS);
