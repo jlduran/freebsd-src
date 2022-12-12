@@ -80,6 +80,9 @@ libbe_error_description(libbe_handle_t *lbh)
 	case BE_ERR_MOUNTED:
 		return ("boot environment is already mounted");
 
+	case BE_ERR_MOUNTFROM:
+		return ("could not set vfs.root.mountfrom");
+
 	case BE_ERR_NOMOUNT:
 		return ("boot environment is not mounted");
 

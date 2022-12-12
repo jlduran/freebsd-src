@@ -395,6 +395,8 @@ bectl_rename_body()
 	atf_check -o not-empty zfs get mountpoint ${zpool}/ROOT/default2
 	atf_check -e not-empty -s not-exit:0 zfs get mountpoint \
 	    ${zpool}/ROOT/default
+	atf_check_equal "zfs:${zpool}/ROOT/default2" \
+	    "$(kenv vfs.root.mountfrom)"
 }
 bectl_rename_cleanup()
 {

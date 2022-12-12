@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD$");
 
 #include <libzutil.h>
 #include <ctype.h>
+#include <kenv.h>
 #include <libgen.h>
 #include <libzfs_core.h>
 #include <libzfs_impl.h>
@@ -72,6 +73,10 @@ static int be_create_child_cloned(libbe_handle_t *lbh, const char *active);
 /* Arbitrary... should tune */
 #define	BE_SNAP_SERIAL_MAX	1024
 
+#ifndef ZFS_MAXNAMELEN
+#define	ZFS_MAXNAMELEN	256
+#endif
+
 /*
  * Iterator function for locating the rootfs amongst the children of the
  * zfs_be_root set by loader(8).  data is expected to be a libbe_handle_t *.
@@ -101,6 +106,35 @@ be_locate_rootfs(libbe_handle_t *lbh)
 
 	strlcpy(lbh->rootfs, zfs_get_name(zfs), sizeof(lbh->rootfs));
 	zfs_close(zfs);
+	return (0);
+}
+
+/* Sets vfs.root.mountfrom, useful when rerooting (reboot -r) */
+static int
+be_set_mountfrom(const char *old, const char *new)
+{
+	char *curr;
+	char mountfrom[ZFS_MAXNAMELEN];
+	int rv;
+
+	curr = NULL;
+
+	rv = kenv(KENV_GET, "vfs.root.mountfrom", mountfrom, sizeof(mountfrom));
+	if (rv <= 0)
+		return (-1);
+
+	if (strncmp(mountfrom, "zfs:", 4) == 0) {
+		curr = mountfrom + 4;
+		if ((old == NULL) || (strcmp(old, curr) == 0)) {
+			strcpy(mountfrom, "zfs:");
+			strlcat(mountfrom, new, sizeof(mountfrom));
+			printf("setting vfs.root.mountfrom=\"%s\"\n", mountfrom);
+			rv = kenv(KENV_SET, "vfs.root.mountfrom", mountfrom, strlen(mountfrom) + 1);
+			if (rv != 0)
+				return (-1);
+		}
+	}
+
 	return (0);
 }
 
@@ -1011,6 +1045,11 @@ be_rename(libbe_handle_t *lbh, const char *old, const char *new)
 	zfs_close(zfs_hdl);
 	if (err != 0)
 		return (set_error(lbh, BE_ERR_UNKNOWN));
+
+	err = be_set_mountfrom(full_old, full_new);
+	if (err != 0)
+		return (set_error(lbh, BE_ERR_MOUNTFROM));
+
 	return (0);
 }
 
@@ -1229,7 +1268,8 @@ be_add_child(libbe_handle_t *lbh, const char *child_path, bool cp_if_exists)
 
 /*
  * Deactivate old BE dataset; currently just sets canmount=noauto or
- * resets boot once configuration.
+ * resets boot once configuration and restores previous vfs.root.mountfrom
+ * value.
  */
 int
 be_deactivate(libbe_handle_t *lbh, const char *ds, bool temporary)
@@ -1246,6 +1286,13 @@ be_deactivate(libbe_handle_t *lbh, const char *ds, bool temporary)
 	if (zfs_prop_set(zfs, "canmount", "noauto") != 0)
 		return (1);
 	zfs_close(zfs);
+
+	// XXX
+	// get R_be_path
+	//err = be_set_mountfrom(NULL, R_be_path);
+	//if (err != 0)
+	//	return (set_error(lbh, BE_ERR_MOUNTFROM));
+
 	return (0);
 }
 
@@ -1265,8 +1312,11 @@ be_activate(libbe_handle_t *lbh, const char *bootenv, bool temporary)
 		return (set_error(lbh, err));
 
 	if (temporary) {
-		return (lzbe_set_boot_device(
-		    zpool_get_name(lbh->active_phandle), lzbe_add, be_path));
+		err = lzbe_set_boot_device(
+		    zpool_get_name(lbh->active_phandle), lzbe_add, be_path);
+
+		if (err != 0)
+			return (err);
 	} else {
 		if (strncmp(lbh->bootfs, "-", 1) != 0 &&
 		    be_deactivate(lbh, lbh->bootfs, false) != 0)
@@ -1298,6 +1348,11 @@ be_activate(libbe_handle_t *lbh, const char *bootenv, bool temporary)
 		if (err)
 			return (-1);
 	}
+
+	/* Update vfs.root.mountfrom value */
+	err = be_set_mountfrom(NULL, be_path);
+	if (err != 0)
+		return (set_error(lbh, BE_ERR_MOUNTFROM));
 
 	return (BE_ERR_SUCCESS);
 }

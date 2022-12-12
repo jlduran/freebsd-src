@@ -49,6 +49,7 @@ typedef enum be_error {
 	BE_ERR_INVORIGIN,       /* invalid origin */
 	BE_ERR_IO,              /* error when doing some I/O operation */
 	BE_ERR_MOUNTED,         /* boot environment is already mounted */
+	BE_ERR_MOUNTFROM,       /* error when setting vfs.root.mountfrom */
 	BE_ERR_NOENT,           /* boot env doesn't exist */
 	BE_ERR_NOMEM,           /* insufficient memory */
 	BE_ERR_NOMOUNT,         /* boot environment is not mounted */
