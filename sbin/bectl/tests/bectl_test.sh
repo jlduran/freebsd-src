@@ -412,7 +412,7 @@ atf_test_case bectl_jail cleanup
 bectl_jail_head()
 {
 
-	atf_set "descr" "Check bectl rename"
+	atf_set "descr" "Check bectl jail/unjail"
 	atf_set "require.user" root
 	atf_set "require.progs" jail
 }
