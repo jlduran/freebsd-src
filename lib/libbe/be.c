@@ -1288,6 +1288,15 @@ be_deactivate(libbe_handle_t *lbh, const char *ds, bool temporary)
 	zfs_close(zfs);
 
 	// XXX
+	// zfs_prop_get
+	// nvlist_t *dsprops;
+	// if (be_get_dataset_props(be, dsname, dsprops) != 0) {
+	//	nvlist_free(dsprops);
+	//	free(dsname);
+	//	return (0);
+	//} ...
+	// if (nvlist_lookup_boolean_value(dsprops, "nextboot",
+	//    &active_reboot) == 0 && active_reboot)
 	// get R_be_path
 	//err = be_set_mountfrom(NULL, R_be_path);
 	//if (err != 0)

@@ -4,10 +4,10 @@ freebsd_instance:
    image_family: freebsd-14-0-snap
 
 task:
-  compile_and_install_libbe_script:
-    - cd lib/libbe
-    - make -j$(sysctl -n hw.ncpu)
-    - make -j$(sysctl -n hw.ncpu) install
+  #compile_and_install_libbe_script:
+  #  - cd lib/libbe
+  #  - make -j$(sysctl -n hw.ncpu)
+  #  - make -j$(sysctl -n hw.ncpu) install
   compile_and_install_bectl_script:
     - cd sbin/bectl
     - make -j$(sysctl -n hw.ncpu)
