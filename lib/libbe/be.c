@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
  *
@@ -491,7 +491,7 @@ be_destroy_internal(libbe_handle_t *lbh, const char *name, int options,
 	/*
 	 * If the caller wants auto-origin destruction and the origin
 	 * name matches one of our automatically created snapshot names
-	 * (i.e. strftime("%F-%T") with a serial at the end), then
+	 * (i.e., strftime("%F-%T") with a serial at the end), then
 	 * we'll set the DESTROY_ORIGIN flag and nuke it
 	 * be_is_auto_snapshot_name is exported from libbe(3) so that
 	 * the caller can determine if it needs to warn about the origin
@@ -534,7 +534,6 @@ be_destroy_internal(libbe_handle_t *lbh, const char *name, int options,
 int
 be_destroy(libbe_handle_t *lbh, const char *name, int options)
 {
-
 	/*
 	 * The consumer must not set both BE_DESTROY_AUTOORIGIN and
 	 * BE_DESTROY_ORIGIN.  Internally, we'll set the latter from the former.
@@ -635,7 +634,6 @@ be_snapshot(libbe_handle_t *lbh, const char *source, const char *snap_name,
 	return (BE_ERR_SUCCESS);
 }
 
-
 /*
  * Create the boot environment specified by the name parameter
  */
@@ -653,7 +651,7 @@ static int
 be_deep_clone_prop(int prop, void *cb)
 {
 	int err;
-        struct libbe_dccb *dccb;
+	struct libbe_dccb *dccb;
 	zprop_source_t src;
 	char pval[BE_MAXPATHLEN];
 	char source[BE_MAXPATHLEN];
@@ -701,7 +699,8 @@ be_deep_clone_prop(int prop, void *cb)
  * result should produce: 'zroot/ROOT/bootenv/data/set'
  */
 static int
-be_get_path(struct libbe_deep_clone *ldc, const char *dspath, char *result, int result_size)
+be_get_path(struct libbe_deep_clone *ldc, const char *dspath, char *result,
+    int result_size)
 {
 	char *pos;
 	char *child_dataset;
@@ -716,7 +715,7 @@ be_get_path(struct libbe_deep_clone *ldc, const char *dspath, char *result, int 
 	/* root path of the new boot environment */
 	snprintf(result, result_size, "%s/%s", ldc->lbh->root, ldc->bename);
 
-        /* gets us to the parent dataset, the +1 consumes a trailing slash */
+	/* gets us to the parent dataset, the +1 consumes a trailing slash */
 	pos += strlen(ldc->lbh->root) + 1;
 
 	/* skip the parent dataset */
@@ -747,7 +746,7 @@ be_clone_cb(zfs_handle_t *ds, void *data)
 	if (be_get_path(ldc, dspath, be_path, sizeof(be_path)) != BE_ERR_SUCCESS)
 		return (set_error(ldc->lbh, BE_ERR_UNKNOWN));
 
-	/* the dataset to be created (i.e. the boot environment) already exists */
+	/* the dataset to be created (i.e., the boot environment) already exists */
 	if (zfs_dataset_exists(ldc->lbh->lzh, be_path, ZFS_TYPE_DATASET))
 		return (set_error(ldc->lbh, BE_ERR_EXISTS));
 
@@ -791,7 +790,8 @@ be_clone_cb(zfs_handle_t *ds, void *data)
  * with the root path that libbe was initailized with.
 */
 static int
-be_clone(libbe_handle_t *lbh, const char *bename, const char *snapshot, int depth)
+be_clone(libbe_handle_t *lbh, const char *bename, const char *snapshot,
+    int depth)
 {
 	int err;
 	char snap_path[BE_MAXPATHLEN];
@@ -799,7 +799,7 @@ be_clone(libbe_handle_t *lbh, const char *bename, const char *snapshot, int dept
 	zfs_handle_t *parent_hdl;
 	struct libbe_deep_clone ldc;
 
-        /* ensure the boot environment name is valid */
+	/* ensure the boot environment name is valid */
 	if ((err = be_validate_name(lbh, bename)) != 0)
 		return (set_error(lbh, err));
 
@@ -814,11 +814,11 @@ be_clone(libbe_handle_t *lbh, const char *bename, const char *snapshot, int dept
 	if ((err = be_validate_snap(lbh, snap_path)) != 0)
 		return (set_error(lbh, err));
 
-        /* get a copy of the snapshot path so we can disect it */
+	/* get a copy of the snapshot path so we can disect it */
 	if ((parentname = strdup(snap_path)) == NULL)
 		return (set_error(lbh, BE_ERR_UNKNOWN));
 
-        /* split dataset name from snapshot name */
+	/* split dataset name from snapshot name */
 	snapname = strchr(parentname, '@');
 	if (snapname == NULL) {
 		free(parentname);
@@ -827,17 +827,17 @@ be_clone(libbe_handle_t *lbh, const char *bename, const char *snapshot, int dept
 	*snapname = '\0';
 	snapname++;
 
-        /* set-up the boot environment */
-        ldc.lbh = lbh;
-        ldc.bename = bename;
-        ldc.snapname = snapname;
+	/* set-up the boot environment */
+	ldc.lbh = lbh;
+	ldc.bename = bename;
+	ldc.snapname = snapname;
 	ldc.depth = 0;
 	ldc.depth_limit = depth;
 
-        /* the boot environment will be cloned from this dataset */
+	/* the boot environment will be cloned from this dataset */
 	parent_hdl = zfs_open(lbh->lzh, parentname, ZFS_TYPE_DATASET);
 
-        /* create the boot environment */
+	/* create the boot environment */
 	err = be_clone_cb(parent_hdl, &ldc);
 
 	free(parentname);
@@ -848,7 +848,7 @@ be_clone(libbe_handle_t *lbh, const char *bename, const char *snapshot, int dept
  * Create a boot environment from pre-existing snapshot, specifying a depth.
  */
 int be_create_depth(libbe_handle_t *lbh, const char *bename,
-		    const char *snap, int depth)
+    const char *snap, int depth)
 {
 	return (be_clone(lbh, bename, snap, depth));
 }
@@ -862,7 +862,6 @@ be_create_from_existing_snap(libbe_handle_t *lbh, const char *bename,
 {
 	return (be_clone(lbh, bename, snap, -1));
 }
-
 
 /*
  * Create a boot environment from an existing boot environment
@@ -881,7 +880,6 @@ be_create_from_existing(libbe_handle_t *lbh, const char *bename, const char *old
 	return (set_error(lbh, err));
 }
 
-
 /*
  * Verifies that a snapshot has a valid name, exists, and has a mountpoint of
  * '/'. Returns BE_ERR_SUCCESS (0), upon success, or the relevant BE_ERR_* upon
@@ -890,7 +888,6 @@ be_create_from_existing(libbe_handle_t *lbh, const char *bename, const char *old
 int
 be_validate_snap(libbe_handle_t *lbh, const char *snap_name)
 {
-
 	if (strlen(snap_name) >= BE_MAXPATHLEN)
 		return (BE_ERR_PATHLEN);
 
@@ -903,7 +900,6 @@ be_validate_snap(libbe_handle_t *lbh, const char *snap_name)
 
 	return (BE_ERR_SUCCESS);
 }
-
 
 /*
  * Idempotently appends the name argument to the root boot environment path
@@ -940,7 +936,6 @@ be_root_concat(libbe_handle_t *lbh, const char *name, char *result)
 	return (BE_ERR_PATHLEN);
 }
 
-
 /*
  * Verifies the validity of a boot environment name (A-Za-z0-9-_.). Returns
  * BE_ERR_SUCCESS (0) if name is valid, otherwise returns BE_ERR_INVALIDNAME
@@ -950,7 +945,6 @@ be_root_concat(libbe_handle_t *lbh, const char *name, char *result)
 int
 be_validate_name(libbe_handle_t *lbh, const char *name)
 {
-
 	/*
 	 * Impose the additional restriction that the entire dataset name must
 	 * not exceed the maximum length of a dataset, i.e. MAXNAMELEN.
