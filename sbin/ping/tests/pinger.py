@@ -39,7 +39,7 @@ def parse_args():
                         choices=["MF", "DF", "evil"],
                         help="IP flags")
     parser.add_argument("--opts", type=str, default="",
-                        choices=["EOL", "NOP", "NOP-40", "unk"] +
+                        choices=["EOL", "NOP", "NOP-40", "unk", "unk-40"] +
                         routing_options, help="Include IP options")
     parser.add_argument("--special", type=str, default="",
                         choices=["tcp", "udp", "wrong", "warp"],
@@ -109,13 +109,15 @@ def construct_response_packet(echo, ip, icmp, special):
     if icmp.type in icmp_id_seq_types:
         pkt=ip/icmp/load
     else:
+        ip.options=""
         pkt=ip/icmp/oip/oicmp/load
 
     return pkt
 
 def generate_ip_options(opts):
-    routers=["192.0.2.10", "192.0.2.20", "192.0.2.30", "192.0.2.40",
-             "192.0.2.50", "192.0.2.60", "192.0.2.70", "192.0.2.80", 0]
+    routers=["192.0.2.10", "192.0.2.20", "192.0.2.30",
+             "192.0.2.40", "192.0.2.50", "192.0.2.60",
+             "192.0.2.70", "192.0.2.80", "192.0.2.90"]
     routers_zero=[0, 0, 0, 0, 0, 0, 0, 0, 0]
     if opts == "EOL":
         options=sc.IPOption(b"\x00")
@@ -126,7 +128,7 @@ def generate_ip_options(opts):
     elif opts == "RR":
         options=sc.IPOption_RR(pointer=40, routers=routers)
     elif opts == "RR-same":
-        options=sc.IPOption_RR(pointer=3, routers=routers_zero)
+        options=sc.IPOption_RR(pointer=3)
     elif opts == "RR-trunc":
         options=sc.IPOption_RR(length=7, routers=routers_zero)
     elif opts == "LSRR":
@@ -140,10 +142,13 @@ def generate_ip_options(opts):
         options=sc.IPOption_SSRR(routers=routers)
     elif opts == "SSRR-trunc":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
-        options=sc.IPOption_SSRR(length=3, routers=routers)
+        options=sc.IPOption_SSRR(length=3, routers=routers_zero)
     elif opts == "unk":
         subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
         options=sc.IPOption(b"\x9f")
+    elif opts == "unk-40":
+        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        options=sc.IPOption(b"\x9f" * 40)
     else:
         options=""
     return options
