@@ -1055,7 +1055,7 @@ pinger(void)
 	u_char *packet;
 
 	packet = outpack;
-	icp = (struct icmp *)outpack;
+	memcpy(&icp, &outpack, sizeof(struct icmp *));
 	icp->icmp_type = icmp_type;
 	icp->icmp_code = 0;
 	icp->icmp_cksum = 0;
@@ -1127,7 +1127,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 	struct in_addr ina;
 	u_char *cp, *dp;
 	struct icmp *icp;
-	struct ip *ip;
+	struct ip *ip, *oip;
 	const void *tp;
 	double triptime;
 	int dupflag, hlen, i, j, recv_len;
@@ -1136,7 +1136,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 	static char old_rr[MAX_IPOPTLEN];
 
 	/* Check the IP header */
-	ip = (struct ip *)buf;
+	memcpy(&ip, &buf, sizeof(struct ip *));
 	hlen = ip->ip_hl << 2;
 	recv_len = cc;
 	if (cc < hlen + ICMP_MINLEN) {
@@ -1269,7 +1269,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 		 * as root to avoid leaking information not normally
 		 * available to those not running as root.
 		 */
-		struct ip *oip = (struct ip *)icp->icmp_data;
+		memcpy(&oip, icp->icmp_data, sizeof(struct ip *));
 		struct icmp *oicmp = (struct icmp *)(oip + 1);
 
 		if (((options & F_VERBOSE) && uid == 0) ||
@@ -1452,6 +1452,9 @@ finish(void)
 static void
 pr_icmph(struct icmp *icp)
 {
+	struct ip *oip;
+
+	oip = (struct ip *)icp->icmp_data;
 
 	switch(icp->icmp_type) {
 	case ICMP_ECHOREPLY:
@@ -1488,11 +1491,11 @@ pr_icmph(struct icmp *icp)
 			break;
 		}
 		/* Print returned IP header information */
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(oip);
 		break;
 	case ICMP_SOURCEQUENCH:
 		(void)printf("Source Quench\n");
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(oip);
 		break;
 	case ICMP_REDIRECT:
 		switch(icp->icmp_code) {
@@ -1513,7 +1516,7 @@ pr_icmph(struct icmp *icp)
 			break;
 		}
 		(void)printf("(New addr: %s)\n", inet_ntoa(icp->icmp_gwaddr));
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(oip);
 		break;
 	case ICMP_ECHO:
 		(void)printf("Echo Request\n");
@@ -1532,12 +1535,12 @@ pr_icmph(struct icmp *icp)
 			    icp->icmp_code);
 			break;
 		}
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(oip);
 		break;
 	case ICMP_PARAMPROB:
 		(void)printf("Parameter problem: pointer = 0x%02x\n",
 		    icp->icmp_hun.ih_pptr);
-		pr_retip((struct ip *)icp->icmp_data);
+		pr_retip(oip);
 		break;
 	case ICMP_TSTAMP:
 		(void)printf("Timestamp\n");
