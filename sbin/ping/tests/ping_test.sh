@@ -162,11 +162,18 @@ inject_opts_head()
 }
 inject_opts_body()
 {
-	atf_check -s exit:0 -o match:"wrong total length" -o match:"NOP" python3 $(atf_get_srcdir)/injection.py opts
+	atf_check -s exit:0 -o match:"wrong total length" -o match:"NOP" \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 0 \
+	    --icmp_code 0 \
+	    --opts NOP-40
 }
 inject_opts_cleanup()
 {
-	ifconfig `cat tun.txt` destroy
+	pinger_cleanup
 }
 
 atf_test_case "inject_pip" "cleanup"
@@ -178,11 +185,20 @@ inject_pip_head()
 }
 inject_pip_body()
 {
-	atf_check -s exit:2 -o match:"Destination Host Unreachable" -o not-match:"01010101" python3 $(atf_get_srcdir)/injection.py pip
+	# XXX This test is wrong.  It should match (not not-match) 40 NOPs.
+	atf_check -s exit:2 -o match:"Destination Host Unreachable" \
+	    -o not-match:"01010101" \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 3 \
+	    --icmp_code 1 \
+	    --opts NOP-40
 }
 inject_pip_cleanup()
 {
-	ifconfig `cat tun.txt` destroy
+	pinger_cleanup
 }
 
 # This is redundant with the ping_ tests, but it serves to ensure that scapy.py
@@ -196,11 +212,17 @@ inject_reply_head()
 }
 inject_reply_body()
 {
-	atf_check -s exit:0 -o match:"1 packets transmitted, 1 packets received" python3 $(atf_get_srcdir)/injection.py reply
+	atf_check -s exit:0 -o match:"1 packets transmitted, 1 packets received" \
+	    $(atf_get_srcdir)/pinger.py \
+	    --iface tun0 \
+	    --src 192.0.2.1 \
+	    --dst 192.0.2.2 \
+	    --icmp_type 0 \
+	    --icmp_code 0
 }
 inject_reply_cleanup()
 {
-	ifconfig `cat tun.txt` destroy
+	pinger_cleanup
 }
 
 atf_init_test_cases()
@@ -229,4 +251,14 @@ check_ping_statistics()
 	    -e 's/hlim=[0-9][0-9]*/hlim=/' \
 	    "$1" >"$1".filtered
 	atf_check -s exit:0 diff -u "$1".filtered "$2"
+}
+
+pinger_cleanup()
+{
+	if [ -f created_interfaces.lst ]; then
+		for ifname in `cat created_interfaces.lst`
+		do
+			ifconfig ${ifname} destroy
+		done
+	fi
 }
