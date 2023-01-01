@@ -17,135 +17,65 @@ from typing import List
 # from the BaseTest
 
 
-class TestExampleSimplest(BaseTest):
-    @pytest.mark.skip(reason="comment me to run the test")
-    def test_one(self):
-        assert ToolsHelper.get_output("uname -s").strip() == "FreeBSD"
-
-
 class TestExampleSimple(BaseTest):
-    # List of required kernel modules (kldstat -v)
-    # that needs to be present for the tests to run
-    REQUIRED_MODULES = ["null"]
-
-    @pytest.mark.skip(reason="comment me to run the test")
-    def test_one(self):
-        """Optional test description
-        This and the following lines are not propagated
-        to the ATF test description.
-        """
-        pass
-
-    @pytest.mark.skip(reason="comment me to run the test")
-    # List of all requirements supported by an atf runner
-    # See atf-test-case(4) for the detailed description
     @pytest.mark.require_user("root")
-    @pytest.mark.require_arch(["amd64", "i386"])
-    @pytest.mark.require_files(["/path/file1", "/path/file2"])
-    @pytest.mark.require_machine(["amd64", "i386"])
-    @pytest.mark.require_memory("200M")
-    @pytest.mark.require_progs(["prog1", "prog2"])
-    @pytest.mark.timeout(300)
-    def test_two(self):
-        pass
+    def test_root(self):
+        assert subprocess.getoutput("id -un") == "root"
 
-    @pytest.mark.skip(reason="comment me to run the test")
     @pytest.mark.require_user("unprivileged")
-    def test_syscall_failure(self):
-        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        with pytest.raises(OSError) as exc_info:
-            s.bind(("::1", 42))
-        assert exc_info.value.errno == errno.EACCES
+    def test_unprivileged(self):
+        assert subprocess.getoutput("id -un") != "root"
 
-    @pytest.mark.skip(reason="comment me to run the test")
     @pytest.mark.parametrize(
-        "family_tuple",
+        "user_tuple",
         [
-            pytest.param([socket.AF_INET, None], id="AF_INET"),
-            pytest.param([socket.AF_INET6, None], id="AF_INET6"),
-            pytest.param([39, errno.EAFNOSUPPORT], id="FAMILY_39"),
+            pytest.param(
+                ["kldload if_epair", ""],
+                marks=pytest.mark.require_user("root"),
+                id="root",
+            ),
+            pytest.param(
+                ["kldload if_epair", "Operation not permitted"],
+                marks=pytest.mark.require_user("unprivileged"),
+                id="unprivileged",
+            ),
         ],
     )
-    def test_parametrize(self, family_tuple):
-        family, error = family_tuple
-        try:
-            s = socket.socket(family, socket.SOCK_STREAM)
-            s.close()
-        except OSError as e:
-            if error is None or error != e.errno:
-                raise
-
-    # @pytest.mark.skip(reason="comment me to run the test")
-    def test_with_cleanup(self):
-        print("TEST BODY")
-
-    def cleanup_test_with_cleanup(self, test_id):
-        print("CLEANUP HANDLER")
+    def test_parametrize_require_user(self, user_tuple):
+        command, output = user_tuple
+        assert output in subprocess.getoutput(command)
 
 
-class TestVnetSimple(SingleVnetTestTemplate):
-    """
-    SingleVnetTestTemplate creates a topology with a single
-    vnet and a single epair between this vnet and the host system.
-    Additionally, lo0 interface is created inside the vnet.
-
-    Both vnets and interfaces are aliased as vnetX and ifY.
-    They can be accessed via maps:
-        vnet: VnetInstance = self.vnet_map["vnet1"]
-        iface: VnetInterface = vnet.iface_alias_map["if1"]
-
-    All prefixes from IPV4_PREFIXES and IPV6_PREFIXES are
-    assigned to the single epair interface inside the jail.
-
-    One can rely on the fact that there are no IPv6 prefixes
-    in the tentative state when the test method is called.
-    """
-
-    IPV6_PREFIXES: List[str] = ["2001:db8::1/64"]
-    IPV4_PREFIXES: List[str] = ["192.0.2.1/24"]
-
-    def setup_method(self, method):
-        """
-        Optional pre-setup for all of the tests inside the class
-        """
-        # Code to run before vnet setup
-        #
-        super().setup_method(method)
-        #
-        # Code to run after vnet setup
-        # Executed inside the vnet
-
-    @pytest.mark.skip(reason="comment me to run the test")
+class TestSingleVnetTestTemplate(SingleVnetTestTemplate):
     @pytest.mark.require_user("root")
-    def test_ping(self):
-        assert subprocess.run("ping -c1 192.0.2.1".split()).returncode == 0
-        assert subprocess.run("ping -c1 2001:db8::1".split()).returncode == 0
+    def test_root(self):
+        assert subprocess.getoutput("id -un") == "root"
 
-    @pytest.mark.skip(reason="comment me to run the test")
-    def test_topology(self):
-        vnet = self.vnet_map["vnet1"]
-        iface = vnet.iface_alias_map["if1"]
-        print("Iface {} inside vnet {}".format(iface.name, vnet.name))
+    @pytest.mark.require_user("unprivileged")
+    def test_unprivileged(self):
+        assert subprocess.getoutput("id -un") != "root"
+
+    @pytest.mark.parametrize(
+        "user_tuple",
+        [
+            pytest.param(
+                ["kldload if_epair", "module already loaded or in kernel"],
+                marks=pytest.mark.require_user("root"),
+                id="root",
+            ),
+            pytest.param(
+                ["kldload if_epair", "Operation not permitted"],
+                marks=pytest.mark.require_user("unprivileged"),
+                id="unprivileged",
+            ),
+        ],
+    )
+    def test_parametrize_require_user(self, user_tuple):
+        command, output = user_tuple
+        assert output in subprocess.getoutput(command)
 
 
-class TestVnetDual1(VnetTestTemplate):
-    """
-    VnetTestTemplate creates topology described in the self.TOPOLOGY
-
-    Each vnet (except vnet1) can have a handler function, named
-      vnetX_handler. This function will be run in a separate process
-      inside vnetX jail. The framework automatically creates a pipe
-      to allow communication between the main test and the vnet handler.
-
-    This topology contains 2 VNETs connected with 2 epairs:
-
-    [           VNET1          ]     [          VNET2           ]
-     if1(epair) 2001:db8:a::1/64 <-> 2001:db8:a::2/64 if1(epair)
-     if2(epair) 2001:db8:b::1/64 <-> 2001:db8:b::2/64 if2(epair)
-                 lo0                             lo0
-
-    """
-
+class TestVnetTestTemplate(VnetTestTemplate):
     TOPOLOGY = {
         "vnet1": {"ifaces": ["if1", "if2"]},
         "vnet2": {"ifaces": ["if1", "if2"]},
@@ -174,25 +104,29 @@ class TestVnetDual1(VnetTestTemplate):
             os_ifname = vnet.iface_alias_map[iface_alias].name
             self.send_object(vnet.pipe, self._get_iface_stat(os_ifname))
 
-    @pytest.mark.skip(reason="comment me to run the test")
     @pytest.mark.require_user("root")
-    def test_ifstat(self):
-        """Checks that RX interface packets are properly accounted for"""
-        second_vnet = self.vnet_map["vnet2"]
-        pipe = second_vnet.pipe
+    def test_root(self):
+        assert subprocess.getoutput("id -un") == "root"
 
-        # Ping neighbor IP on if1 and verify that the counter was incremented
-        self.send_object(pipe, "if1")
-        old_stat = self.wait_object(pipe)
-        assert subprocess.run("ping -c5 2001:db8:a::2".split()).returncode == 0
-        self.send_object(pipe, "if1")
-        new_stat = self.wait_object(pipe)
-        assert new_stat["received-packets"] - old_stat["received-packets"] >= 5
+    @pytest.mark.require_user("unprivileged")
+    def test_unprivileged(self):
+        assert subprocess.getoutput("id -un") != "root"
 
-        # Ping neighbor IP on if2 and verify that the counter was incremented
-        self.send_object(pipe, "if2")
-        old_stat = self.wait_object(pipe)
-        assert subprocess.run("ping -c5 2001:db8:b::2".split()).returncode == 0
-        self.send_object(pipe, "if2")
-        new_stat = self.wait_object(pipe)
-        assert new_stat["received-packets"] - old_stat["received-packets"] >= 5
+    @pytest.mark.parametrize(
+        "user_tuple",
+        [
+            pytest.param(
+                ["kldload if_epair", "module already loaded or in kernel"],
+                marks=pytest.mark.require_user("root"),
+                id="root",
+            ),
+            pytest.param(
+                ["kldload if_epair", "Operation not permitted"],
+                marks=pytest.mark.require_user("unprivileged"),
+                id="unprivileged",
+            ),
+        ],
+    )
+    def test_parametrize_require_user(self, user_tuple):
+        command, output = user_tuple
+        assert output in subprocess.getoutput(command)
