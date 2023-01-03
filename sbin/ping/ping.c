@@ -203,7 +203,6 @@ static int sweepincr = 1;	/* payload increment in sweep */
 static int interval = 1000;	/* interval between packets, ms */
 static int waittime = MAXWAIT;	/* timeout for each packet */
 static long nrcvtimeout = 0;	/* # of packets we got back after waittime */
-static uint16_t lastseq;	/* the latest seq # for the received packets */
 
 /* timing */
 static int timing;		/* flag to do timing */
@@ -986,10 +985,6 @@ ping(int argc, char *const *argv)
 			    (npackets && nreceived >= npackets))
 				break;
 		}
-		if (n == 0 && (options & F_FLOOD) == 0 &&
-		    (nreceived == 0 || ntransmitted - 1 > lastseq))
-			printf("Request timeout for icmp_seq %u\n",
-			    (uint16_t)(ntransmitted - 1));
 		if (n == 0 || options & F_FLOOD) {
 			if (sweepmax && sntransmitted == snpackets) {
 				if (datalen + sweepincr > sweepmax)
@@ -1021,6 +1016,12 @@ ping(int argc, char *const *argv)
 				nmissedmax = ntransmitted - nreceived - 1;
 				if (options & F_MISSED)
 					(void)write(STDOUT_FILENO, &BBELL, 1);
+				if (!(options & F_QUIET)) {
+					printf("Request timeout for icmp_seq %u\n",
+					    (uint16_t)(ntransmitted - 2));
+					if (!(options & F_FLOOD))
+						(void)fflush(stdout);
+				}
 			}
 		}
 	}
@@ -1235,7 +1236,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 				timing = 0;
 		}
 
-		seq = lastseq = ntohs(icp.icmp_seq);
+		seq = ntohs(icp.icmp_seq);
 
 		if (TST(seq % mx_dup_ck)) {
 			++nrepeats;
