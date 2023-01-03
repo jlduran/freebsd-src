@@ -250,6 +250,7 @@ static long ntransmitfailures;	/* number of transmit failures */
 static int interval = 1000;	/* interval between packets in ms */
 static int waittime = MAXWAIT;	/* timeout for each packet */
 static long nrcvtimeout = 0;	/* # of packets we got back after waittime */
+static uint16_t lastseq;	/* the latest seq # for the received packets */
 
 /* timing */
 static int timing;		/* flag to do timing */
@@ -1149,14 +1150,14 @@ ping6(int argc, char *argv[])
 	printf("%s --> ", pr_addr((struct sockaddr *)&src, sizeof(src)));
 	printf("%s\n", pr_addr((struct sockaddr *)&dst, sizeof(dst)));
 
-	if (preload == 0)
+	if (npackets != 0 && preload > npackets)
+		preload = npackets;
+	else if (preload == 0)
+		preload = 1;
+
+	for (i = 0; i < preload; i++)
 		pinger();
-	else {
-		if (npackets != 0 && preload > npackets)
-			preload = npackets;
-		while (preload--)
-			pinger();
-	}
+
 	clock_gettime(CLOCK_MONOTONIC, &last);
 
 	sigemptyset(&si_sa.sa_mask);
@@ -1252,6 +1253,19 @@ ping6(int argc, char *argv[])
 			if (((options & F_ONCE) != 0 && nreceived > 0) ||
 			    (npackets > 0 && nreceived >= npackets))
 				break;
+		}
+		if (n == 0 && almost_done == 0 &&
+		    (options & F_QUIET) == 0 && (options & F_FLOOD) == 0 &&
+		    (nreceived == 0 || nreceived - 1 > lastseq)) {
+			int seq = preload;
+
+			while (seq) {
+				printf("Request timeout for icmp_seq %u\n",
+				    (uint16_t)(ntransmitted - seq));
+				fflush(stdout);
+				seq--;
+			}
+			preload = 1;
 		}
 		if (n == 0 || (options & F_FLOOD)) {
 			if (npackets == 0 || ntransmitted < npackets)
@@ -1638,7 +1652,7 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 	}
 
 	if (icp->icmp6_type == ICMP6_ECHO_REPLY && myechoreply(icp)) {
-		seq = ntohs(icp->icmp6_seq);
+		seq = lastseq = ntohs(icp->icmp6_seq);
 		++nreceived;
 		if (timing) {
 			memcpy(&tpp, icp + 1, sizeof(tpp));

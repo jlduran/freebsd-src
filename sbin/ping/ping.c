@@ -203,6 +203,7 @@ static int sweepincr = 1;	/* payload increment in sweep */
 static int interval = 1000;	/* interval between packets, ms */
 static int waittime = MAXWAIT;	/* timeout for each packet */
 static long nrcvtimeout = 0;	/* # of packets we got back after waittime */
+static uint16_t lastseq;	/* the latest seq # for the received packets */
 
 /* timing */
 static int timing;		/* flag to do timing */
@@ -913,14 +914,15 @@ ping(int argc, char *const *argv)
 	iov.iov_base = packet;
 	iov.iov_len = IP_MAXPACKET;
 
-	if (preload == 0)
-		pinger();		/* send the first ping */
-	else {
-		if (npackets != 0 && preload > npackets)
-			preload = npackets;
-		while (preload--)	/* fire off them quickies */
-			pinger();
-	}
+	if (npackets != 0 && preload > npackets)
+		preload = npackets;
+	else if (preload == 0)
+		preload = 1;
+
+	/* Send the first ping.  If preload > 1, fire off them quickies. */
+	for (i = 0; i < preload; i++)
+		pinger();	
+
 	(void)clock_gettime(CLOCK_MONOTONIC, &last);
 
 	if (options & F_FLOOD) {
@@ -984,6 +986,22 @@ ping(int argc, char *const *argv)
 			if ((options & F_ONCE && nreceived) ||
 			    (npackets && nreceived >= npackets))
 				break;
+		}
+		if (n == 0 && almost_done == 0 &&
+		    (options & F_QUIET) == 0 && (options & F_FLOOD) == 0 &&
+		    (nreceived == 0 || ntransmitted - 1 > lastseq)) {
+			int seq = preload;
+			/*
+			 * XXX: the timeout messages for payload > 1 will be
+			 * displayed only when all of them are missing.
+			 */
+			while (seq) {
+				printf("Request timeout for icmp_seq %u\n",
+				    (uint16_t)(ntransmitted - seq));
+				fflush(stdout);
+				seq--;
+			}
+			preload = 1;
 		}
 		if (n == 0 || options & F_FLOOD) {
 			if (sweepmax && sntransmitted == snpackets) {
@@ -1230,7 +1248,7 @@ pr_pack(char *buf, ssize_t cc, struct sockaddr_in *from, struct timespec *tv)
 				timing = 0;
 		}
 
-		seq = ntohs(icp.icmp_seq);
+		seq = lastseq = ntohs(icp.icmp_seq);
 
 		if (TST(seq % mx_dup_ck)) {
 			++nrepeats;
