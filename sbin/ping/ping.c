@@ -921,7 +921,7 @@ ping(int argc, char *const *argv)
 
 	/* Send the first ping.  If preload > 1, fire off them quickies. */
 	for (i = 0; i < preload; i++)
-		pinger();	
+		pinger();
 
 	(void)clock_gettime(CLOCK_MONOTONIC, &last);
 
@@ -998,6 +998,8 @@ ping(int argc, char *const *argv)
 			while (seq) {
 				printf("Request timeout for icmp_seq %u\n",
 				    (uint16_t)(ntransmitted - seq));
+				if (options & F_MISSED)
+					(void)write(STDOUT_FILENO, &BBELL, 1);
 				fflush(stdout);
 				seq--;
 			}
@@ -1030,11 +1032,8 @@ ping(int argc, char *const *argv)
 				}
 			}
 			(void)clock_gettime(CLOCK_MONOTONIC, &last);
-			if (ntransmitted - nreceived - 1 > nmissedmax) {
+			if (ntransmitted - nreceived - 1 > nmissedmax)
 				nmissedmax = ntransmitted - nreceived - 1;
-				if (options & F_MISSED)
-					(void)write(STDOUT_FILENO, &BBELL, 1);
-			}
 		}
 	}
 	finish();

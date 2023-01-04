@@ -1260,8 +1260,10 @@ ping6(int argc, char *argv[])
 			int seq = preload;
 
 			while (seq) {
-				printf("Request timeout for icmp_seq %u\n",
+				printf("Request timeout for icmp_seq=%u\n",
 				    (uint16_t)(ntransmitted - seq));
+				if (options & F_MISSED)
+					(void)write(STDOUT_FILENO, &BBELL, 1);
 				fflush(stdout);
 				seq--;
 			}
@@ -1292,11 +1294,8 @@ ping6(int argc, char *argv[])
 				}
 			}
 			clock_gettime(CLOCK_MONOTONIC, &last);
-			if (ntransmitted - nreceived - 1 > nmissedmax) {
+			if (ntransmitted - nreceived - 1 > nmissedmax)
 				nmissedmax = ntransmitted - nreceived - 1;
-				if (options & F_MISSED)
-					(void)write(STDOUT_FILENO, &BBELL, 1);
-			}
 		}
 	}
 	sigemptyset(&si_sa.sa_mask);
