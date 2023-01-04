@@ -190,7 +190,7 @@ static int phdr_len = 0;
 static int send_len;
 
 /* counters */
-static long nmissedmax;		/* max value of ntransmitted - nreceived - 1 */
+static long nmissedmax;		/* max value of ntransmitted - nreceived */
 static long npackets;		/* max packets to transmit */
 static long nreceived;		/* # of packets we got back */
 static long nrepeats;		/* number of duplicates */
@@ -913,9 +913,7 @@ ping(int argc, char *const *argv)
 	iov.iov_base = packet;
 	iov.iov_len = IP_MAXPACKET;
 
-	if (preload == 0)
-		pinger();		/* send the first ping */
-	else {
+	if (preload > 0) {
 		if (npackets != 0 && preload > npackets)
 			preload = npackets;
 		while (preload--)	/* fire off them quickies */
@@ -1012,13 +1010,13 @@ ping(int argc, char *const *argv)
 				}
 			}
 			(void)clock_gettime(CLOCK_MONOTONIC, &last);
-			if (ntransmitted - nreceived - 1 > nmissedmax) {
-				nmissedmax = ntransmitted - nreceived - 1;
+			if (ntransmitted - nreceived > nmissedmax) {
+				nmissedmax = ntransmitted - nreceived;
 				if (options & F_MISSED)
 					(void)write(STDOUT_FILENO, &BBELL, 1);
 				if (!(options & F_QUIET)) {
 					printf("Request timeout for icmp_seq %u\n",
-					    (uint16_t)(ntransmitted - 2));
+					    (uint16_t)(ntransmitted - 1));
 					if (!(options & F_FLOOD))
 						(void)fflush(stdout);
 				}
