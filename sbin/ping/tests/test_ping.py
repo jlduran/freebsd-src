@@ -9,22 +9,18 @@ from typing import List
 
 
 def generate_test_ids(args):
-    if args[0] == "-":
-        leading = "_"
-    else:
-        leading = ""
-    return leading + ("_").join(
-        args.replace("-", "").replace(".", "_").replace(":", "_").split()
+    """Replace spaces, hyphens, dots, and colons with underscores."""
+    return ("_").join(
+        args.replace(" -", "_")
+        .replace("-", "_")
+        .replace(".", "_")
+        .replace(":", "_")
+        .split()
     )
 
 
-# The objective is to keep in line with ping_test.sh's
-# check_ping_statistics(), so that the redacted output
-# can be used interchangeably.
-# NB: I may update ping_test.sh as well, to account for
-#     future tests.  Also, I'm not sure if this is the best
-#     way to redact ping's output with pytest.
 def redact(output):
+    """Redact some elements of ping's output."""
     patterns_tuple = [
         ("localhost \([0-9]{1,3}(\.[0-9]{1,3}){3}\)", "localhost"),
         ("from [0-9]{1,3}(\.[0-9]{1,3}){3}", "from"),
@@ -277,22 +273,6 @@ Request timeout for icmp_seq=0
             ExpectedProcess(
                 0,
                 stdout="""\
-PING 192.0.2.1 (192.0.2.1): 56 data bytes
-64 bytes from: icmp_seq=0 ttl= time= ms
-64 bytes from: icmp_seq=1 ttl= time= ms
-64 bytes from: icmp_seq=2 ttl= time= ms
-
---- 192.0.2.1 ping statistics ---
-3 packets transmitted, 3 packets received, 0.0% packet loss
-round-trip min/avg/max/stddev = /// ms
-""",
-            ),
-        ),
-        (
-            "-c1 -S::1 -s8 -t1 localhost",
-            ExpectedProcess(
-                0,
-                stdout="""\
 PING localhost from: 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 
@@ -303,7 +283,7 @@ round-trip min/avg/max/stddev = /// ms
             ),
         ),
         (
-            "-c3 192.0.2.1",
+            "-c1 -S::1 -s8 -t1 localhost",
             ExpectedProcess(
                 0,
                 stdout="""\
@@ -313,6 +293,22 @@ PING6(56=40+8+8 bytes) ::1 --> ::1
 --- localhost ping6 statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
+""",
+            ),
+        ),
+        (
+            "-c3 192.0.2.1",
+            ExpectedProcess(
+                0,
+                stdout="""\
+PING 192.0.2.1 (192.0.2.1): 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+64 bytes from: icmp_seq=1 ttl= time= ms
+64 bytes from: icmp_seq=2 ttl= time= ms
+
+--- 192.0.2.1 ping statistics ---
+3 packets transmitted, 3 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
 """,
             ),
         ),
@@ -473,7 +469,7 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
     def test_ping(self, args, expected):
         """Test ping"""
         ping = subprocess.run(
-            f"ping {args}".split(), capture_output=True, timeout=10, text=True
+            f"ping {args}".split(), capture_output=True, timeout=15, text=True
         )
         assert ping.returncode == expected.returncode
         assert redact(ping.stdout) == expected.stdout
