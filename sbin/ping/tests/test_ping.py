@@ -489,8 +489,8 @@ class ExpectedProcess(object):
 
 
 class TestPing(SingleVnetTestTemplate):
-    # XXX ping_test.sh had require_ipv4/require_ipv6 methods.
-    # These checks, in my opinion, should be done by the pytest framework,
+    # XXX ping_test.sh has require_ipv4/require_ipv6 methods.
+    # These checks, in my opinion, should be done by atf-python,
     # as we should focus only on writing tests.
     IPV6_PREFIXES: List[str] = ["2001:db8::1/64"]
     IPV4_PREFIXES: List[str] = ["192.0.2.1/24"]
@@ -536,15 +536,11 @@ class TestPing(SingleVnetTestTemplate):
     ]
     test_ids = [methodize(test) for test in tests]
 
-    # XXX args, CompletedProcess
     @pytest.mark.parametrize("args", tests, ids=test_ids)
     def test_ping(self, args, request):
-        # XXX can we parametrize the test's description
-        #     without doing something too complex?
         """Test ping"""
-        # XXX Add a timeout of ??
         ping = subprocess.run(f"ping {args}".split(), capture_output=True,
-                              text=True)
+                              timeout=10, text=True)
         expected = request.getfixturevalue(methodize(args))
         assert ping.returncode == expected.returncode
         assert redact(ping.stdout) == expected.stdout
