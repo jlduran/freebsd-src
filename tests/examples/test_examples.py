@@ -30,12 +30,12 @@ class TestExampleSimple(BaseTest):
         "user_tuple",
         [
             pytest.param(
-                ["kldload if_epair", ""],
+                ["id -un", "root"],
                 marks=pytest.mark.require_user("root"),
                 id="root",
             ),
             pytest.param(
-                ["kldload if_epair", "Operation not permitted"],
+                ["id -un", "tests"],
                 marks=pytest.mark.require_user("unprivileged"),
                 id="unprivileged",
             ),
@@ -59,12 +59,12 @@ class TestSingleVnetTestTemplate(SingleVnetTestTemplate):
         "user_tuple",
         [
             pytest.param(
-                ["kldload if_epair", "module already loaded or in kernel"],
+                ["id -un", "root"],
                 marks=pytest.mark.require_user("root"),
                 id="root",
             ),
             pytest.param(
-                ["kldload if_epair", "Operation not permitted"],
+                ["id -un", "tests"],
                 marks=pytest.mark.require_user("unprivileged"),
                 id="unprivileged",
             ),
@@ -116,12 +116,12 @@ class TestVnetTestTemplate(VnetTestTemplate):
         "user_tuple",
         [
             pytest.param(
-                ["kldload if_epair", "module already loaded or in kernel"],
+                ["id -un", "root"],
                 marks=pytest.mark.require_user("root"),
                 id="root",
             ),
             pytest.param(
-                ["kldload if_epair", "Operation not permitted"],
+                ["id -un", "tests"],
                 marks=pytest.mark.require_user("unprivileged"),
                 id="unprivileged",
             ),
