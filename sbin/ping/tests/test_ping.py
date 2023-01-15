@@ -8,17 +8,6 @@ from atf_python.sys.net.vnet import SingleVnetTestTemplate
 from typing import List
 
 
-def generate_test_ids(args):
-    """Replace spaces, hyphens, dots, and colons with underscores."""
-    return ("_").join(
-        args.replace(" -", "_")
-        .replace("-", "_")
-        .replace(".", "_")
-        .replace(":", "_")
-        .split()
-    )
-
-
 def redact(output):
     """Redact some elements of ping's output."""
     patterns_tuple = [
@@ -34,10 +23,8 @@ def redact(output):
     return output
 
 
-# XXX Better name?
-# XXX Or add args and use subprocess.CompletedProcess instead?
 class ExpectedProcess(object):
-    """An expected ping output.
+    """An expected ping output that matches `subprocess.CompletedProcess()`.
 
     Attributes:
       returncode: The exit code of the process, negative for signals.
@@ -62,15 +49,12 @@ class ExpectedProcess(object):
 
 
 class TestPing(SingleVnetTestTemplate):
-    # XXX ping_test.sh has require_ipv4/require_ipv6 methods.
-    # These checks, in my opinion, should be done by atf-python,
-    # as we should focus only on writing tests.
     IPV6_PREFIXES: List[str] = ["2001:db8::1/64"]
     IPV4_PREFIXES: List[str] = ["192.0.2.1/24"]
 
     # Each test in testdata is a tuple (args, ExpectedProcess())
     testdata = [
-        (
+        pytest.param(
             "-4 -c1 -s56 -t1 localhost",
             ExpectedProcess(
                 0,
@@ -83,8 +67,9 @@ PING localhost: 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_4_c1_s56_t1_localhost",
         ),
-        (
+        pytest.param(
             "-6 -c1 -s8 -t1 localhost",
             ExpectedProcess(
                 0,
@@ -97,8 +82,9 @@ PING6(56=40+8+8 bytes) ::1 --> ::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_6_c1_s8_t1_localhost",
         ),
-        (
+        pytest.param(
             "-A -c1 192.0.2.1",
             ExpectedProcess(
                 0,
@@ -111,8 +97,9 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_A_c1_192_0_2_1",
         ),
-        (
+        pytest.param(
             "-A -c1 192.0.2.2",
             ExpectedProcess(
                 2,
@@ -124,8 +111,9 @@ Request timeout for icmp_seq 0
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_A_c1_192_0_2_1",
         ),
-        (
+        pytest.param(
             "-A -c1 2001:db8::1",
             ExpectedProcess(
                 0,
@@ -138,8 +126,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_A_c1_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-A -c1 2001:db8::2",
             ExpectedProcess(
                 2,
@@ -151,8 +140,9 @@ Request timeout for icmp_seq=0
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_A_c1_2001_db8__2",
         ),
-        (
+        pytest.param(
             "-A -c3 192.0.2.1",
             ExpectedProcess(
                 0,
@@ -167,8 +157,9 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_A_3_192_0.2.1",
         ),
-        (
+        pytest.param(
             "-A -c3 192.0.2.2",
             ExpectedProcess(
                 2,
@@ -182,8 +173,9 @@ Request timeout for icmp_seq 0
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_A_c3_192_0_2_2",
         ),
-        (
+        pytest.param(
             "-A -c3 2001:db8::1",
             ExpectedProcess(
                 0,
@@ -198,8 +190,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_A_c3_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-A -c3 2001:db8::2",
             ExpectedProcess(
                 2,
@@ -213,8 +206,9 @@ Request timeout for icmp_seq=0
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_A_c3_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-c1 192.0.2.1",
             ExpectedProcess(
                 0,
@@ -227,8 +221,9 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_c1_192_0_2_1",
         ),
-        (
+        pytest.param(
             "-c1 192.0.2.2",
             ExpectedProcess(
                 2,
@@ -240,8 +235,9 @@ Request timeout for icmp_seq 0
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_c1_192_0_2_2",
         ),
-        (
+        pytest.param(
             "-c1 2001:db8::1",
             ExpectedProcess(
                 0,
@@ -254,8 +250,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_c1_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-c1 2001:db8::2",
             ExpectedProcess(
                 2,
@@ -267,8 +264,9 @@ Request timeout for icmp_seq=0
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_c1_2001_db8__2",
         ),
-        (
+        pytest.param(
             "-c1 -S127.0.0.1 -s56 -t1 localhost",
             ExpectedProcess(
                 0,
@@ -281,8 +279,9 @@ PING localhost from: 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_c1_S127_0_0_1_s56_t1_localhost",
         ),
-        (
+        pytest.param(
             "-c1 -S::1 -s8 -t1 localhost",
             ExpectedProcess(
                 0,
@@ -295,8 +294,9 @@ PING6(56=40+8+8 bytes) ::1 --> ::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_c1_S__1_s8_t1_localhost",
         ),
-        (
+        pytest.param(
             "-c3 192.0.2.1",
             ExpectedProcess(
                 0,
@@ -311,8 +311,9 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_c3_192_0_2_1",
         ),
-        (
+        pytest.param(
             "-c3 192.0.2.2",
             ExpectedProcess(
                 2,
@@ -326,8 +327,9 @@ Request timeout for icmp_seq 2
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_c3_192_0_2_2",
         ),
-        (
+        pytest.param(
             "-c3 2001:db8::1",
             ExpectedProcess(
                 0,
@@ -342,8 +344,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_c3_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-c3 2001:db8::2",
             ExpectedProcess(
                 2,
@@ -357,8 +360,9 @@ Request timeout for icmp_seq=2
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_c3_2001_db8__2",
         ),
-        (
+        pytest.param(
             "-q -c1 192.0.2.1",
             ExpectedProcess(
                 0,
@@ -370,8 +374,9 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_q_c1_192_0_2_1",
         ),
-        (
+        pytest.param(
             "-q -c1 192.0.2.2",
             ExpectedProcess(
                 2,
@@ -382,8 +387,9 @@ PING 192.0.2.2 (192.0.2.2): 56 data bytes
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_q_c1_192_0_2_2",
         ),
-        (
+        pytest.param(
             "-q -c1 2001:db8::1",
             ExpectedProcess(
                 0,
@@ -395,8 +401,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_q_c1_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-q -c1 2001:db8::2",
             ExpectedProcess(
                 2,
@@ -407,8 +414,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_q_c1_2001_db8__2",
         ),
-        (
+        pytest.param(
             "-q -c3 192.0.2.1",
             ExpectedProcess(
                 0,
@@ -420,8 +428,9 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 round-trip min/avg/max/stddev = /// ms
 """,
             ),
+            id="_q_c3_192_0_2_1",
         ),
-        (
+        pytest.param(
             "-q -c3 192.0.2.2",
             ExpectedProcess(
                 2,
@@ -432,8 +441,9 @@ PING 192.0.2.2 (192.0.2.2): 56 data bytes
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_q_c3_192_0_2_2",
         ),
-        (
+        pytest.param(
             "-q -c3 2001:db8::1",
             ExpectedProcess(
                 0,
@@ -445,8 +455,9 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 round-trip min/avg/max/std-dev = /// ms
 """,
             ),
+            id="_q_c3_2001_db8__1",
         ),
-        (
+        pytest.param(
             "-q -c3 2001:db8::2",
             ExpectedProcess(
                 2,
@@ -457,15 +468,16 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
             ),
+            id="_q_c3_2001_db8__2",
         ),
-        (
+        pytest.param(
             "-Wx localhost",
             ExpectedProcess(64, stderr="ping: invalid timing interval: `x'\n"),
+            id="_Wx_localhost",
         ),
     ]
-    test_ids = [generate_test_ids(test[0]) for test in testdata]
 
-    @pytest.mark.parametrize("args, expected", testdata, ids=test_ids)
+    @pytest.mark.parametrize("args, expected", testdata)
     def test_ping(self, args, expected):
         """Test ping"""
         ping = subprocess.run(
