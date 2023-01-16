@@ -2,14 +2,14 @@ import pytest
 
 import logging
 import re
-import types
 import subprocess
+
+from atf_python.sys.net.vnet import SingleVnetTestTemplate
+from atf_python.sys.net.vnet import IfaceFactory
+from typing import List
 
 logging.getLogger("scapy").setLevel(logging.CRITICAL)
 import scapy.all as sc
-
-from atf_python.sys.net.vnet import SingleVnetTestTemplate
-from typing import List
 
 
 def redact(output):
@@ -27,21 +27,7 @@ def redact(output):
     return output
 
 
-def create_tun_iface(src, dst):
-    completed_process = subprocess.run(
-        "ifconfig tun create",
-        capture_output=True,
-        shell=True,
-        check=True,
-        text=True,
-    )
-    tun_iface = completed_process.stdout.strip()
-    subprocess.run(f"ifconfig {tun_iface} up", shell=True, check=True)
-    subprocess.run(f"ifconfig {tun_iface} {src} {dst}", shell=True, check=True)
-    return tun_iface
-
-
-def construct_response_packet(echo, ip, icmp, special):
+def build_response_packet(echo, ip, icmp, special):
     icmp_id_seq_types = [0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
     oip = echo[sc.IP]
     oicmp = echo[sc.ICMP]
@@ -133,8 +119,26 @@ def generate_ip_options(opts):
     return options
 
 
-# XXX This will be converted to a class
-def pinger(src, dst, icmp_type, icmp_code, opts):
+def pinger(
+    iface,
+    src,
+    dst,
+    icmp_type,
+    icmp_code,
+    flags="",
+    opts="",
+    special="",
+    icmp_pptr=0,
+    icmp_gwaddr="0.0.0.0",
+    icmp_nextmtu=0,
+    icmp_otime=0,
+    icmp_rtime=0,
+    icmp_ttime=0,
+    icmp_mask="0.0.0.0",
+    request="",
+    count=1,
+    dup=False,
+):
     """P I N G E R
 
     Echo reply faker.
@@ -147,27 +151,58 @@ def pinger(src, dst, icmp_type, icmp_code, opts):
       icmp_type: The ICMP type.
       icmp_code: The ICMP code.
     """
-    iface = create_tun_iface(src, dst)
     tun = sc.TunTapInterface(iface)
+    subprocess.run(["ifconfig", tun.iface, "up"], check=True)
+    subprocess.run(["ifconfig", tun.iface, src, dst], check=True)
     opts = generate_ip_options(opts)
-    ip = sc.IP(src=dst, dst=src, options=opts)
-    command = f"/sbin/ping -v -c1 -t1 {dst}"
-    special = ""
+    ip = sc.IP(flags=flags, src=dst, dst=src, options=opts)
+    command = [
+        "/sbin/ping",
+        "-c",
+        str(count),
+        "-t",
+        str(count),
+        "-v",
+    ]
+    if request == "mask":
+        command += ["-Mm"]
+    if request == "timestamp":
+        command += ["-Mt"]
+    if special != "":
+        command += ["-p1"]
+    if opts in [
+        "RR",
+        "RR-same",
+        "RR-trunc",
+        "LSRR",
+        "LSRR-trunc",
+        "SSRR",
+        "SSRR-trunc",
+    ]:
+        command += ["-R"]
+    command += [dst]
     with subprocess.Popen(
-        args=command.split(),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+        args=command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     ) as ping:
-        echo = tun.recv()
-        icmp = sc.ICMP(
-            type=icmp_type,
-            code=icmp_code,
-            id=echo[sc.ICMP].id,
-            seq=echo[sc.ICMP].seq,
-        )
-        pkt = construct_response_packet(echo, ip, icmp, special)
-        tun.send(pkt)
+        for dummy in range(count):
+            echo = tun.recv()
+            icmp = sc.ICMP(
+                type=icmp_type,
+                code=icmp_code,
+                id=echo[sc.ICMP].id,
+                seq=echo[sc.ICMP].seq,
+                ts_ori=icmp_otime,
+                ts_rx=icmp_rtime,
+                ts_tx=icmp_ttime,
+                gw=icmp_gwaddr,
+                ptr=icmp_pptr,
+                addr_mask=icmp_mask,
+                nexthopmtu=icmp_nextmtu,
+            )
+            pkt = build_response_packet(echo, ip, icmp, special)
+            tun.send(pkt)
+            if dup is True:
+                tun.send(pkt)
         stdout, stderr = ping.communicate()
     return subprocess.CompletedProcess(
         ping.args, ping.returncode, stdout, stderr
@@ -614,13 +649,18 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
             expected.args.split(), capture_output=True, timeout=15, text=True
         )
         assert ping.returncode == expected.returncode
-        assert redact(ping.stdout) == str(expected.stdout or "")
-        assert ping.stderr == str(expected.stderr or "")
+        assert redact(ping.stdout) == str(expected.stdout or "")  # XXX or always set expected stdout
+        assert ping.stderr == str(expected.stderr or "")  # XXX or always set expected stderr
 
     # XXX The following scapy based tests will probably be parameterized as well
     def test_pinger_0_0(self):
         """Test an echo reply"""
-        ping = pinger("192.0.2.1", "192.0.2.2", 0, 0, "")
+        src = "192.0.2.1"
+        dst = "192.0.2.2"
+        tun_iface = IfaceFactory().create_iface("", "tun")[0].name # XXX Is it? I want it to automatically cleanup/teardown
+        ping = pinger(
+            iface=tun_iface, src=src, dst=dst, icmp_type=0, icmp_code=0
+        )
         expected_stdout = """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
@@ -635,7 +675,17 @@ round-trip min/avg/max/stddev = /// ms
 
     def test_pinger_0_0_NOP_40(self):
         """Test an echo reply with 40 NOP IP options"""
-        ping = pinger("192.0.2.1", "192.0.2.2", 0, 0, "NOP-40")
+        src = "192.0.2.1"
+        dst = "192.0.2.2"
+        tun_iface = IfaceFactory().create_iface("", "tun")[0].name # XXX Is it? I want it to automatically cleanup/teardown
+        ping = pinger(
+            tun_iface,
+            src,
+            dst,
+            0,
+            0,
+            opts="NOP-40",
+        )
         expected_stdout = """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
@@ -692,7 +742,17 @@ round-trip min/avg/max/stddev = /// ms
     # @pytest.mark.skip("XXX currently failing")
     def test_pinger_3_1_NOP_40(self):
         """Test a destination host unreachable reply with 40 NOP IP options"""
-        ping = pinger("192.0.2.1", "192.0.2.2", 3, 1, "NOP-40")
+        src = "192.0.2.1"
+        dst = "192.0.2.2"
+        tun_iface = IfaceFactory().create_iface("", "tun")[0].name # XXX Is it? I want it to automatically cleanup/teardown
+        ping = pinger(
+            tun_iface,
+            src,
+            dst,
+            3,
+            1,
+            opts="NOP-40",
+        )
         expected_stdout = """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 132 bytes from 192.0.2.2: Destination Host Unreachable
