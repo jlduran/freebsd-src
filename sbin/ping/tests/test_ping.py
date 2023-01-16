@@ -12,21 +12,6 @@ logging.getLogger("scapy").setLevel(logging.CRITICAL)
 import scapy.all as sc
 
 
-def redact(output):
-    """Redact some elements of ping's output"""
-    patterns_tuple = [
-        ("localhost \([0-9]{1,3}(\.[0-9]{1,3}){3}\)", "localhost"),
-        ("from [0-9]{1,3}(\.[0-9]{1,3}){3}", "from"),
-        ("hlim=[0-9]*", "hlim="),
-        ("ttl=[0-9]*", "ttl="),
-        ("time=[0-9.-]*", "time="),
-        ("[0-9\.]+/[0-9.]+", "/"),
-    ]
-    for pattern, repl in patterns_tuple:
-        output = re.sub(pattern, repl, output)
-    return output
-
-
 def build_response_packet(echo, ip, icmp, special):
     icmp_id_seq_types = [0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
     oip = echo[sc.IP]
@@ -253,6 +238,21 @@ def pinger(
     return subprocess.CompletedProcess(
         ping.args, ping.returncode, stdout, stderr
     )
+
+
+def redact(output):
+    """Redact some elements of ping's output"""
+    pattern_replacements = [
+        ("localhost \([0-9]{1,3}(\.[0-9]{1,3}){3}\)", "localhost"),
+        ("from [0-9]{1,3}(\.[0-9]{1,3}){3}", "from"),
+        ("hlim=[0-9]*", "hlim="),
+        ("ttl=[0-9]*", "ttl="),
+        ("time=[0-9.-]*", "time="),
+        ("[0-9\.]+/[0-9.]+", "/"),
+    ]
+    for pattern, repl in pattern_replacements:
+        output = re.sub(pattern, repl, output)
+    return output
 
 
 class TestPing(SingleVnetTestTemplate):
@@ -786,7 +786,7 @@ round-trip min/avg/max/stddev = /// ms
                 "stderr": "",
                 "redacted": True,
             },
-            id="_0_0_NOP_40",
+            id="_0_0_opts_NOP_40",
         ),
         pytest.param(
             {
@@ -813,7 +813,34 @@ Request timeout for icmp_seq 0
                 "redacted": False,
             },
             # marks=pytest.mark.skip("XXX currently failing"),
-            id="_3_1_NOP_40",
+            id="_3_1_opts_NOP_40",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
+                "flags": "DF",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+92 bytes from 192.0.2.2: Destination Host Unreachable
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+ 4  5  00 0054 0001   2 0000  40  01 b6a4 192.0.2.1  192.0.2.2
+
+Request timeout for icmp_seq 0
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            # marks=pytest.mark.skip("XXX currently failing"),
+            id="_3_1_flags_DF",
         ),
     ]
 
