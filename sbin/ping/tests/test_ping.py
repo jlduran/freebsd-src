@@ -13,7 +13,7 @@ import scapy.all as sc
 
 
 def redact(output):
-    """Redact some elements of ping's output."""
+    """Redact some elements of ping's output"""
     patterns_tuple = [
         ("localhost \([0-9]{1,3}(\.[0-9]{1,3}){3}\)", "localhost"),
         ("from [0-9]{1,3}(\.[0-9]{1,3}){3}", "from"),
@@ -72,6 +72,9 @@ def build_response_packet(echo, ip, icmp, special):
 
 
 def generate_ip_options(opts):
+    if not opts:
+        return ""
+
     routers = [
         "192.0.2.10",
         "192.0.2.20",
@@ -120,14 +123,21 @@ def generate_ip_options(opts):
 
 
 def pinger(
+    # Required arguments
+    # Avoid setting defaults on these arguments,
+    # as we want to set them explicitly in the tests
     iface,
+    /,
     src,
     dst,
     icmp_type,
     icmp_code,
-    flags="",
-    opts="",
-    special="",
+    # IP arguments
+    flags=0,
+    opts=None,
+    special=None,
+    # ICMP arguments
+    # Match names with <netinet/ip_icmp.h>
     icmp_pptr=0,
     icmp_gwaddr="0.0.0.0",
     icmp_nextmtu=0,
@@ -135,21 +145,57 @@ def pinger(
     icmp_rtime=0,
     icmp_ttime=0,
     icmp_mask="0.0.0.0",
-    request="",
+    request=None,
+    # Miscellaneous arguments
     count=1,
     dup=False,
 ):
     """P I N G E R
 
-    Echo reply faker.
+    Echo reply faker
 
-    Returns a CompletedProcess instance.
+    :param str iface: Interface to send packet to
+    :keyword str src: Source packet IP
+    :keyword str dst: Destination packet IP
+    :keyword icmp_type: ICMP type
+    :type icmp_type: class:`scapy.fields.ByteEnumField`
+    :keyword icmp_code: ICMP code
+    :type icmp_code: class:`scapy.fields.MultiEnumField`
 
-    Attributes:
-      src: The source IP address.
-      dst: The destination IP address.
-      icmp_type: The ICMP type.
-      icmp_code: The ICMP code.
+    :keyword flags: IP flags - one of `DF`, `MF` or `evil`, defaults to None
+    :type flags: class:`scapy.fields.FlagsField`, optional
+    :keyword opts: Include IP options - one of `EOL`, `NOP`, `NOP-40`, `unk`,
+        `unk-40`, `RR`, `RR-same`, `RR-trunc`, `LSRR`, `LSRR-trunc`, `SSRR` or
+        `SSRR-trunc`, defaults to None
+    :type opts: str, optional
+    :keyword special: Send a special packet - one of `tcp`, `udp`, `wrong`
+        or `warp`, defaults to None
+    :type special: str, optional
+    :keyword icmp_pptr: ICMP pointer, defaults to 0
+    :type icmp_pptr: class:`scapy.fields.ByteField`, optional
+    :keyword icmp_gwaddr: ICMP gateway IP address, defaults to "0.0.0.0"
+    :type icmp_gwaddr: class:`scapy.fields.IPField`, optional
+    :keyword icmp_nextmtu: ICMP next MTU, defaults to 0
+    :type icmp_nextmtu: class:`scapy.fields.ShortField`, optional
+    :keyword icmp_otime: ICMP originate timestamp, defaults to 0
+    :type icmp_otime: class:`scapy.layers.inet.ICMPTimeStampField`, optional
+    :keyword icmp_rtime: ICMP receive timestamp, defaults to 0
+    :type icmp_rtime: class:`scapy.layers.inet.ICMPTimeStampField`, optional
+    :keyword icmp_ttime: ICMP transmit timestamp, defaults to 0
+    :type icmp_ttime: class:`scapy.layers.inet.ICMPTimeStampField`, optional
+    :keyword icmp_mask: ICMP address mask, defaults to "0.0.0.0"
+    :type icmp_mask: class:`scapy.fields.IPField`, optional
+    :keyword request: Request type - one of `mask` or `timestamp`,
+        defaults to None
+    :type request: str, optional
+    :keyword count: Number of packets to send, defaults to 1
+    :type count: int, optional
+    :keyword dup: Duplicate packets, defaults to `False`
+    :type dup: bool, optional
+
+    :return: A class:`subprocess.CompletedProcess` with the output from the
+        ping utility
+    :rtype: class:`subprocess.CompletedProcess`
     """
     tun = sc.TunTapInterface(iface)
     subprocess.run(["ifconfig", tun.iface, "up"], check=True)
@@ -168,7 +214,7 @@ def pinger(
         command += ["-Mm"]
     if request == "timestamp":
         command += ["-Mt"]
-    if special != "":
+    if special:
         command += ["-p1"]
     if opts in [
         "RR",
@@ -649,44 +695,46 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
             expected.args.split(), capture_output=True, timeout=15, text=True
         )
         assert ping.returncode == expected.returncode
-        assert redact(ping.stdout) == str(expected.stdout or "")  # XXX or always set expected stdout
-        assert ping.stderr == str(expected.stderr or "")  # XXX or always set expected stderr
+        assert redact(ping.stdout) == str(expected.stdout or "")
+        assert ping.stderr == str(expected.stderr or "")
 
-    # XXX The following scapy based tests will probably be parameterized as well
-    def test_pinger_0_0(self):
-        """Test an echo reply"""
-        src = "192.0.2.1"
-        dst = "192.0.2.2"
-        tun_iface = IfaceFactory().create_iface("", "tun")[0].name # XXX Is it? I want it to automatically cleanup/teardown
-        ping = pinger(
-            iface=tun_iface, src=src, dst=dst, icmp_type=0, icmp_code=0
-        )
-        expected_stdout = """\
+    # Each test in pinger_testdata contains a dictionary with the keywords to
+    # `pinger()` and a dictionary with the expected outcome (returncode,
+    # stdout, stderr, and if ping's output is redacted)
+    pinger_testdata = [
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 0,
+                "icmp_code": 0,
+            },
+            {
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
-"""
-        assert ping.returncode == 0
-        assert redact(ping.stdout) == expected_stdout
-        assert ping.stderr == ""
-
-    def test_pinger_0_0_NOP_40(self):
-        """Test an echo reply with 40 NOP IP options"""
-        src = "192.0.2.1"
-        dst = "192.0.2.2"
-        tun_iface = IfaceFactory().create_iface("", "tun")[0].name # XXX Is it? I want it to automatically cleanup/teardown
-        ping = pinger(
-            tun_iface,
-            src,
-            dst,
-            0,
-            0,
-            opts="NOP-40",
-        )
-        expected_stdout = """\
+""",
+                "stderr": "",
+                "redacted": True,
+            },
+            id="_0_0",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 0,
+                "icmp_code": 0,
+                "opts": "NOP-40",
+            },
+            {
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 wrong total length 124 instead of 84
@@ -734,26 +782,23 @@ NOP
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
-"""
-        assert ping.returncode == 0
-        assert redact(ping.stdout) == expected_stdout
-        assert ping.stderr == ""
-
-    # @pytest.mark.skip("XXX currently failing")
-    def test_pinger_3_1_NOP_40(self):
-        """Test a destination host unreachable reply with 40 NOP IP options"""
-        src = "192.0.2.1"
-        dst = "192.0.2.2"
-        tun_iface = IfaceFactory().create_iface("", "tun")[0].name # XXX Is it? I want it to automatically cleanup/teardown
-        ping = pinger(
-            tun_iface,
-            src,
-            dst,
-            3,
-            1,
-            opts="NOP-40",
-        )
-        expected_stdout = """\
+""",
+                "stderr": "",
+                "redacted": True,
+            },
+            id="_0_0_NOP_40",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
+                "opts": "NOP-40",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 132 bytes from 192.0.2.2: Destination Host Unreachable
 Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
@@ -763,7 +808,23 @@ Request timeout for icmp_seq 0
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
-"""
-        assert ping.returncode == 2
-        assert ping.stdout == expected_stdout
-        assert ping.stderr == ""
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            # marks=pytest.mark.skip("XXX currently failing"),
+            id="_3_1_NOP_40",
+        ),
+    ]
+
+    @pytest.mark.parametrize("pinger_kargs, expected", pinger_testdata)
+    def test_pinger(self, pinger_kargs, expected):
+        """Test ping using pinger(), a reply faker"""
+        iface = IfaceFactory().create_iface("", "tun")[0].name
+        ping = pinger(iface, **pinger_kargs)
+        assert ping.returncode == expected["returncode"]
+        if expected["redacted"]:
+            assert redact(ping.stdout) == expected["stdout"]
+        else:
+            assert ping.stdout == expected["stdout"]
+        assert ping.stderr == expected["stderr"]
