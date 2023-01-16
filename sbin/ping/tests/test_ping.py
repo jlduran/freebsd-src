@@ -262,10 +262,10 @@ class TestPing(SingleVnetTestTemplate):
     # Each test in testdata is an expected subprocess.CompletedProcess()
     testdata = [
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -4 -c1 -s56 -t1 localhost",
-                0,
-                stdout="""\
+            {
+                "args": "ping -4 -c1 -s56 -t1 localhost",
+                "returncode": 0,
+                "stdout": """\
 PING localhost: 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 
@@ -273,14 +273,15 @@ PING localhost: 56 data bytes
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_4_c1_s56_t1_localhost",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -6 -c1 -s8 -t1 localhost",
-                0,
-                stdout="""\
+            {
+                "args": "ping -6 -c1 -s8 -t1 localhost",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) ::1 --> ::1
 16 bytes from ::1, icmp_seq=0 hlim= time= ms
 
@@ -288,14 +289,15 @@ PING6(56=40+8+8 bytes) ::1 --> ::1
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_6_c1_s8_t1_localhost",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c1 192.0.2.1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -A -c1 192.0.2.1",
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.1 (192.0.2.1): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 
@@ -303,28 +305,30 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c1_192_0_2_1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c1 192.0.2.2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -A -c1 192.0.2.2",
+                "returncode": 2,
+                "stdout": """\
 \x07PING 192.0.2.2 (192.0.2.2): 56 data bytes
 Request timeout for icmp_seq 0
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c1_192_0_2_1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c1 2001:db8::1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -A -c1 2001:db8::1",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 16 bytes from 2001:db8::1, icmp_seq=0 hlim= time= ms
 
@@ -332,28 +336,30 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c1_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c1 2001:db8::2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -A -c1 2001:db8::2",
+                "returncode": 2,
+                "stdout": """\
 \x07PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 Request timeout for icmp_seq=0
 
 --- 2001:db8::2 ping6 statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c1_2001_db8__2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c3 192.0.2.1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -A -c3 192.0.2.1",
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.1 (192.0.2.1): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 64 bytes from: icmp_seq=1 ttl= time= ms
@@ -363,14 +369,15 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_3_192_0.2.1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c3 192.0.2.2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -A -c3 192.0.2.2",
+                "returncode": 2,
+                "stdout": """\
 \x07PING 192.0.2.2 (192.0.2.2): 56 data bytes
 Request timeout for icmp_seq 0
 \x07Request timeout for icmp_seq 1
@@ -379,14 +386,15 @@ Request timeout for icmp_seq 0
 --- 192.0.2.2 ping statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c3_192_0_2_2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c3 2001:db8::1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -A -c3 2001:db8::1",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 16 bytes from 2001:db8::1, icmp_seq=0 hlim= time= ms
 16 bytes from 2001:db8::1, icmp_seq=1 hlim= time= ms
@@ -396,14 +404,15 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c3_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -A -c3 2001:db8::2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -A -c3 2001:db8::2",
+                "returncode": 2,
+                "stdout": """\
 \x07PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 Request timeout for icmp_seq=0
 \x07Request timeout for icmp_seq=1
@@ -412,14 +421,15 @@ Request timeout for icmp_seq=0
 --- 2001:db8::2 ping6 statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_A_c3_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c1 192.0.2.1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -c1 192.0.2.1",
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.1 (192.0.2.1): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 
@@ -427,28 +437,30 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_c1_192_0_2_1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c1 192.0.2.2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -c1 192.0.2.2",
+                "returncode": 2,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 Request timeout for icmp_seq 0
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_c1_192_0_2_2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c1 2001:db8::1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -c1 2001:db8::1",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 16 bytes from 2001:db8::1, icmp_seq=0 hlim= time= ms
 
@@ -456,28 +468,30 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_c1_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c1 2001:db8::2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -c1 2001:db8::2",
+                "returncode": 2,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 Request timeout for icmp_seq=0
 
 --- 2001:db8::2 ping6 statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_c1_2001_db8__2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c1 -S127.0.0.1 -s56 -t1 localhost",
-                0,
-                stdout="""\
+            {
+                "args": "ping -c1 -S127.0.0.1 -s56 -t1 localhost",
+                "returncode": 0,
+                "stdout": """\
 PING localhost from: 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 
@@ -485,14 +499,15 @@ PING localhost from: 56 data bytes
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_c1_S127_0_0_1_s56_t1_localhost",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c1 -S::1 -s8 -t1 localhost",
-                0,
-                stdout="""\
+            {
+                "args": "ping -c1 -S::1 -s8 -t1 localhost",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) ::1 --> ::1
 16 bytes from ::1, icmp_seq=0 hlim= time= ms
 
@@ -500,14 +515,15 @@ PING6(56=40+8+8 bytes) ::1 --> ::1
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_c1_S__1_s8_t1_localhost",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c3 192.0.2.1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -c3 192.0.2.1",
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.1 (192.0.2.1): 56 data bytes
 64 bytes from: icmp_seq=0 ttl= time= ms
 64 bytes from: icmp_seq=1 ttl= time= ms
@@ -517,14 +533,15 @@ PING 192.0.2.1 (192.0.2.1): 56 data bytes
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_c3_192_0_2_1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c3 192.0.2.2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -c3 192.0.2.2",
+                "returncode": 2,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 Request timeout for icmp_seq 0
 Request timeout for icmp_seq 1
@@ -533,14 +550,15 @@ Request timeout for icmp_seq 2
 --- 192.0.2.2 ping statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_c3_192_0_2_2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c3 2001:db8::1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -c3 2001:db8::1",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 16 bytes from 2001:db8::1, icmp_seq=0 hlim= time= ms
 16 bytes from 2001:db8::1, icmp_seq=1 hlim= time= ms
@@ -550,14 +568,15 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_c3_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -c3 2001:db8::2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -c3 2001:db8::2",
+                "returncode": 2,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 Request timeout for icmp_seq=0
 Request timeout for icmp_seq=1
@@ -566,123 +585,133 @@ Request timeout for icmp_seq=2
 --- 2001:db8::2 ping6 statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_c3_2001_db8__2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c1 192.0.2.1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -q -c1 192.0.2.1",
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.1 (192.0.2.1): 56 data bytes
 
 --- 192.0.2.1 ping statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c1_192_0_2_1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c1 192.0.2.2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -q -c1 192.0.2.2",
+                "returncode": 2,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c1_192_0_2_2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c1 2001:db8::1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -q -c1 2001:db8::1",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 
 --- 2001:db8::1 ping6 statistics ---
 1 packets transmitted, 1 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c1_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c1 2001:db8::2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -q -c1 2001:db8::2",
+                "returncode": 2,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 
 --- 2001:db8::2 ping6 statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c1_2001_db8__2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c3 192.0.2.1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -q -c3 192.0.2.1",
+                "returncode": 0,
+                "stdout": """\
 PING 192.0.2.1 (192.0.2.1): 56 data bytes
 
 --- 192.0.2.1 ping statistics ---
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/stddev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c3_192_0_2_1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c3 192.0.2.2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -q -c3 192.0.2.2",
+                "returncode": 2,
+                "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
 
 --- 192.0.2.2 ping statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c3_192_0_2_2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c3 2001:db8::1",
-                0,
-                stdout="""\
+            {
+                "args": "ping -q -c3 2001:db8::1",
+                "returncode": 0,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::1
 
 --- 2001:db8::1 ping6 statistics ---
 3 packets transmitted, 3 packets received, 0.0% packet loss
 round-trip min/avg/max/std-dev = /// ms
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c3_2001_db8__1",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -q -c3 2001:db8::2",
-                2,
-                stdout="""\
+            {
+                "args": "ping -q -c3 2001:db8::2",
+                "returncode": 2,
+                "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 
 --- 2001:db8::2 ping6 statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
 """,
-            ),
+                "stderr": "",
+            },
             id="_q_c3_2001_db8__2",
         ),
         pytest.param(
-            subprocess.CompletedProcess(
-                "ping -Wx localhost",
-                64,
-                stderr="ping: invalid timing interval: `x'\n",
-            ),
+            {
+                "args": "ping -Wx localhost",
+                "returncode": 64,
+                "stdout": "",
+                "stderr": "ping: invalid timing interval: `x'\n",
+            },
             marks=pytest.mark.skip("XXX currently failing"),
             id="_Wx_localhost",
         ),
@@ -692,11 +721,14 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
     def test_ping(self, expected):
         """Test ping"""
         ping = subprocess.run(
-            expected.args.split(), capture_output=True, timeout=15, text=True
+            expected["args"].split(),
+            capture_output=True,
+            timeout=15,
+            text=True,
         )
-        assert ping.returncode == expected.returncode
-        assert redact(ping.stdout) == str(expected.stdout or "")
-        assert ping.stderr == str(expected.stderr or "")
+        assert ping.returncode == expected["returncode"]
+        assert redact(ping.stdout) == expected["stdout"]
+        assert ping.stderr == expected["stderr"]
 
     # Each test in pinger_testdata contains a dictionary with the keywords to
     # `pinger()` and a dictionary with the expected outcome (returncode,

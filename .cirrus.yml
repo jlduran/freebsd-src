@@ -13,6 +13,7 @@ task:
   setup_script:
     - make -C sbin/ping -j$(sysctl -n hw.ncpu) all install
   test_ping_script:
+    - kyua test -k /usr/tests/Kyuafile sbin/ping/ping_test
     - kyua test -k /usr/tests/Kyuafile sbin/ping/test_ping.py
   always:
     test_ping_report_script:
