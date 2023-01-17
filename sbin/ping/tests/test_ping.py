@@ -4,8 +4,9 @@ import logging
 import re
 import subprocess
 
-from atf_python.sys.net.vnet import SingleVnetTestTemplate
 from atf_python.sys.net.vnet import IfaceFactory
+from atf_python.sys.net.vnet import SingleVnetTestTemplate
+from atf_python.sys.net.tools import ToolsHelper
 from typing import List
 
 logging.getLogger("scapy").setLevel(logging.CRITICAL)
@@ -85,22 +86,22 @@ def generate_ip_options(opts):
     elif opts == "RR-trunc":
         options = sc.IPOption_RR(length=7, routers=routers_zero)
     elif opts == "LSRR":
-        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_LSRR(routers=routers)
     elif opts == "LSRR-trunc":
-        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_LSRR(length=3, routers=routers_zero)
     elif opts == "SSRR":
-        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_SSRR(routers=routers)
     elif opts == "SSRR-trunc":
-        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_SSRR(length=3, routers=routers_zero)
     elif opts == "unk":
-        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption(b"\x9f")
     elif opts == "unk-40":
-        subprocess.run(["sysctl", "net.inet.ip.process_options=0"], check=True)
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption(b"\x9f" * 40)
     else:
         options = ""
@@ -259,7 +260,8 @@ class TestPing(SingleVnetTestTemplate):
     IPV6_PREFIXES: List[str] = ["2001:db8::1/64"]
     IPV4_PREFIXES: List[str] = ["192.0.2.1/24"]
 
-    # Each test in testdata is an expected subprocess.CompletedProcess()
+    # Each param in testdata contains a dictionary with the command,
+    # and the expected outcome (returncode, redacted stdout, and stderr)
     testdata = [
         pytest.param(
             {
@@ -322,7 +324,7 @@ Request timeout for icmp_seq 0
 """,
                 "stderr": "",
             },
-            id="_A_c1_192_0_2_1",
+            id="_A_c1_192_0_2_2",
         ),
         pytest.param(
             {
@@ -423,7 +425,7 @@ Request timeout for icmp_seq=0
 """,
                 "stderr": "",
             },
-            id="_A_c3_2001_db8__1",
+            id="_A_c3_2001_db8__2",
         ),
         pytest.param(
             {
@@ -730,7 +732,7 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
         assert redact(ping.stdout) == expected["stdout"]
         assert ping.stderr == expected["stderr"]
 
-    # Each test in pinger_testdata contains a dictionary with the keywords to
+    # Each param in pinger_testdata contains a dictionary with the keywords to
     # `pinger()` and a dictionary with the expected outcome (returncode,
     # stdout, stderr, and if ping's output is redacted)
     pinger_testdata = [
