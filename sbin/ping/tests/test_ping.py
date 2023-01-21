@@ -1,6 +1,7 @@
 import pytest
 
 import logging
+import os
 import re
 import subprocess
 
@@ -707,16 +708,6 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
             },
             id="_q_c3_2001_db8__2",
         ),
-        pytest.param(
-            {
-                "args": "ping -Wx localhost",
-                "returncode": 64,
-                "stdout": "",
-                "stderr": "ping: invalid timing interval: `x'\n",
-            },
-            marks=pytest.mark.skip("XXX currently failing"),
-            id="_Wx_localhost",
-        ),
     ]
 
     @pytest.mark.parametrize("expected", testdata)
@@ -731,6 +722,36 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
         assert ping.returncode == expected["returncode"]
         assert redact(ping.stdout) == expected["stdout"]
         assert ping.stderr == expected["stderr"]
+
+    # Each param in ping46_testdata contains a dictionary with the arguments
+    # and the expected outcome (returncode, redacted stdout, and stderr)
+    # common to `ping -4` and `ping -6`
+    ping46_testdata = [
+        pytest.param(
+            {
+                "args": "-Wx localhost",
+                "returncode": os.EX_USAGE,
+                "stdout": "",
+                "stderr": "ping: invalid timing interval: `x'\n",
+            },
+            # marks=pytest.mark.skip("XXX err(3) -> errx(3) in ping6.c"),
+            id="_Wx_localhost",
+        ),
+    ]
+
+    @pytest.mark.parametrize("expected", ping46_testdata)
+    def test_ping_46(self, expected):
+        """Test ping -4/ping -6"""
+        for version in [4, 6]:
+            ping = subprocess.run(
+                ["ping", f"-{version}"] + expected["args"].split(),
+                capture_output=True,
+                timeout=15,
+                text=True,
+            )
+            assert ping.returncode == expected["returncode"]
+            assert redact(ping.stdout) == expected["stdout"]
+            assert ping.stderr == expected["stderr"]
 
     # Each param in pinger_testdata contains a dictionary with the keywords to
     # `pinger()` and a dictionary with the expected outcome (returncode,
