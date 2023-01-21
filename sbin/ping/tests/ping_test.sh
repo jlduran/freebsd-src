@@ -438,8 +438,12 @@ ping_Wx_head()
 ping_Wx_body()
 {
 	atf_check -s exit:$EX_USAGE \
-	    -e match:"invalid timing interval" \
-	    ping -Wx localhost
+	    -e inline:"ping: invalid timing interval: \`x'\n" \
+	    ping -4Wx localhost
+
+	atf_check -s exit:$EX_USAGE \
+	    -e inline:"ping: invalid timing interval: \`x'\n" \
+	    ping -6Wx localhost
 }
 
 ping_zx_head()
