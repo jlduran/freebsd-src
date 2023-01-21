@@ -879,6 +879,8 @@ Request timeout for icmp_seq 0
     ]
 
     @pytest.mark.parametrize("pinger_kargs, expected", pinger_testdata)
+    @pytest.mark.require_progs(["scapy"])
+    @pytest.mark.require_user("root")
     def test_pinger(self, pinger_kargs, expected):
         """Test ping using pinger(), a reply faker"""
         iface = IfaceFactory().create_iface("", "tun")[0].name
