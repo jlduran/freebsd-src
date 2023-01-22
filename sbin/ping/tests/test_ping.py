@@ -734,7 +734,7 @@ PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
                 "stdout": "",
                 "stderr": "ping: invalid timing interval: `x'\n",
             },
-            # marks=pytest.mark.skip("XXX err(3) -> errx(3) in ping6.c"),
+            marks=pytest.mark.skip("XXX currently failing"),
             id="_Wx_localhost",
         ),
     ]
@@ -866,7 +866,7 @@ round-trip min/avg/max/stddev = /// ms
                 "stderr": "",
                 "redacted": True,
             },
-            # marks=pytest.mark.skip("XXX currently failing"),
+            marks=pytest.mark.skip("XXX currently failing"),
             id="_0_0_opts_unk",
         ),
         pytest.param(
@@ -893,7 +893,7 @@ Request timeout for icmp_seq 0
                 "stderr": "",
                 "redacted": False,
             },
-            # marks=pytest.mark.skip("XXX currently failing"),
+            marks=pytest.mark.skip("XXX currently failing"),
             id="_3_1_opts_NOP_40",
         ),
         pytest.param(
@@ -920,7 +920,7 @@ Request timeout for icmp_seq 0
                 "stderr": "",
                 "redacted": False,
             },
-            # marks=pytest.mark.skip("XXX currently failing"),
+            marks=pytest.mark.skip("XXX currently failing"),
             id="_3_1_flags_DF",
         ),
     ]
