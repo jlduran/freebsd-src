@@ -317,8 +317,7 @@ round-trip min/avg/max/stddev = /// ms
                 "args": "ping -A -c1 192.0.2.2",
                 "returncode": 2,
                 "stdout": """\
-\x07PING 192.0.2.2 (192.0.2.2): 56 data bytes
-Request timeout for icmp_seq 0
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
@@ -348,8 +347,7 @@ round-trip min/avg/max/std-dev = /// ms
                 "args": "ping -A -c1 2001:db8::2",
                 "returncode": 2,
                 "stdout": """\
-\x07PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
-Request timeout for icmp_seq=0
+PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 
 --- 2001:db8::2 ping6 statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
@@ -381,10 +379,7 @@ round-trip min/avg/max/stddev = /// ms
                 "args": "ping -A -c3 192.0.2.2",
                 "returncode": 2,
                 "stdout": """\
-\x07PING 192.0.2.2 (192.0.2.2): 56 data bytes
-Request timeout for icmp_seq 0
-\x07Request timeout for icmp_seq 1
-\x07Request timeout for icmp_seq 2
+\x07\x07PING 192.0.2.2 (192.0.2.2): 56 data bytes
 
 --- 192.0.2.2 ping statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
@@ -416,10 +411,7 @@ round-trip min/avg/max/std-dev = /// ms
                 "args": "ping -A -c3 2001:db8::2",
                 "returncode": 2,
                 "stdout": """\
-\x07PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
-Request timeout for icmp_seq=0
-\x07Request timeout for icmp_seq=1
-\x07Request timeout for icmp_seq=2
+\x07\x07PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
 
 --- 2001:db8::2 ping6 statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
@@ -450,7 +442,6 @@ round-trip min/avg/max/stddev = /// ms
                 "returncode": 2,
                 "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
-Request timeout for icmp_seq 0
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
@@ -481,7 +472,6 @@ round-trip min/avg/max/std-dev = /// ms
                 "returncode": 2,
                 "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
-Request timeout for icmp_seq=0
 
 --- 2001:db8::2 ping6 statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
@@ -546,9 +536,6 @@ round-trip min/avg/max/stddev = /// ms
                 "returncode": 2,
                 "stdout": """\
 PING 192.0.2.2 (192.0.2.2): 56 data bytes
-Request timeout for icmp_seq 0
-Request timeout for icmp_seq 1
-Request timeout for icmp_seq 2
 
 --- 192.0.2.2 ping statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
@@ -581,9 +568,6 @@ round-trip min/avg/max/std-dev = /// ms
                 "returncode": 2,
                 "stdout": """\
 PING6(56=40+8+8 bytes) 2001:db8::1 --> 2001:db8::2
-Request timeout for icmp_seq=0
-Request timeout for icmp_seq=1
-Request timeout for icmp_seq=2
 
 --- 2001:db8::2 ping6 statistics ---
 3 packets transmitted, 0 packets received, 100.0% packet loss
@@ -885,7 +869,6 @@ PING 192.0.2.2 (192.0.2.2): 56 data bytes
 Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
  4  f  00 007c 0001   0 0000  40  01 d868 192.0.2.1  192.0.2.2 01010101010101010101010101010101010101010101010101010101010101010101010101010101
 
-Request timeout for icmp_seq 0
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
@@ -912,7 +895,6 @@ PING 192.0.2.2 (192.0.2.2): 56 data bytes
 Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
  4  5  00 0054 0001   2 0000  40  01 b6a4 192.0.2.1  192.0.2.2
 
-Request timeout for icmp_seq 0
 
 --- 192.0.2.2 ping statistics ---
 1 packets transmitted, 0 packets received, 100.0% packet loss
