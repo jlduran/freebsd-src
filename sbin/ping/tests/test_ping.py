@@ -868,7 +868,6 @@ round-trip min/avg/max/stddev = /// ms
                 "stderr": "",
                 "redacted": True,
             },
-            marks=pytest.mark.skip("XXX currently failing"),
             id="_0_0_opts_unk",
         ),
         pytest.param(
@@ -894,7 +893,6 @@ Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
                 "stderr": "",
                 "redacted": False,
             },
-            marks=pytest.mark.skip("XXX currently failing"),
             id="_3_1_opts_NOP_40",
         ),
         pytest.param(
