@@ -9,6 +9,7 @@ from atf_python.sys.net.vnet import IfaceFactory
 from atf_python.sys.net.vnet import SingleVnetTestTemplate
 from atf_python.sys.net.tools import ToolsHelper
 from typing import List
+from typing import Optional
 
 logging.getLogger("scapy").setLevel(logging.CRITICAL)
 import scapy.all as sc
@@ -113,37 +114,39 @@ def pinger(
     # Required arguments
     # Avoid setting defaults on these arguments,
     # as we want to set them explicitly in the tests
-    iface,
+    iface: str,
     /,
-    src,
-    dst,
-    icmp_type,
-    icmp_code,
+    src: sc.scapy.fields.SourceIPField,
+    dst: sc.scapy.layers.inet.DestIPField,
+    icmp_type: sc.scapy.fields.ByteEnumField,
+    icmp_code: sc.scapy.fields.MultiEnumField,
     # IP arguments
-    flags=0,
-    opts=None,
-    special=None,
+    flags: Optional[sc.scapy.fields.FlagsField] = None,
+    opts: Optional[str] = None,
+    special: Optional[str] = None,
     # ICMP arguments
     # Match names with <netinet/ip_icmp.h>
-    icmp_pptr=0,
-    icmp_gwaddr="0.0.0.0",
-    icmp_nextmtu=0,
-    icmp_otime=0,
-    icmp_rtime=0,
-    icmp_ttime=0,
-    icmp_mask="0.0.0.0",
-    request=None,
+    icmp_pptr: sc.scapy.fields.ByteField = 0,
+    icmp_gwaddr: sc.scapy.fields.IPField = "0.0.0.0",
+    icmp_nextmtu: sc.scapy.fields.ShortField = 0,
+    icmp_otime: sc.scapy.layers.inet.ICMPTimeStampField = 0,
+    icmp_rtime: sc.scapy.layers.inet.ICMPTimeStampField = 0,
+    icmp_ttime: sc.scapy.layers.inet.ICMPTimeStampField = 0,
+    icmp_mask: sc.scapy.fields.IPField = "0.0.0.0",
+    request: Optional[str] = None,
     # Miscellaneous arguments
-    count=1,
-    dup=False,
-):
+    count: int = 1,
+    dup: bool = False,
+) -> subprocess.CompletedProcess:
     """P I N G E R
 
     Echo reply faker
 
     :param str iface: Interface to send packet to
-    :keyword str src: Source packet IP
-    :keyword str dst: Destination packet IP
+    :keyword src: Source packet IP
+    :type src: class:`scapy.fields.SourceIPField`
+    :keyword dst: Destination packet IP
+    :type dst: class:`scapy.layers.inet.DestIPField`
     :keyword icmp_type: ICMP type
     :type icmp_type: class:`scapy.fields.ByteEnumField`
     :keyword icmp_code: ICMP code
@@ -159,26 +162,26 @@ def pinger(
         or `warp`, defaults to None
     :type special: str, optional
     :keyword icmp_pptr: ICMP pointer, defaults to 0
-    :type icmp_pptr: class:`scapy.fields.ByteField`, optional
+    :type icmp_pptr: class:`scapy.fields.ByteField`
     :keyword icmp_gwaddr: ICMP gateway IP address, defaults to "0.0.0.0"
-    :type icmp_gwaddr: class:`scapy.fields.IPField`, optional
+    :type icmp_gwaddr: class:`scapy.fields.IPField`
     :keyword icmp_nextmtu: ICMP next MTU, defaults to 0
-    :type icmp_nextmtu: class:`scapy.fields.ShortField`, optional
+    :type icmp_nextmtu: class:`scapy.fields.ShortField`
     :keyword icmp_otime: ICMP originate timestamp, defaults to 0
-    :type icmp_otime: class:`scapy.layers.inet.ICMPTimeStampField`, optional
+    :type icmp_otime: class:`scapy.layers.inet.ICMPTimeStampField`
     :keyword icmp_rtime: ICMP receive timestamp, defaults to 0
-    :type icmp_rtime: class:`scapy.layers.inet.ICMPTimeStampField`, optional
+    :type icmp_rtime: class:`scapy.layers.inet.ICMPTimeStampField`
     :keyword icmp_ttime: ICMP transmit timestamp, defaults to 0
-    :type icmp_ttime: class:`scapy.layers.inet.ICMPTimeStampField`, optional
+    :type icmp_ttime: class:`scapy.layers.inet.ICMPTimeStampField`
     :keyword icmp_mask: ICMP address mask, defaults to "0.0.0.0"
-    :type icmp_mask: class:`scapy.fields.IPField`, optional
+    :type icmp_mask: class:`scapy.fields.IPField`
     :keyword request: Request type - one of `mask` or `timestamp`,
         defaults to None
     :type request: str, optional
     :keyword count: Number of packets to send, defaults to 1
-    :type count: int, optional
+    :type count: int
     :keyword dup: Duplicate packets, defaults to `False`
-    :type dup: bool, optional
+    :type dup: bool
 
     :return: A class:`subprocess.CompletedProcess` with the output from the
         ping utility
