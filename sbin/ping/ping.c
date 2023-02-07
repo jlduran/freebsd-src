@@ -1157,11 +1157,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 		if (timing) {
 			struct timespec tv1;
 			struct tv32 tv32;
-#ifndef icmp_data
-			tp = &icp->icmp_ip;
-#else
 			tp = icp->icmp_data;
-#endif
 			tp = (const char *)tp + phdr_len;
 
 			if ((size_t)(cc - ICMP_MINLEN - phdr_len) >=
@@ -1273,11 +1269,7 @@ pr_pack(char *buf, int cc, struct sockaddr_in *from, struct timespec *tv)
 		 * as root to avoid leaking information not normally
 		 * available to those not running as root.
 		 */
-#ifndef icmp_data
-		struct ip *oip = &icp->icmp_ip;
-#else
 		struct ip *oip = (struct ip *)icp->icmp_data;
-#endif
 		struct icmp *oicmp = (struct icmp *)(oip + 1);
 
 		if (((options & F_VERBOSE) && uid == 0) ||
@@ -1496,19 +1488,11 @@ pr_icmph(struct icmp *icp)
 			break;
 		}
 		/* Print returned IP header information */
-#ifndef icmp_data
-		pr_retip(&icp->icmp_ip);
-#else
 		pr_retip((struct ip *)icp->icmp_data);
-#endif
 		break;
 	case ICMP_SOURCEQUENCH:
 		(void)printf("Source Quench\n");
-#ifndef icmp_data
-		pr_retip(&icp->icmp_ip);
-#else
 		pr_retip((struct ip *)icp->icmp_data);
-#endif
 		break;
 	case ICMP_REDIRECT:
 		switch(icp->icmp_code) {
@@ -1529,11 +1513,7 @@ pr_icmph(struct icmp *icp)
 			break;
 		}
 		(void)printf("(New addr: %s)\n", inet_ntoa(icp->icmp_gwaddr));
-#ifndef icmp_data
-		pr_retip(&icp->icmp_ip);
-#else
 		pr_retip((struct ip *)icp->icmp_data);
-#endif
 		break;
 	case ICMP_ECHO:
 		(void)printf("Echo Request\n");
@@ -1552,20 +1532,12 @@ pr_icmph(struct icmp *icp)
 			    icp->icmp_code);
 			break;
 		}
-#ifndef icmp_data
-		pr_retip(&icp->icmp_ip);
-#else
 		pr_retip((struct ip *)icp->icmp_data);
-#endif
 		break;
 	case ICMP_PARAMPROB:
 		(void)printf("Parameter problem: pointer = 0x%02x\n",
 		    icp->icmp_hun.ih_pptr);
-#ifndef icmp_data
-		pr_retip(&icp->icmp_ip);
-#else
 		pr_retip((struct ip *)icp->icmp_data);
-#endif
 		break;
 	case ICMP_TSTAMP:
 		(void)printf("Timestamp\n");
