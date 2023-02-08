@@ -921,6 +921,60 @@ Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
             marks=pytest.mark.skip("XXX currently failing"),
             id="_3_1_flags_DF",
         ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
+                "special": "tcp",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PATTERN: 0x01
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+48 bytes from 192.0.2.2: Destination Host Unreachable
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+ 4  5  00 0028 0001   0 0000  40  06 f6cb 192.0.2.1  192.0.2.2 
+TCP: from port 1234, to port 5678 (decimal)
+
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            id="_3_1_special_tcp",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
+                "special": "udp",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PATTERN: 0x01
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+36 bytes from 192.0.2.2: Destination Host Unreachable
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+ 4  5  00 001c 0001   0 0000  40  11 f6cc 192.0.2.1  192.0.2.2 
+UDP: from port 1234, to port 5678 (decimal)
+
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            id="_3_1_special_udp",
+        ),
     ]
 
     @pytest.mark.parametrize("pinger_kargs, expected", pinger_testdata)
