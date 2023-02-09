@@ -82,10 +82,13 @@ def generate_ip_options(opts):
     elif opts == "NOP-40":
         options = sc.IPOption(b"\x01" * 40)
     elif opts == "RR":
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_RR(pointer=40, routers=routers)
     elif opts == "RR-same":
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_RR(pointer=3, routers=routers_zero)
     elif opts == "RR-trunc":
+        ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption_RR(length=7, routers=routers_zero)
     elif opts == "LSRR":
         ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
