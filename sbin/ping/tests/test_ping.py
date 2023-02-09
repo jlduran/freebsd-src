@@ -190,8 +190,8 @@ def pinger(
     tun = sc.TunTapInterface(iface)
     subprocess.run(["ifconfig", tun.iface, "up"], check=True)
     subprocess.run(["ifconfig", tun.iface, src, dst], check=True)
-    opts = generate_ip_options(opts)
-    ip = sc.IP(flags=flags, src=dst, dst=src, options=opts)
+    ip_opts = generate_ip_options(opts)
+    ip = sc.IP(flags=flags, src=dst, dst=src, options=ip_opts)
     command = [
         "/sbin/ping",
         "-c",
