@@ -891,6 +891,10 @@ ping(int argc, char *const *argv)
 		err(EX_OSERR, "sigaction SIGINT");
 	}
 
+	si_sa.sa_handler = stopit;
+	if (sigaction(SIGQUIT, &si_sa, 0) == -1)
+		err(EX_OSERR, "sigaction SIGQUIT");
+
 	si_sa.sa_handler = status;
 	if (sigaction(SIGINFO, &si_sa, 0) == -1) {
 		err(EX_OSERR, "sigaction");
