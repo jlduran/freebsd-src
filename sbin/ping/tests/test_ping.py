@@ -1004,6 +1004,31 @@ round-trip min/avg/max/stddev = /// ms
                 "dst": "192.0.2.2",
                 "icmp_type": 0,
                 "icmp_code": 0,
+                "opts": "NOP",
+            },
+            {
+                "returncode": 0,
+                "stdout": """\
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+64 bytes from: icmp_seq=0 ttl= time= ms
+wrong total length 88 instead of 84
+NOP
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = /// ms
+""",
+                "stderr": "",
+                "redacted": True,
+            },
+            id="_0_0_opts_NOP",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 0,
+                "icmp_code": 0,
                 "opts": "NOP-40",
             },
             {
