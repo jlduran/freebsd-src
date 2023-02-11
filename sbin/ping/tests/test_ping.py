@@ -1029,6 +1029,32 @@ round-trip min/avg/max/stddev = /// ms
                 "dst": "192.0.2.2",
                 "icmp_type": 3,
                 "icmp_code": 1,
+                "special": "no-payload",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PATTERN: 0x01
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+36 bytes from 192.0.2.2: Destination Host Unreachable
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+ 4  5  00 001c 0001   0 0000  40  01 f6dc 192.0.2.1  192.0.2.2 
+
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            id="_quoted_data_too_short",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
                 "oip_ihl": 0x4,
             },
             {
