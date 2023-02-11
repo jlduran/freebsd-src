@@ -37,6 +37,8 @@ def build_response_packet(echo, ip, icmp, oip_ihl, special):
         oip.ihl = oip_ihl
 
     # Special options
+    if special == "no-payload":
+        load = ""
     if special == "tcp":
         oip.proto = "tcp"
         tcp = sc.TCP(sport=1234, dport=5678)
@@ -171,8 +173,8 @@ def pinger(
     :type opts: str, optional
     :keyword oip_ihl: Inner packet's Internet Header Length, defaults to None
     :type oip_ihl: class:`scapy.fields.BitField`, optional
-    :keyword special: Send a special packet - one of `tcp`, `udp`, `wrong` or
-        `warp`, defaults to None
+    :keyword special: Send a special packet - one of `no-payload`, `tcp`,
+        `udp`, `wrong` or `warp`, defaults to None
     :type special: str, optional
     :keyword icmp_pptr: ICMP pointer, defaults to 0
     :type icmp_pptr: class:`scapy.fields.ByteField`
