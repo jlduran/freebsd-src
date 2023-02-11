@@ -1029,6 +1029,27 @@ round-trip min/avg/max/stddev = /// ms
                 "dst": "192.0.2.2",
                 "icmp_type": 3,
                 "icmp_code": 1,
+                "ihl": 0x4,
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            id="_IHL_too_short",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
                 "special": "no-payload",
             },
             {
