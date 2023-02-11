@@ -28,7 +28,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd November 24, 2022
+.Dd February 11, 2023
 .Dt PF.CONF 5
 .Os
 .Sh NAME
@@ -797,26 +797,40 @@ modifier to ensure unique IP identifiers.
 Enforces a minimum TTL for matching IP packets.
 .It Ar max-mss Aq Ar number
 Enforces a maximum MSS for matching TCP packets.
-.It Xo Ar set-tos Aq Ar string
-.No \*(Ba Aq Ar number
-.Xc
+.It Ar set-tos Aq Ar TOS
 Enforces a
-.Em TOS
+type of service
+.Pq ToS
 for matching IP packets.
-.Em TOS
+.Ar TOS
 may be
-given as one of
-.Ar critical ,
-.Ar inetcontrol ,
-.Ar lowdelay ,
-.Ar netcontrol ,
-.Ar throughput ,
-.Ar reliability ,
-or one of the DiffServ Code Points:
-.Ar ef ,
-.Ar va ,
-.Ar af11 No ... Ar af43 ,
-.Ar cs0 No ... Ar cs7 ;
+given as one of:
+.Pp
+.Bl -tag -width "inetcontrol" -offset indent -compact
+.It Ar critical
+.Ar ( 0xa0 ) ,
+.It Ar inetcontrol
+.Ar ( 0xc0 ) ,
+.It Ar lowdelay
+.Ar ( 0x10 ) ,
+.It Ar netcontrol
+.Ar ( 0xe0 ) ,
+.It Ar throughput
+.Ar ( 0x08 ) ,
+.It Ar reliability
+.Ar ( 0x04 ) .
+.El
+.Pp
+Or one of the differentiated services (DiffServ) code points:
+.Ar ef
+.Ar ( 0xb8 ) ,
+.Ar va
+.Ar ( 0xb0 ) ,
+.Ar af11 ... af43
+.Xo Ar ( 0x28 ... 0x98 ) ,
+.Xc
+.Ar cs0 ... cs7
+.Ar ( 0x00 ... 0xe0 ) ;
 or as either hex or decimal.
 .It Ar random-id
 Replaces the IP identification field with random values to compensate
@@ -1911,13 +1925,11 @@ or
 .Ar icmp6-type
 .Pc
 must match.
-.It Xo Ar tos Aq Ar string
-.No \*(Ba Aq Ar number
-.Xc
+.It Ar tos Aq Ar TOS
 This rule applies to packets with the specified
-.Em TOS
+.Em ToS
 bits set.
-.Em TOS
+.Ar TOS
 may be
 given as one of
 .Ar critical ,
@@ -1929,8 +1941,8 @@ given as one of
 or one of the DiffServ Code Points:
 .Ar ef ,
 .Ar va ,
-.Ar af11 No ... Ar af43 ,
-.Ar cs0 No ... Ar cs7 ;
+.Ar af11 ... af43 ,
+.Ar cs0 ... cs7 ;
 or as either hex or decimal.
 .Pp
 For example, the following rules are identical:
