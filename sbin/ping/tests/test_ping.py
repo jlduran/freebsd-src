@@ -1027,6 +1027,32 @@ round-trip min/avg/max/stddev = /// ms
             {
                 "src": "192.0.2.1",
                 "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
+                "oip_ihl": 0xf,
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+92 bytes from: Destination Host Unreachable
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+ 4  f  00 0054 0001   0 0000  40  01 eca4 192.0.2.1  192.0.2.2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": True,  # XXX No redaction yet
+            },
+            marks=pytest.mark.skip("XXX No redaction yet"),
+            id="_inner_packet_too_short",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
                 "icmp_type": 0,
                 "icmp_code": 0,
                 "opts": "NOP-40",
