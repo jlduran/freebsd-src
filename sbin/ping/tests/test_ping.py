@@ -15,7 +15,7 @@ logging.getLogger("scapy").setLevel(logging.CRITICAL)
 import scapy.all as sc
 
 
-def build_response_packet(echo, ip, icmp, special):
+def build_response_packet(echo, ip, icmp, oip_ihl, special):
     icmp_id_seq_types = [0, 8, 13, 14, 15, 16, 17, 18, 37, 38]
     oip = echo[sc.IP]
     oicmp = echo[sc.ICMP]
@@ -31,6 +31,10 @@ def build_response_packet(echo, ip, icmp, special):
     oip.flags = ip.flags
     oip.chksum = None
     oip.options = ip.options
+
+    # Inner packet (oip) options
+    if oip_ihl:
+        oip.ihl = oip_ihl
 
     # Special options
     if special == "tcp":
@@ -124,8 +128,10 @@ def pinger(
     icmp_type: sc.scapy.fields.ByteEnumField,
     icmp_code: sc.scapy.fields.MultiEnumField,
     # IP arguments
+    ihl: Optional[sc.scapy.fields.BitField] = None,
     flags: Optional[sc.scapy.fields.FlagsField] = None,
     opts: Optional[str] = None,
+    oip_ihl: Optional[sc.scapy.fields.BitField] = None,
     special: Optional[str] = None,
     # ICMP arguments
     # Match names with <netinet/ip_icmp.h>
@@ -155,14 +161,18 @@ def pinger(
     :keyword icmp_code: ICMP code
     :type icmp_code: class:`scapy.fields.MultiEnumField`
 
+    :keyword ihl: Internet Header Length, defaults to None
+    :type ihl: class:`scapy.fields.BitField`, optional
     :keyword flags: IP flags - one of `DF`, `MF` or `evil`, defaults to None
     :type flags: class:`scapy.fields.FlagsField`, optional
     :keyword opts: Include IP options - one of `EOL`, `NOP`, `NOP-40`, `unk`,
         `unk-40`, `RR`, `RR-same`, `RR-trunc`, `LSRR`, `LSRR-trunc`, `SSRR` or
         `SSRR-trunc`, defaults to None
     :type opts: str, optional
-    :keyword special: Send a special packet - one of `tcp`, `udp`, `wrong`
-        or `warp`, defaults to None
+    :keyword oip_ihl: Inner packet's Internet Header Length, defaults to None
+    :type oip_ihl: class:`scapy.fields.BitField`, optional
+    :keyword special: Send a special packet - one of `tcp`, `udp`, `wrong` or
+        `warp`, defaults to None
     :type special: str, optional
     :keyword icmp_pptr: ICMP pointer, defaults to 0
     :type icmp_pptr: class:`scapy.fields.ByteField`
@@ -194,7 +204,7 @@ def pinger(
     subprocess.run(["ifconfig", tun.iface, "up"], check=True)
     subprocess.run(["ifconfig", tun.iface, src, dst], check=True)
     ip_opts = generate_ip_options(opts)
-    ip = sc.IP(flags=flags, src=dst, dst=src, options=ip_opts)
+    ip = sc.IP(ihl=ihl, flags=flags, src=dst, dst=src, options=ip_opts)
     command = [
         "/sbin/ping",
         "-c",
@@ -238,7 +248,7 @@ def pinger(
                 addr_mask=icmp_mask,
                 nexthopmtu=icmp_nextmtu,
             )
-            pkt = build_response_packet(echo, ip, icmp, special)
+            pkt = build_response_packet(echo, ip, icmp, oip_ihl, special)
             tun.send(pkt)
             if dup is True:
                 tun.send(pkt)
