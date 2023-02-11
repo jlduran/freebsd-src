@@ -1121,6 +1121,29 @@ Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
             {
                 "src": "192.0.2.1",
                 "dst": "192.0.2.2",
+                "icmp_type": 3,
+                "icmp_code": 1,
+                "oip_ihl": 0xf,
+                "special": "no-payload",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PATTERN: 0x01
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            id="_max_inner_packet_ihl_without_payload",
+        ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
                 "icmp_type": 0,
                 "icmp_code": 0,
                 "opts": "NOP-40",
