@@ -1486,14 +1486,31 @@ check_status(void)
 
 	if (siginfo_p) {
 		siginfo_p = 0;
-		(void)fprintf(stderr, "\r%ld/%ld packets received (%.1f%%)",
-		    nreceived, ntransmitted,
-		    ntransmitted ? nreceived * 100.0 / ntransmitted : 0.0);
+		(void)fprintf(stderr, "--- %s ping statistics ---\n", hostname);
+		(void)fprintf(stderr, "%ld packets transmitted, ", ntransmitted);
+		(void)fprintf(stderr, "%ld packets received, ", nreceived);
+		if (nrepeats)
+			(void)fprintf(stderr, "+%ld duplicates, ", nrepeats);
+		if (ntransmitted) {
+			if (nreceived > ntransmitted)
+				(void)fprintf(stderr,
+				    "-- somebody's printing up packets!");
+			else
+				(void)fprintf(stderr, "%.1f%% packet loss",
+				    ((ntransmitted - nreceived) * 100.0) /
+				    ntransmitted);
+		}
+		if (nrcvtimeout)
+			(void)fprintf(stderr, ", %ld packets out of wait time",
+			    nrcvtimeout);
+		fprintf(stderr, "\n");
 		if (nreceived && timing) {
 			double n = nreceived + nrepeats;
 			double avg = tsum / n;
-			(void)fprintf(stderr, " round-trip min/avg/max = "
-			    "%.3f/%.3f/%.3f ms", tmin, avg, tmax);
+			double dev = sqrt(fmax(0, tsumsq / n - avg * avg));
+			(void)fprintf(stderr,
+			    "round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+			    tmin, avg, tmax, dev);
 		}
 		(void)fprintf(stderr, "\n");
 	}
@@ -1530,10 +1547,10 @@ finish(void)
 	if (nreceived && timing) {
 		double n = nreceived + nrepeats;
 		double avg = tsum / n;
-		double vari = tsumsq / n - avg * avg;
+		double dev = sqrt(fmax(0, tsumsq / n - avg * avg));
 		(void)printf(
 		    "round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
-		    tmin, avg, tmax, sqrt(vari));
+		    tmin, avg, tmax, dev);
 	}
 
 	if (nreceived)
