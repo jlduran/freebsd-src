@@ -37,6 +37,8 @@ task:
   - gpart show
   - df -m
   - pkg --version
+  - pkg delete -y python2
+  - pkg upgrade -y
   - pw useradd user
   - mkdir -p /usr/obj/$(pwd -P)
   - chown user:user /usr/obj/$(pwd -P)
