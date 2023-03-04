@@ -7,7 +7,8 @@ BINDIR=		${TESTSDIR}
 
 TESTS_SUBDIRS+=	libalias
 
-ATF_TESTS_C=	ip_reass_test \
+ATF_TESTS_C=	in_mcast_test \
+		ip_reass_test \
 		so_reuseport_lb_test \
 		socket_afinet \
 		tcp6_v4mapped_bind_test \
