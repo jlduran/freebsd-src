@@ -200,7 +200,7 @@ for its argument.
 
 % ping6 -n -I ed0 ff02::1
 
-PING6(56=40+8+8 bytes) fe80::5254:ff:feda:cb7d --> ff02::1%ed0
+PING(56=40+8+8 bytes) fe80::5254:ff:feda:cb7d --> ff02::1%ed0
 56 bytes from fe80::5254:ff:feda:cb7d%lo0, icmp_seq=0 hlim=64 time=0.25 ms
 56 bytes from fe80::2a0:c9ff:fe84:ed6c%ed0, icmp_seq=0 hlim=64 time=1.333 ms(DUP!)
 56 bytes from fe80::5254:ff:feda:d161%ed0, icmp_seq=0 hlim=64 time=1.459 ms(DUP!)
