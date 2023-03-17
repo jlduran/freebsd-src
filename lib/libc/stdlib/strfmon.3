@@ -154,12 +154,12 @@ The following example will format the value
 to the string
 .Dq Li $1,234,567.89 :
 .Bd -literal -offset indent
-#include <stdio.h>
 #include <monetary.h>
 #include <xlocale.h>
+#include <stdio.h>
 
 int
-main()
+main(void)
 {
 	char string[100];
 	double money = 1234567.89;
