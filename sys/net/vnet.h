@@ -65,6 +65,7 @@
  * as required for libkvm.
  */
 #if defined(_KERNEL) || defined(_WANT_VNET)
+#include <machine/param.h>	/* for CACHE_LINE_SIZE */
 #include <sys/queue.h>
 
 struct vnet {
@@ -360,12 +361,6 @@ struct vnet_sysinit {
 	    vnet_deregister_sysuninit, &ident ## _vnet_uninit)
 
 /*
- * Run per-vnet sysinits or sysuninits during vnet creation/destruction.
- */
-void	 vnet_sysinit(void);
-void	 vnet_sysuninit(void);
-
-/*
  * Interfaces for managing per-vnet constructors and destructors.
  */
 void	vnet_register_sysinit(void *arg);
@@ -414,7 +409,7 @@ do {									\
 #define	VNET_LIST_RUNLOCK()
 #define	VNET_LIST_RUNLOCK_NOSLEEP()
 #define	VNET_ITERATOR_DECL(arg)
-#define	VNET_FOREACH(arg)
+#define	VNET_FOREACH(arg)	for (int _vn = 0; _vn == 0; _vn++)
 
 #define	IS_DEFAULT_VNET(arg)	1
 #define	CRED_TO_VNET(cr)	NULL

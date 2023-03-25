@@ -68,6 +68,7 @@ static device_method_t ofw_cpulist_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_add_child,	bus_generic_add_child),
 	DEVMETHOD(bus_child_pnpinfo,	ofw_bus_gen_child_pnpinfo),
+	DEVMETHOD(bus_get_device_path,  ofw_bus_gen_get_device_path),
 
 	/* ofw_bus interface */
 	DEVMETHOD(ofw_bus_get_devinfo,	ofw_cpulist_get_devinfo),
@@ -86,10 +87,7 @@ static driver_t ofw_cpulist_driver = {
 	sizeof(struct ofw_cpulist_softc)
 };
 
-static devclass_t ofw_cpulist_devclass;
-
-DRIVER_MODULE(ofw_cpulist, ofwbus, ofw_cpulist_driver, ofw_cpulist_devclass,
-    0, 0);
+DRIVER_MODULE(ofw_cpulist, ofwbus, ofw_cpulist_driver, 0, 0);
 
 static int 
 ofw_cpulist_probe(device_t dev) 
@@ -183,9 +181,7 @@ static driver_t ofw_cpu_driver = {
 	sizeof(struct ofw_cpu_softc)
 };
 
-static devclass_t ofw_cpu_devclass;
-
-DRIVER_MODULE(ofw_cpu, cpulist, ofw_cpu_driver, ofw_cpu_devclass, 0, 0);
+DRIVER_MODULE(ofw_cpu, cpulist, ofw_cpu_driver, 0, 0);
 
 static int
 ofw_cpu_probe(device_t dev)

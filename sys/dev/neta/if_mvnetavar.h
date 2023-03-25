@@ -140,7 +140,7 @@ struct mvneta_tx_ring {
 	/* Index of this queue */
 	int				qidx;
 	/* IFNET pointer */
-	struct ifnet			*ifp;
+	if_t				ifp;
 	/* Ring buffer for IFNET */
 	struct buf_ring			*br;
 	/* Real descriptors array. shared by TxDMA */
@@ -252,8 +252,8 @@ struct mvneta_softc {
 	uint32_t	version;
 	/*
 	 * mtx must be held by interface functions to/from
-	 * other frameworks. interrupt hander, sysctl hander,
-	 * ioctl hander, and so on.
+	 * other frameworks. interrupt handler, sysctl handler,
+	 * ioctl handler, and so on.
 	 */
 	struct mtx	mtx;
 	struct resource *res[2];
@@ -261,7 +261,7 @@ struct mvneta_softc {
 	
 	uint64_t	clk_freq;
 
-	struct ifnet	*ifp;
+	if_t		ifp;
 	uint32_t        mvneta_if_flags;
 	uint32_t        mvneta_media;
 	uint32_t	tx_csum_limit;

@@ -862,7 +862,7 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 			}
 			mps_unlock(sc);
 			copyout(cm->cm_reply, PTRIN(data->PtrReply),
-			    data->ReplySize);
+			    MIN(sz, data->ReplySize));
 			mps_lock(sc);
 		}
 		mpssas_free_tm(sc, cm);
@@ -1015,7 +1015,8 @@ mps_user_pass_thru(struct mps_softc *sc, mps_pass_thru_t *data)
 			    data->ReplySize, sz);
 		}
 		mps_unlock(sc);
-		copyout(cm->cm_reply, PTRIN(data->PtrReply), data->ReplySize);
+		copyout(cm->cm_reply, PTRIN(data->PtrReply),
+		    MIN(sz, data->ReplySize));
 		mps_lock(sc);
 
 		if ((function == MPI2_FUNCTION_SCSI_IO_REQUEST) ||
@@ -1955,7 +1956,7 @@ mps_user_event_report(struct mps_softc *sc, mps_event_report_t *data)
 	if ((size >= sizeof(sc->recorded_events)) && (status == 0)) {
 		mps_unlock(sc);
 		if (copyout((void *)sc->recorded_events,
-		    PTRIN(data->PtrEvents), size) != 0)
+		    PTRIN(data->PtrEvents), sizeof(sc->recorded_events)) != 0)
 			status = EFAULT;
 		mps_lock(sc);
 	} else {
@@ -2156,6 +2157,10 @@ mps_ioctl(struct cdev *dev, u_long cmd, void *arg, int flag,
 		mps_unlock(sc);
 		break;
 	case MPSIO_READ_CFG_PAGE:
+		if (page_req->len < (int)sizeof(MPI2_CONFIG_PAGE_HEADER)) {
+			error = EINVAL;
+			break;
+		}
 		mps_page = malloc(page_req->len, M_MPSUSER, M_WAITOK | M_ZERO);
 		error = copyin(page_req->buf, mps_page,
 		    sizeof(MPI2_CONFIG_PAGE_HEADER));
@@ -2174,6 +2179,11 @@ mps_ioctl(struct cdev *dev, u_long cmd, void *arg, int flag,
 		mps_unlock(sc);
 		break;
 	case MPSIO_READ_EXT_CFG_PAGE:
+		if (ext_page_req->len <
+		    (int)sizeof(MPI2_CONFIG_EXTENDED_PAGE_HEADER)) {
+			error = EINVAL;
+			break;
+		}
 		mps_page = malloc(ext_page_req->len, M_MPSUSER, M_WAITOK|M_ZERO);
 		error = copyin(ext_page_req->buf, mps_page,
 		    sizeof(MPI2_CONFIG_EXTENDED_PAGE_HEADER));
@@ -2187,6 +2197,10 @@ mps_ioctl(struct cdev *dev, u_long cmd, void *arg, int flag,
 		error = copyout(mps_page, ext_page_req->buf, ext_page_req->len);
 		break;
 	case MPSIO_WRITE_CFG_PAGE:
+		if (page_req->len < (int)sizeof(MPI2_CONFIG_PAGE_HEADER)) {
+			error = EINVAL;
+			break;
+		}
 		mps_page = malloc(page_req->len, M_MPSUSER, M_WAITOK|M_ZERO);
 		error = copyin(page_req->buf, mps_page, page_req->len);
 		if (error)

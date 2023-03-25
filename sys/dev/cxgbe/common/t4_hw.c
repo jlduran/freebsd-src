@@ -3908,13 +3908,16 @@ int t4_link_l1cfg(struct adapter *adap, unsigned int mbox, unsigned int port,
 		speed = fwcap_top_speed(lc->pcaps);
 
 	fec = 0;
-#ifdef INVARIANTS
-	if (lc->force_fec != 0)
-		MPASS(lc->pcaps & FW_PORT_CAP32_FORCE_FEC);
-#endif
 	if (fec_supported(speed)) {
+		int force_fec;
+
+		if (lc->pcaps & FW_PORT_CAP32_FORCE_FEC)
+			force_fec = lc->force_fec;
+		else
+			force_fec = 0;
+
 		if (lc->requested_fec == FEC_AUTO) {
-			if (lc->force_fec > 0) {
+			if (force_fec > 0) {
 				/*
 				 * Must use FORCE_FEC even though requested FEC
 				 * is AUTO. Set all the FEC bits valid for the
@@ -3960,7 +3963,7 @@ int t4_link_l1cfg(struct adapter *adap, unsigned int mbox, unsigned int port,
 			 * User has explicitly requested some FEC(s). Set
 			 * FORCE_FEC unless prohibited from using it.
 			 */
-			if (lc->force_fec != 0)
+			if (force_fec != 0)
 				fec |= FW_PORT_CAP32_FORCE_FEC;
 			fec |= fec_to_fwcap(lc->requested_fec &
 			    M_FW_PORT_CAP32_FEC);
@@ -5263,10 +5266,28 @@ static bool mac_intr_handler(struct adapter *adap, int port, bool verbose)
 	return (fatal);
 }
 
+static bool pl_timeout_status(struct adapter *adap, int arg, bool verbose)
+{
+
+	CH_ALERT(adap, "    PL_TIMEOUT_STATUS 0x%08x 0x%08x\n",
+	    t4_read_reg(adap, A_PL_TIMEOUT_STATUS0),
+	    t4_read_reg(adap, A_PL_TIMEOUT_STATUS1));
+
+	return (false);
+}
+
 static bool plpl_intr_handler(struct adapter *adap, int arg, bool verbose)
 {
+	static const struct intr_action plpl_intr_actions[] = {
+		{ F_TIMEOUT, 0, pl_timeout_status },
+		{ 0 },
+	};
 	static const struct intr_details plpl_intr_details[] = {
+		{ F_PL_BUSPERR, "Bus parity error" },
 		{ F_FATALPERR, "Fatal parity error" },
+		{ F_INVALIDACCESS, "Global reserved memory access" },
+		{ F_TIMEOUT,  "Bus timeout" },
+		{ F_PLERR, "Module reserved access" },
 		{ F_PERRVFID, "VFID_MAP parity error" },
 		{ 0 }
 	};
@@ -5277,7 +5298,7 @@ static bool plpl_intr_handler(struct adapter *adap, int arg, bool verbose)
 		.fatal = F_FATALPERR | F_PERRVFID,
 		.flags = NONFATAL_IF_DISABLED,
 		.details = plpl_intr_details,
-		.actions = NULL,
+		.actions = plpl_intr_actions,
 	};
 
 	return (t4_handle_intr(adap, &plpl_intr_info, 0, verbose));

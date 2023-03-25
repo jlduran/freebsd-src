@@ -38,6 +38,8 @@ __FBSDID("$FreeBSD$");
 #include <machine/pmc_mdep.h>
 #include <machine/cpu.h>
 
+#include "opt_acpi.h"
+
 static int arm64_npmcs;
 
 struct arm64_event_code_map {
@@ -165,15 +167,12 @@ arm64_allocate_pmc(int cpu, int ri, struct pmc *pm,
   const struct pmc_op_pmcallocate *a)
 {
 	uint32_t config;
-	struct arm64_cpu *pac;
 	enum pmc_event pe;
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[arm64,%d] illegal CPU value %d", __LINE__, cpu));
 	KASSERT(ri >= 0 && ri < arm64_npmcs,
 	    ("[arm64,%d] illegal row index %d", __LINE__, ri));
-
-	pac = arm64_pcpu[cpu];
 
 	if (a->pm_class != PMC_CLASS_ARMV8) {
 		return (EINVAL);
@@ -337,12 +336,6 @@ arm64_start_pmc(int cpu, int ri)
 static int
 arm64_stop_pmc(int cpu, int ri)
 {
-	struct pmc_hw *phw;
-	struct pmc *pm;
-
-	phw    = &arm64_pcpu[cpu]->pc_arm64pmcs[ri];
-	pm     = phw->phw_pmc;
-
 	/*
 	 * Disable the PMCs.
 	 */
@@ -355,7 +348,7 @@ arm64_stop_pmc(int cpu, int ri)
 static int
 arm64_release_pmc(int cpu, int ri, struct pmc *pmc)
 {
-	struct pmc_hw *phw;
+	struct pmc_hw *phw __diagused;
 
 	KASSERT(cpu >= 0 && cpu < pmc_cpu_max(),
 	    ("[arm64,%d] illegal CPU value %d", __LINE__, cpu));
@@ -372,7 +365,6 @@ arm64_release_pmc(int cpu, int ri, struct pmc *pmc)
 static int
 arm64_intr(struct trapframe *tf)
 {
-	struct arm64_cpu *pc;
 	int retval, ri;
 	struct pmc *pm;
 	int error;
@@ -386,7 +378,6 @@ arm64_intr(struct trapframe *tf)
 	    TRAPF_USERMODE(tf));
 
 	retval = 0;
-	pc = arm64_pcpu[cpu];
 
 	for (ri = 0; ri < arm64_npmcs; ri++) {
 		pm = arm64_pcpu[cpu]->pc_arm64pmcs[ri].phw_pmc;
@@ -538,11 +529,11 @@ arm64_pcpu_fini(struct pmc_mdep *md, int cpu)
 }
 
 struct pmc_mdep *
-pmc_arm64_initialize()
+pmc_arm64_initialize(void)
 {
 	struct pmc_mdep *pmc_mdep;
 	struct pmc_classdep *pcd;
-	int idcode, impcode;
+	int classes, idcode, impcode;
 	int reg;
 	uint64_t midr;
 
@@ -572,8 +563,18 @@ pmc_arm64_initialize()
 	arm64_pcpu = malloc(sizeof(struct arm64_cpu *) * pmc_cpu_max(),
 		M_PMC, M_WAITOK | M_ZERO);
 
-	/* Just one class */
-	pmc_mdep = pmc_mdep_alloc(1);
+	/* One AArch64 CPU class */
+	classes = 1;
+
+#ifdef DEV_ACPI
+	/* Query presence of optional classes and set max class. */
+	if (pmc_cmn600_nclasses() > 0)
+		classes = MAX(classes, PMC_MDEP_CLASS_INDEX_CMN600);
+	if (pmc_dmc620_nclasses() > 0)
+		classes = MAX(classes, PMC_MDEP_CLASS_INDEX_DMC620_C);
+#endif
+
+	pmc_mdep = pmc_mdep_alloc(classes);
 
 	switch(impcode) {
 	case PMCR_IMP_ARM:
@@ -621,6 +622,15 @@ pmc_arm64_initialize()
 	pmc_mdep->pmd_switch_out = arm64_switch_out;
 
 	pmc_mdep->pmd_npmc   += arm64_npmcs;
+
+#ifdef DEV_ACPI
+	if (pmc_cmn600_nclasses() > 0)
+		pmc_cmn600_initialize(pmc_mdep);
+	if (pmc_dmc620_nclasses() > 0) {
+		pmc_dmc620_initialize_cd2(pmc_mdep);
+		pmc_dmc620_initialize_c(pmc_mdep);
+	}
+#endif
 
 	return (pmc_mdep);
 }

@@ -1166,6 +1166,7 @@ mrsas_shutdown(device_t dev)
 		if (sc->reset_in_progress) {
 			mrsas_dprint(sc, MRSAS_INFO,
 			    "gave up waiting for OCR to be finished\n");
+			return (0);
 		}
 	}
 
@@ -3979,6 +3980,7 @@ mrsas_issue_blocked_cmd(struct mrsas_softc *sc, struct mrsas_mfi_cmd *cmd)
 			}
 		}
 	}
+	sc->chan = NULL;
 
 	if (cmd->cmd_status == 0xFF) {
 		device_printf(sc->mrsas_dev, "DCMD timed out after %d "
@@ -4749,7 +4751,7 @@ dcmd_timeout:
 
 /*
  * mrsas_alloc_tmp_dcmd:       Allocates memory for temporary command input:
- * Adapter soft state Temp command Size of alloction
+ * Adapter soft state Temp command Size of allocation
  *
  * Allocates DMAable memory for a temporary internal command. The allocated
  * memory is initialized to all zeros upon successful loading of the dma
@@ -5046,7 +5048,5 @@ static driver_t mrsas_driver = {
 	sizeof(struct mrsas_softc)
 };
 
-static devclass_t mrsas_devclass;
-
-DRIVER_MODULE(mrsas, pci, mrsas_driver, mrsas_devclass, 0, 0);
+DRIVER_MODULE(mrsas, pci, mrsas_driver, 0, 0);
 MODULE_DEPEND(mrsas, cam, 1, 1, 1);

@@ -9,14 +9,29 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "https://bugs.freebsd.org/submit/"
 
+/* Default to -fPIE and -pie on Linux. */
+#define CLANG_DEFAULT_PIE_ON_LINUX 1
+
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER ""
 
 /* Default C/ObjC standard to use. */
 /* #undef CLANG_DEFAULT_STD_C */
+/* Always #define something so that missing the config.h #include at use sites
+ * becomes a compile error.
+ */
+#ifndef CLANG_DEFAULT_STD_C
+#define CLANG_DEFAULT_STD_C LangStandard::lang_unspecified
+#endif
 
 /* Default C++/ObjC++ standard to use. */
 /* #undef CLANG_DEFAULT_STD_CXX */
+/* Always #define something so that missing the config.h #include at use sites
+ * becomes a compile error.
+ */
+#ifndef CLANG_DEFAULT_STD_CXX
+#define CLANG_DEFAULT_STD_CXX LangStandard::lang_unspecified
+#endif
 
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB ""
@@ -65,7 +80,7 @@
 #define CLANG_HAVE_RLIMITS 1
 
 /* The LLVM product name and version */
-#define BACKEND_PACKAGE_STRING "LLVM 13.0.0"
+#define BACKEND_PACKAGE_STRING "LLVM 15.0.7"
 
 /* Linker version detected at compile time. */
 /* #undef HOST_LINK_VERSION */
@@ -76,6 +91,9 @@
 /* enable x86 relax relocations by default */
 #define ENABLE_X86_RELAX_RELOCATIONS 1
 
+/* Enable IEEE binary128 as default long double format on PowerPC Linux. */
+#define PPC_LINUX_DEFAULT_IEEELONGDOUBLE 0
+
 /* Enable each functionality of modules */
 /* #undef CLANG_ENABLE_ARCMT */
 /* #undef CLANG_ENABLE_OBJC_REWRITER */
@@ -83,5 +101,8 @@
 
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #define CLANG_SPAWN_CC1 0
+
+/* Whether to enable opaque pointers by default */
+#define CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL 1
 
 #endif

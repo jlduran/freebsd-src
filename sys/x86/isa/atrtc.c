@@ -62,6 +62,11 @@ __FBSDID("$FreeBSD$");
 #include <machine/md_var.h>
 #endif
 
+/* tunable to detect a power loss of the rtc */
+static bool atrtc_power_lost = false;
+SYSCTL_BOOL(_machdep, OID_AUTO, atrtc_power_lost, CTLFLAG_RD, &atrtc_power_lost,
+    false, "RTC lost power on last power cycle (probably caused by an emtpy cmos battery)");
+
 /*
  * atrtc_lock protects low-level access to individual hardware registers.
  * atrtc_time_lock protects the entire sequence of accessing multiple registers
@@ -600,6 +605,7 @@ atrtc_gettime(device_t dev, struct timespec *ts)
 
 	/* Look if we have a RTC present and the time is valid */
 	if (!(rtcin(RTC_STATUSD) & RTCSD_PWR)) {
+		atrtc_power_lost = true;
 		device_printf(dev, "WARNING: Battery failure indication\n");
 		return (EINVAL);
 	}
@@ -676,10 +682,8 @@ static driver_t atrtc_acpi_driver = {
 };
 #endif	/* DEV_ACPI */
 
-static devclass_t atrtc_devclass;
-
-DRIVER_MODULE(atrtc, isa, atrtc_isa_driver, atrtc_devclass, 0, 0);
+DRIVER_MODULE(atrtc, isa, atrtc_isa_driver, 0, 0);
 #ifdef DEV_ACPI
-DRIVER_MODULE(atrtc, acpi, atrtc_acpi_driver, atrtc_devclass, 0, 0);
+DRIVER_MODULE(atrtc, acpi, atrtc_acpi_driver, 0, 0);
 #endif
 ISA_PNP_INFO(atrtc_ids);

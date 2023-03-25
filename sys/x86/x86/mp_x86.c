@@ -47,9 +47,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/cons.h>	/* cngetc() */
 #include <sys/cpuset.h>
 #include <sys/csan.h>
-#ifdef GPROF 
-#include <sys/gmon.h>
-#endif
 #include <sys/interrupt.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
@@ -90,9 +87,6 @@ __FBSDID("$FreeBSD$");
 #endif
 
 static MALLOC_DEFINE(M_CPUS, "cpus", "CPU items");
-
-/* lock region used by kernel profiling */
-int	mcount_lock;
 
 int	mp_naps;		/* # of Applications processors */
 int	boot_cpu_id = -1;	/* designated BSP */
@@ -871,6 +865,25 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 	nchildren = 0;
 	node = root;
 	while (node != NULL) {
+		/*
+		 * When some APICs are disabled by tunables, nodes can end up
+		 * with an empty cpuset. Nodes with an empty cpuset will be
+		 * translated into cpu groups with empty cpusets. smp_topo_fill
+		 * will then set cg_first and cg_last to -1. This isn't
+		 * correctly handled in all functions. E.g. when
+		 * cpu_search_lowest and cpu_search_highest loop through all
+		 * cpus, they call CPU_ISSET on cpu -1 which ends up in a
+		 * general protection fault.
+		 *
+		 * We could fix the scheduler to handle empty cpu groups
+		 * correctly. Nevertheless, empty cpu groups are causing
+		 * overhead for no value. So, it makes more sense to just don't
+		 * create them.
+		 */
+		if (CPU_EMPTY(&node->cpuset)) {
+			node = topo_next_node(root, node);
+			continue;
+		}
 		if (CPU_CMP(&node->cpuset, &root->cpuset) == 0) {
 			if (node->type == TOPO_TYPE_CACHE &&
 			    cg_root->cg_level < node->subtype)
@@ -896,8 +909,14 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 	if (nchildren == root->cpu_count)
 		return;
 
-	cg_root->cg_child = smp_topo_alloc(nchildren);
+	/*
+	 * We are not interested in nodes without children.
+	 */
 	cg_root->cg_children = nchildren;
+	if (nchildren == 0)
+		return;
+
+	cg_root->cg_child = smp_topo_alloc(nchildren);
 
 	/*
 	 * Now find again the same cache nodes as above and recursively
@@ -909,7 +928,8 @@ x86topo_add_sched_group(struct topo_node *root, struct cpu_group *cg_root)
 		if ((node->type != TOPO_TYPE_GROUP &&
 		    node->type != TOPO_TYPE_NODE &&
 		    node->type != TOPO_TYPE_CACHE) ||
-		    CPU_CMP(&node->cpuset, &root->cpuset) == 0) {
+		    CPU_CMP(&node->cpuset, &root->cpuset) == 0 ||
+		    CPU_EMPTY(&node->cpuset)) {
 			node = topo_next_node(root, node);
 			continue;
 		}
@@ -957,10 +977,9 @@ void
 cpu_add(u_int apic_id, char boot_cpu)
 {
 
-	if (apic_id > max_apic_id) {
+	if (apic_id > max_apic_id)
 		panic("SMP: APIC ID %d too high", apic_id);
-		return;
-	}
+
 	KASSERT(cpu_info[apic_id].cpu_present == 0, ("CPU %u added twice",
 	    apic_id));
 	cpu_info[apic_id].cpu_present = 1;
@@ -1103,11 +1122,6 @@ init_secondary_tail(void)
 
 	kcsan_cpu_init(cpuid);
 
-	/*
-	 * Assert that smp_after_idle_runnable condition is reasonable.
-	 */
-	MPASS(PCPU_GET(curpcb) == NULL);
-
 	sched_ap_entry();
 
 	panic("scheduler returned us to %s", __func__);
@@ -1117,15 +1131,23 @@ init_secondary_tail(void)
 static void
 smp_after_idle_runnable(void *arg __unused)
 {
-	struct pcpu *pc;
 	int cpu;
 
+	if (mp_ncpus == 1)
+		return;
+
+	KASSERT(smp_started != 0, ("%s: SMP not started yet", __func__));
+
+	/*
+	 * Wait for all APs to handle an interrupt.  After that, we know that
+	 * the APs have entered the scheduler at least once, so the boot stacks
+	 * are safe to free.
+	 */
+	smp_rendezvous(smp_no_rendezvous_barrier, NULL,
+	    smp_no_rendezvous_barrier, NULL);
+
 	for (cpu = 1; cpu < mp_ncpus; cpu++) {
-		pc = pcpu_find(cpu);
-		while (atomic_load_ptr(&pc->pc_curpcb) == NULL)
-			cpu_spinwait();
-		kmem_free((vm_offset_t)bootstacks[cpu], kstack_pages *
-		    PAGE_SIZE);
+		kmem_free(bootstacks[cpu], kstack_pages * PAGE_SIZE);
 	}
 }
 SYSINIT(smp_after_idle_runnable, SI_SUB_SMP, SI_ORDER_ANY,
@@ -1688,7 +1710,7 @@ mp_ipi_intrcnt(void *dummy)
 		intrcnt_add(buf, &ipi_rendezvous_counts[i]);
 		snprintf(buf, sizeof(buf), "cpu%d:hardclock", i);
 		intrcnt_add(buf, &ipi_hardclock_counts[i]);
-	}		
+	}
 }
 SYSINIT(mp_ipi_intrcnt, SI_SUB_INTR, SI_ORDER_MIDDLE, mp_ipi_intrcnt, NULL);
 #endif

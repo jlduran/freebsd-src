@@ -111,6 +111,10 @@ static int panic_reboot_wait_time = PANIC_REBOOT_WAIT_TIME;
 SYSCTL_INT(_kern, OID_AUTO, panic_reboot_wait_time, CTLFLAG_RWTUN,
     &panic_reboot_wait_time, 0,
     "Seconds to wait before rebooting after a panic");
+static int reboot_wait_time = 0;
+SYSCTL_INT(_kern, OID_AUTO, reboot_wait_time, CTLFLAG_RWTUN,
+    &reboot_wait_time, 0,
+    "Seconds to wait before rebooting");
 
 /*
  * Note that stdarg.h and the ANSI style va_start macro is used for both
@@ -240,8 +244,8 @@ MTX_SYSINIT(dumper_configs, &dumpconf_list_lk, "dumper config list", MTX_DEF);
 static TAILQ_HEAD(dumpconflist, dumperinfo) dumper_configs =
     TAILQ_HEAD_INITIALIZER(dumper_configs);
 
-/* Context information for dump-debuggers. */
-static struct pcb dumppcb;		/* Registers. */
+/* Context information for dump-debuggers, saved by the dump_savectx() macro. */
+struct pcb dumppcb;			/* Registers. */
 lwpid_t dumptid;			/* Thread ID. */
 
 static struct cdevsw reroot_cdevsw = {
@@ -266,8 +270,6 @@ shutdown_conf(void *unused)
 	    SHUTDOWN_PRI_LAST + 100);
 	EVENTHANDLER_REGISTER(shutdown_final, shutdown_panic, NULL,
 	    SHUTDOWN_PRI_LAST + 100);
-	EVENTHANDLER_REGISTER(shutdown_final, shutdown_reset, NULL,
-	    SHUTDOWN_PRI_LAST + 200);
 }
 
 SYSINIT(shutdown_conf, SI_SUB_INTRINSIC, SI_ORDER_ANY, shutdown_conf, NULL);
@@ -402,8 +404,7 @@ doadump(boolean_t textdump)
 	if (TAILQ_EMPTY(&dumper_configs))
 		return (ENXIO);
 
-	savectx(&dumppcb);
-	dumptid = curthread->td_tid;
+	dump_savectx();
 	dumping++;
 
 	coredump = TRUE;
@@ -534,6 +535,12 @@ kern_reboot(int howto)
 
 	EVENTHANDLER_INVOKE(shutdown_final, howto);
 
+	/*
+	 * Call this directly so that reset is attempted even if shutdown
+	 * handlers are not yet registered.
+	 */
+	shutdown_reset(NULL, howto);
+
 	for(;;) ;	/* safety against shutdown_reset not working */
 	/* NOTREACHED */
 }
@@ -659,7 +666,7 @@ shutdown_halt(void *junk, int howto)
 }
 
 /*
- * Check to see if the system paniced, pause and then reboot
+ * Check to see if the system panicked, pause and then reboot
  * according to the specified delay.
  */
 static void
@@ -700,7 +707,7 @@ shutdown_reset(void *junk, int howto)
 {
 
 	printf("Rebooting...\n");
-	DELAY(1000000);	/* wait 1 sec for printf's to complete and be read */
+	DELAY(reboot_wait_time * 1000000);
 
 	/*
 	 * Acquiring smp_ipi_mtx here has a double effect:
@@ -825,7 +832,7 @@ kassert_panic(const char *fmt, ...)
 	 * If we are suppressing secondary panics, log the warning but do not
 	 * re-enter panic/kdb.
 	 */
-	if (panicstr != NULL && kassert_suppress_in_panic) {
+	if (KERNEL_PANICKED() && kassert_suppress_in_panic) {
 		if (kassert_do_log) {
 			printf("KASSERT failed: %s\n", buf);
 #ifdef KDB
@@ -922,7 +929,7 @@ vpanic(const char *fmt, va_list ap)
 
 	bootopt = RB_AUTOBOOT;
 	newpanic = 0;
-	if (panicstr)
+	if (KERNEL_PANICKED())
 		bootopt |= RB_NOSYNC;
 	else {
 		bootopt |= RB_DUMP;
@@ -1006,7 +1013,7 @@ kproc_shutdown(void *arg, int howto)
 	struct proc *p;
 	int error;
 
-	if (panicstr)
+	if (KERNEL_PANICKED())
 		return;
 
 	p = (struct proc *)arg;
@@ -1026,7 +1033,7 @@ kthread_shutdown(void *arg, int howto)
 	struct thread *td;
 	int error;
 
-	if (panicstr)
+	if (KERNEL_PANICKED())
 		return;
 
 	td = (struct thread *)arg;
@@ -1071,8 +1078,7 @@ SYSCTL_PROC(_kern_shutdown, OID_AUTO, dumpdevname,
     dumpdevname_sysctl_handler, "A",
     "Device(s) for kernel dumps");
 
-static int	_dump_append(struct dumperinfo *di, void *virtual,
-		    vm_offset_t physical, size_t length);
+static int _dump_append(struct dumperinfo *di, void *virtual, size_t length);
 
 #ifdef EKCD
 static struct kerneldumpcrypto *
@@ -1212,45 +1218,39 @@ kerneldumpcomp_destroy(struct dumperinfo *di)
 }
 
 /*
- * Must not be present on global list.
+ * Free a dumper. Must not be present on global list.
  */
-static void
-free_single_dumper(struct dumperinfo *di)
+void
+dumper_destroy(struct dumperinfo *di)
 {
 
 	if (di == NULL)
 		return;
 
 	zfree(di->blockbuf, M_DUMPER);
-
 	kerneldumpcomp_destroy(di);
-
 #ifdef EKCD
 	zfree(di->kdcrypto, M_EKCD);
 #endif
 	zfree(di, M_DUMPER);
 }
 
-/* Registration of dumpers */
+/*
+ * Allocate and set up a new dumper from the provided template.
+ */
 int
-dumper_insert(const struct dumperinfo *di_template, const char *devname,
-    const struct diocskerneldump_arg *kda)
+dumper_create(const struct dumperinfo *di_template, const char *devname,
+    const struct diocskerneldump_arg *kda, struct dumperinfo **dip)
 {
-	struct dumperinfo *newdi, *listdi;
-	bool inserted;
-	uint8_t index;
-	int error;
+	struct dumperinfo *newdi;
+	int error = 0;
 
-	index = kda->kda_index;
-	MPASS(index != KDA_REMOVE && index != KDA_REMOVE_DEV &&
-	    index != KDA_REMOVE_ALL);
+	if (dip == NULL)
+		return (EINVAL);
 
-	error = priv_check(curthread, PRIV_SETDUMPER);
-	if (error != 0)
-		return (error);
-
-	newdi = malloc(sizeof(*newdi) + strlen(devname) + 1, M_DUMPER, M_WAITOK
-	    | M_ZERO);
+	/* Allocate a new dumper */
+	newdi = malloc(sizeof(*newdi) + strlen(devname) + 1, M_DUMPER,
+	    M_WAITOK | M_ZERO);
 	memcpy(newdi, di_template, sizeof(*newdi));
 	newdi->blockbuf = NULL;
 	newdi->kdcrypto = NULL;
@@ -1259,7 +1259,7 @@ dumper_insert(const struct dumperinfo *di_template, const char *devname,
 
 	if (kda->kda_encryption != KERNELDUMP_ENC_NONE) {
 #ifdef EKCD
-		newdi->kdcrypto = kerneldumpcrypto_create(di_template->blocksize,
+		newdi->kdcrypto = kerneldumpcrypto_create(newdi->blocksize,
 		    kda->kda_encryption, kda->kda_key,
 		    kda->kda_encryptedkeysize, kda->kda_encryptedkey);
 		if (newdi->kdcrypto == NULL) {
@@ -1291,8 +1291,38 @@ dumper_insert(const struct dumperinfo *di_template, const char *devname,
 			goto cleanup;
 		}
 	}
-
 	newdi->blockbuf = malloc(newdi->blocksize, M_DUMPER, M_WAITOK | M_ZERO);
+
+	*dip = newdi;
+	return (0);
+cleanup:
+	dumper_destroy(newdi);
+	return (error);
+}
+
+/*
+ * Create a new dumper and register it in the global list.
+ */
+int
+dumper_insert(const struct dumperinfo *di_template, const char *devname,
+    const struct diocskerneldump_arg *kda)
+{
+	struct dumperinfo *newdi, *listdi;
+	bool inserted;
+	uint8_t index;
+	int error;
+
+	index = kda->kda_index;
+	MPASS(index != KDA_REMOVE && index != KDA_REMOVE_DEV &&
+	    index != KDA_REMOVE_ALL);
+
+	error = priv_check(curthread, PRIV_SETDUMPER);
+	if (error != 0)
+		return (error);
+
+	error = dumper_create(di_template, devname, kda, &newdi);
+	if (error != 0)
+		return (error);
 
 	/* Add the new configuration to the queue */
 	mtx_lock(&dumpconf_list_lk);
@@ -1310,10 +1340,6 @@ dumper_insert(const struct dumperinfo *di_template, const char *devname,
 	mtx_unlock(&dumpconf_list_lk);
 
 	return (0);
-
-cleanup:
-	free_single_dumper(newdi);
-	return (error);
 }
 
 #ifdef DDB
@@ -1368,6 +1394,9 @@ dumper_config_match(const struct dumperinfo *di, const char *devname,
 	return (true);
 }
 
+/*
+ * Remove and free the requested dumper(s) from the global list.
+ */
 int
 dumper_remove(const char *devname, const struct diocskerneldump_arg *kda)
 {
@@ -1391,7 +1420,7 @@ dumper_remove(const char *devname, const struct diocskerneldump_arg *kda)
 		if (dumper_config_match(di, devname, kda)) {
 			found = true;
 			TAILQ_REMOVE(&dumper_configs, di, di_next);
-			free_single_dumper(di);
+			dumper_destroy(di);
 		}
 	}
 	mtx_unlock(&dumpconf_list_lk);
@@ -1462,8 +1491,8 @@ dump_encrypt(struct kerneldumpcrypto *kdc, uint8_t *buf, size_t size)
 
 /* Encrypt data and call dumper. */
 static int
-dump_encrypted_write(struct dumperinfo *di, void *virtual,
-    vm_offset_t physical, off_t offset, size_t length)
+dump_encrypted_write(struct dumperinfo *di, void *virtual, off_t offset,
+    size_t length)
 {
 	static uint8_t buf[KERNELDUMP_BUFFER_SIZE];
 	struct kerneldumpcrypto *kdc;
@@ -1479,7 +1508,7 @@ dump_encrypted_write(struct dumperinfo *di, void *virtual,
 		if (dump_encrypt(kdc, buf, nbytes) != 0)
 			return (EIO);
 
-		error = dump_write(di, buf, physical, offset, nbytes);
+		error = dump_write(di, buf, offset, nbytes);
 		if (error != 0)
 			return (error);
 
@@ -1510,7 +1539,7 @@ kerneldumpcomp_write_cb(void *base, size_t length, off_t offset, void *arg)
 		 */
 		rlength = rounddown(length, di->blocksize);
 		if (rlength != 0) {
-			error = _dump_append(di, base, 0, rlength);
+			error = _dump_append(di, base, rlength);
 			if (error != 0)
 				return (error);
 		}
@@ -1520,7 +1549,7 @@ kerneldumpcomp_write_cb(void *base, size_t length, off_t offset, void *arg)
 		di->kdcomp->kdc_resid = resid;
 		return (EAGAIN);
 	}
-	return (_dump_append(di, base, 0, length));
+	return (_dump_append(di, base, length));
 }
 
 /*
@@ -1569,7 +1598,7 @@ dump_write_headers(struct dumperinfo *di, struct kerneldumpheader *kdh)
 	extent = dtoh64(kdh->dumpextent);
 #ifdef EKCD
 	if (kdc != NULL) {
-		error = dump_write(di, kdc->kdc_dumpkey, 0,
+		error = dump_write(di, kdc->kdc_dumpkey,
 		    di->mediaoffset + di->mediasize - di->blocksize - extent -
 		    keysize, keysize);
 		if (error != 0)
@@ -1577,11 +1606,11 @@ dump_write_headers(struct dumperinfo *di, struct kerneldumpheader *kdh)
 	}
 #endif
 
-	error = dump_write(di, buf, 0,
+	error = dump_write(di, buf,
 	    di->mediaoffset + di->mediasize - 2 * di->blocksize - extent -
 	    keysize, di->blocksize);
 	if (error == 0)
-		error = dump_write(di, buf, 0, di->mediaoffset + di->mediasize -
+		error = dump_write(di, buf, di->mediaoffset + di->mediasize -
 		    di->blocksize, di->blocksize);
 	return (error);
 }
@@ -1670,18 +1699,16 @@ dump_start(struct dumperinfo *di, struct kerneldumpheader *kdh)
 }
 
 static int
-_dump_append(struct dumperinfo *di, void *virtual, vm_offset_t physical,
-    size_t length)
+_dump_append(struct dumperinfo *di, void *virtual, size_t length)
 {
 	int error;
 
 #ifdef EKCD
 	if (di->kdcrypto != NULL)
-		error = dump_encrypted_write(di, virtual, physical, di->dumpoff,
-		    length);
+		error = dump_encrypted_write(di, virtual, di->dumpoff, length);
 	else
 #endif
-		error = dump_write(di, virtual, physical, di->dumpoff, length);
+		error = dump_write(di, virtual, di->dumpoff, length);
 	if (error == 0)
 		di->dumpoff += length;
 	return (error);
@@ -1693,8 +1720,7 @@ _dump_append(struct dumperinfo *di, void *virtual, vm_offset_t physical,
  * when the compression stream's output buffer is full.
  */
 int
-dump_append(struct dumperinfo *di, void *virtual, vm_offset_t physical,
-    size_t length)
+dump_append(struct dumperinfo *di, void *virtual, size_t length)
 {
 	void *buf;
 
@@ -1706,22 +1732,21 @@ dump_append(struct dumperinfo *di, void *virtual, vm_offset_t physical,
 		memmove(buf, virtual, length);
 		return (compressor_write(di->kdcomp->kdc_stream, buf, length));
 	}
-	return (_dump_append(di, virtual, physical, length));
+	return (_dump_append(di, virtual, length));
 }
 
 /*
  * Write to the dump device at the specified offset.
  */
 int
-dump_write(struct dumperinfo *di, void *virtual, vm_offset_t physical,
-    off_t offset, size_t length)
+dump_write(struct dumperinfo *di, void *virtual, off_t offset, size_t length)
 {
 	int error;
 
 	error = dump_check_bounds(di, offset, length);
 	if (error != 0)
 		return (error);
-	return (di->dumper(di->priv, virtual, physical, offset, length));
+	return (di->dumper(di->priv, virtual, offset, length));
 }
 
 /*
@@ -1739,7 +1764,7 @@ dump_finish(struct dumperinfo *di, struct kerneldumpheader *kdh)
 		error = compressor_flush(di->kdcomp->kdc_stream);
 		if (error == EAGAIN) {
 			/* We have residual data in di->blockbuf. */
-			error = _dump_append(di, di->blockbuf, 0, di->blocksize);
+			error = _dump_append(di, di->blockbuf, di->blocksize);
 			if (error == 0)
 				/* Compensate for _dump_append()'s adjustment. */
 				di->dumpoff -= di->blocksize - di->kdcomp->kdc_resid;
@@ -1763,7 +1788,7 @@ dump_finish(struct dumperinfo *di, struct kerneldumpheader *kdh)
 	if (error != 0)
 		return (error);
 
-	(void)dump_write(di, NULL, 0, 0, 0);
+	(void)dump_write(di, NULL, 0, 0);
 	return (0);
 }
 
@@ -1799,7 +1824,7 @@ dump_init_header(const struct dumperinfo *di, struct kerneldumpheader *kdh,
 }
 
 #ifdef DDB
-DB_SHOW_COMMAND(panic, db_show_panic)
+DB_SHOW_COMMAND_FLAGS(panic, db_show_panic, DB_CMD_MEMSAFE)
 {
 
 	if (panicstr == NULL)

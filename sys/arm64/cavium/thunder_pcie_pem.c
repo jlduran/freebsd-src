@@ -42,6 +42,8 @@ __FBSDID("$FreeBSD$");
 #include <sys/rman.h>
 #include <sys/endian.h>
 
+#include <vm/vm.h>
+
 #ifdef FDT
 #include <dev/ofw/openfirm.h>
 #include <dev/ofw/ofw_bus.h>
@@ -195,10 +197,9 @@ static device_method_t thunder_pem_methods[] = {
 DEFINE_CLASS_0(pcib, thunder_pem_driver, thunder_pem_methods,
     sizeof(struct thunder_pem_softc));
 
-static devclass_t thunder_pem_devclass;
 extern struct bus_space memmap_bus;
 
-DRIVER_MODULE(thunder_pem, pci, thunder_pem_driver, thunder_pem_devclass, 0, 0);
+DRIVER_MODULE(thunder_pem, pci, thunder_pem_driver, 0, 0);
 MODULE_DEPEND(thunder_pem, pci, 1, 1, 1);
 
 static int
@@ -746,6 +747,8 @@ thunder_pem_probe(device_t dev)
 static int
 thunder_pem_attach(device_t dev)
 {
+	struct resource_map_request req;
+	struct resource_map map;
 	devclass_t pci_class;
 	device_t parent;
 	struct thunder_pem_softc *sc;
@@ -767,11 +770,20 @@ thunder_pem_attach(device_t dev)
 		rid = RID_PEM_SPACE;
 
 	sc->reg = bus_alloc_resource_any(dev, SYS_RES_MEMORY,
-	    &rid, RF_ACTIVE);
+	    &rid, RF_ACTIVE | RF_UNMAPPED);
 	if (sc->reg == NULL) {
 		device_printf(dev, "Failed to allocate resource\n");
 		return (ENXIO);
 	}
+	resource_init_map_request(&req);
+	req.memattr = VM_MEMATTR_DEVICE_NP;
+	error = bus_map_resource(dev, SYS_RES_MEMORY, sc->reg, &req, &map);
+	if (error != 0) {
+		device_printf(dev, "could not map memory.\n");
+		return (error);
+	}
+	rman_set_mapping(sc->reg, &map);
+
 	sc->reg_bst = rman_get_bustag(sc->reg);
 	sc->reg_bsh = rman_get_bushandle(sc->reg);
 

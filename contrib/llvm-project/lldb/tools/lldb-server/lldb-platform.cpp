@@ -77,10 +77,9 @@ static void signal_handler(int signo) {
   case SIGHUP:
     // Use SIGINT first, if that does not work, use SIGHUP as a last resort.
     // And we should not call exit() here because it results in the global
-    // destructors
-    // to be invoked and wreaking havoc on the threads still running.
-    Host::SystemLog(Host::eSystemLogWarning,
-                    "SIGHUP received, exiting lldb-server...\n");
+    // destructors to be invoked and wreaking havoc on the threads still
+    // running.
+    llvm::errs() << "SIGHUP received, exiting lldb-server...\n";
     abort();
     break;
   }
@@ -364,23 +363,17 @@ int main_platform(int argc, char *argv[]) {
           fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
       }
 
-      // After we connected, we need to get an initial ack from...
-      if (platform.HandshakeWithClient()) {
-        bool interrupt = false;
-        bool done = false;
-        while (!interrupt && !done) {
-          if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
-                                                done) !=
-              GDBRemoteCommunication::PacketResult::Success)
-            break;
-        }
-
-        if (error.Fail()) {
-          WithColor::error() << error.AsCString() << '\n';
-        }
-      } else {
-        WithColor::error() << "handshake with client failed\n";
+      bool interrupt = false;
+      bool done = false;
+      while (!interrupt && !done) {
+        if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
+                                              done) !=
+            GDBRemoteCommunication::PacketResult::Success)
+          break;
       }
+
+      if (error.Fail())
+        WithColor::error() << error.AsCString() << '\n';
     }
   } while (g_server);
 

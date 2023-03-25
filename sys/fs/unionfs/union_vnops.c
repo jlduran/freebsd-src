@@ -348,10 +348,6 @@ unionfs_lookup_cleanup:
 
 unionfs_lookup_return:
 
-	/* Ensure subsequent vnops will get a valid pathname buffer. */
-	if (nameiop != LOOKUP && (error == 0 || error == EJUSTRETURN))
-		cnp->cn_flags |= SAVENAME;
-
 	UNIONFS_INTERNAL_DEBUG("unionfs_lookup: leave (%d)\n", error);
 
 	return (error);
@@ -1204,11 +1200,6 @@ unionfs_rename(struct vop_rename_args *ap)
 	rtdvp = tdvp;
 	rtvp = tvp;
 	needrelookup = 0;
-
-#ifdef DIAGNOSTIC
-	if (!(fcnp->cn_flags & HASBUF) || !(tcnp->cn_flags & HASBUF))
-		panic("unionfs_rename: no name");
-#endif
 
 	/* check for cross device rename */
 	if (fvp->v_mount != tdvp->v_mount ||
@@ -2594,7 +2585,7 @@ unionfs_add_writecount(struct vop_add_writecount_args *ap)
 {
 	struct vnode *tvp, *vp;
 	struct unionfs_node *unp;
-	int error, writerefs;
+	int error, writerefs __diagused;
 
 	vp = ap->a_vp;
 	unp = VTOUNIONFS(vp);

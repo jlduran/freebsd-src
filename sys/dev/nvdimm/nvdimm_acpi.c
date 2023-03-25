@@ -67,14 +67,18 @@ find_dimm(ACPI_HANDLE handle, UINT32 nesting_level, void *context,
 	ACPI_DEVICE_INFO *device_info;
 	ACPI_STATUS status;
 
+	device_info = NULL;
 	status = AcpiGetObjectInfo(handle, &device_info);
 	if (ACPI_FAILURE(status))
 		return_ACPI_STATUS(AE_ERROR);
 	if (device_info->Address == (uintptr_t)context) {
 		*(ACPI_HANDLE *)return_value = handle;
-		return_ACPI_STATUS(AE_CTRL_TERMINATE);
-	}
-	return_ACPI_STATUS(AE_OK);
+		status = AE_CTRL_TERMINATE;
+	} else
+		status = AE_OK;
+
+	AcpiOsFree(device_info);
+	return_ACPI_STATUS(status);
 }
 
 static ACPI_HANDLE
@@ -275,7 +279,5 @@ static driver_t	nvdimm_acpi_driver = {
 	sizeof(struct nvdimm_root_dev),
 };
 
-static devclass_t nvdimm_acpi_root_devclass;
-DRIVER_MODULE(nvdimm_acpi_root, acpi, nvdimm_acpi_driver,
-    nvdimm_acpi_root_devclass, NULL, NULL);
+DRIVER_MODULE(nvdimm_acpi_root, acpi, nvdimm_acpi_driver, NULL, NULL);
 MODULE_DEPEND(nvdimm_acpi_root, acpi, 1, 1, 1);

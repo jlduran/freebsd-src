@@ -223,7 +223,7 @@ sfxge_rx_qfill(struct sfxge_rxq *rxq, unsigned int target, boolean_t retrying)
 {
 	struct sfxge_softc *sc;
 	unsigned int index;
-	struct sfxge_evq *evq;
+	struct sfxge_evq *evq __diagused;
 	unsigned int batch;
 	unsigned int rxfill;
 	unsigned int mblksize;
@@ -324,11 +324,11 @@ sfxge_rx_qrefill(struct sfxge_rxq *rxq)
 
 static void __sfxge_rx_deliver(struct sfxge_softc *sc, struct mbuf *m)
 {
-	struct ifnet *ifp = sc->ifnet;
+	if_t ifp = sc->ifnet;
 
 	m->m_pkthdr.rcvif = ifp;
 	m->m_pkthdr.csum_data = 0xffff;
-	ifp->if_input(ifp, m);
+	if_input(ifp, m);
 }
 
 static void
@@ -812,10 +812,10 @@ void
 sfxge_rx_qcomplete(struct sfxge_rxq *rxq, boolean_t eop)
 {
 	struct sfxge_softc *sc = rxq->sc;
-	int if_capenable = sc->ifnet->if_capenable;
+	int if_capenable = if_getcapenable(sc->ifnet);
 	int lro_enabled = if_capenable & IFCAP_LRO;
 	unsigned int index;
-	struct sfxge_evq *evq;
+	struct sfxge_evq *evq __diagused;
 	unsigned int completed;
 	unsigned int level;
 	struct mbuf *m;
@@ -844,7 +844,8 @@ sfxge_rx_qcomplete(struct sfxge_rxq *rxq, boolean_t eop)
 		/* Read the length from the pseudo header if required */
 		if (rx_desc->flags & EFX_PKT_PREFIX_LEN) {
 			uint16_t tmp_size;
-			int rc;
+			int rc __diagused;
+
 			rc = efx_pseudo_hdr_pkt_length_get(rxq->common,
 							   mtod(m, uint8_t *),
 							   &tmp_size);
@@ -1083,20 +1084,17 @@ sfxge_rx_stop(struct sfxge_softc *sc)
 int
 sfxge_rx_start(struct sfxge_softc *sc)
 {
-	struct sfxge_intr *intr;
 	const efx_nic_cfg_t *encp;
 	size_t hdrlen, align, reserved;
 	int index;
 	int rc;
-
-	intr = &sc->intr;
 
 	/* Initialize the common code receive module. */
 	if ((rc = efx_rx_init(sc->enp)) != 0)
 		return (rc);
 
 	encp = efx_nic_cfg_get(sc->enp);
-	sc->rx_buffer_size = EFX_MAC_PDU(sc->ifnet->if_mtu);
+	sc->rx_buffer_size = EFX_MAC_PDU(if_getmtu(sc->ifnet));
 
 	/* Calculate the receive packet buffer size. */
 	sc->rx_prefix_size = encp->enc_rx_prefix_size;
@@ -1273,7 +1271,6 @@ static int
 sfxge_rx_qinit(struct sfxge_softc *sc, unsigned int index)
 {
 	struct sfxge_rxq *rxq;
-	struct sfxge_evq *evq;
 	efsys_mem_t *esmp;
 	int rc;
 
@@ -1288,8 +1285,6 @@ sfxge_rx_qinit(struct sfxge_softc *sc, unsigned int index)
 
 	sc->rxq[index] = rxq;
 	esmp = &rxq->mem;
-
-	evq = sc->evq[index];
 
 	/* Allocate and zero DMA space. */
 	if ((rc = sfxge_dma_alloc(sc, EFX_RXQ_SIZE(sc->rxq_entries), esmp)) != 0)

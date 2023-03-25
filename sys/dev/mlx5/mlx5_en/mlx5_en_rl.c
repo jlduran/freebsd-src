@@ -515,7 +515,7 @@ mlx5e_rlw_channel_set_rate_locked(struct mlx5e_rl_worker *rlw,
 
 		/* get current burst size in bytes */
 		temp = rl->param.tx_burst_size *
-		    MLX5E_SW2HW_MTU(rlw->priv->ifp->if_mtu);
+		    MLX5E_SW2HW_MTU(if_getmtu(rlw->priv->ifp));
 
 		/* limit burst size to 64K currently */
 		if (temp > 65535)
@@ -1202,7 +1202,7 @@ mlx5e_find_available_tx_ring_index(struct mlx5e_rl_worker *rlw,
 }
 
 int
-mlx5e_rl_snd_tag_alloc(struct ifnet *ifp,
+mlx5e_rl_snd_tag_alloc(if_t ifp,
     union if_snd_tag_alloc_params *params,
     struct m_snd_tag **ppmt)
 {
@@ -1211,7 +1211,7 @@ mlx5e_rl_snd_tag_alloc(struct ifnet *ifp,
 	struct mlx5e_priv *priv;
 	int error;
 
-	priv = ifp->if_softc;
+	priv = if_getsoftc(ifp);
 
 	/* check if there is support for packet pacing or if device is going away */
 	if (!MLX5_CAP_GEN(priv->mdev, qos) ||
@@ -1448,7 +1448,6 @@ mlx5e_rl_sysctl_handler(SYSCTL_HANDLER_ARGS)
 	unsigned mode_modify;
 	unsigned was_opened;
 	uint64_t value;
-	uint64_t old;
 	int error;
 
 	PRIV_LOCK(priv);
@@ -1458,13 +1457,11 @@ mlx5e_rl_sysctl_handler(SYSCTL_HANDLER_ARGS)
 	MLX5E_RL_RUNLOCK(rl);
 
 	if (req != NULL) {
-		old = value;
 		error = sysctl_handle_64(oidp, &value, 0, req);
 		if (error || req->newptr == NULL ||
 		    value == rl->param.arg[arg2])
 			goto done;
 	} else {
-		old = 0;
 		error = 0;
 	}
 

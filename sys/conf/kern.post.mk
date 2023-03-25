@@ -262,6 +262,7 @@ genoffset.o genassym.o vers.o: opt_global.h
 .if !empty(.MAKE.MODE:Unormal:Mmeta) && empty(.MAKE.MODE:Unormal:Mnofilemon)
 _meta_filemon=	1
 .endif
+.if ${MK_DIRDEPS_BUILD} == "no"
 # Skip reading .depend when not needed to speed up tree-walks and simple
 # lookups.  For install, only do this if no other targets are specified.
 # Also skip generating or including .depend.* files if in meta+filemon mode
@@ -276,6 +277,7 @@ _SKIP_DEPEND=	1
 .endif
 .if defined(_SKIP_DEPEND) || defined(_meta_filemon)
 .MAKE.DEPENDFILE=	/dev/null
+.endif
 .endif
 
 kernel-depend: .depend
@@ -351,14 +353,15 @@ ${__obj}: ${OBJS_DEPEND_GUESS.${__obj}}
 
 .depend: .PRECIOUS ${SRCS}
 
-_MAP_DEBUG_PREFIX= yes
-
 _ILINKS= machine
 .if ${MACHINE} != ${MACHINE_CPUARCH} && ${MACHINE} != "arm64"
 _ILINKS+= ${MACHINE_CPUARCH}
 .endif
 .if ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 _ILINKS+= x86
+.endif
+.if ${MACHINE_CPUARCH} == "amd64"
+_ILINKS+= i386
 .endif
 
 # Ensure that the link exists without depending on it when it exists.
@@ -367,12 +370,10 @@ _ILINKS+= x86
 .if !exists(${.OBJDIR}/${_link})
 ${SRCS} ${DEPENDOBJS}: ${_link}
 .endif
-.if defined(_MAP_DEBUG_PREFIX)
 .if ${_link} == "machine"
 CFLAGS+= -fdebug-prefix-map=./machine=${SYSDIR}/${MACHINE}/include
 .else
 CFLAGS+= -fdebug-prefix-map=./${_link}=${SYSDIR}/${_link}/include
-.endif
 .endif
 .endfor
 

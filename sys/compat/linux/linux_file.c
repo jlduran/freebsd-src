@@ -29,29 +29,20 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
-
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/capsicum.h>
-#include <sys/conf.h>
 #include <sys/dirent.h>
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/lock.h>
-#include <sys/malloc.h>
 #include <sys/mman.h>
-#include <sys/mount.h>
-#include <sys/mutex.h>
-#include <sys/namei.h>
 #include <sys/selinfo.h>
 #include <sys/pipe.h>
 #include <sys/proc.h>
 #include <sys/stat.h>
 #include <sys/sx.h>
 #include <sys/syscallsubr.h>
-#include <sys/sysproto.h>
 #include <sys/tty.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
@@ -497,7 +488,7 @@ linux_getdents(struct thread *td, struct linux_getdents_args *args)
 
 		linux_dirent = (struct l_dirent*)lbuf;
 		linux_dirent->d_ino = bdp->d_fileno;
-		linux_dirent->d_off = base + reclen;
+		linux_dirent->d_off = bdp->d_off;
 		linux_dirent->d_reclen = linuxreclen;
 		/*
 		 * Copy d_type to last byte of l_dirent buffer
@@ -574,7 +565,7 @@ linux_getdents64(struct thread *td, struct linux_getdents64_args *args)
 
 		linux_dirent64 = (struct l_dirent64*)lbuf;
 		linux_dirent64->d_ino = bdp->d_fileno;
-		linux_dirent64->d_off = base + reclen;
+		linux_dirent64->d_off = bdp->d_off;
 		linux_dirent64->d_reclen = linuxreclen;
 		linux_dirent64->d_type = bdp->d_type;
 		strlcpy(linux_dirent64->d_name, bdp->d_name,
@@ -631,7 +622,7 @@ linux_readdir(struct thread *td, struct linux_readdir_args *args)
 
 	linux_dirent = (struct l_dirent*)lbuf;
 	linux_dirent->d_ino = bdp->d_fileno;
-	linux_dirent->d_off = linuxreclen;
+	linux_dirent->d_off = bdp->d_off;
 	linux_dirent->d_reclen = bdp->d_namlen;
 	strlcpy(linux_dirent->d_name, bdp->d_name,
 	    linuxreclen - offsetof(struct l_dirent, d_name));
@@ -741,7 +732,7 @@ linux_unlink(struct thread *td, struct linux_unlink_args *args)
 		if (error == EPERM) {
 			/* Introduce POSIX noncompliant behaviour of Linux */
 			if (kern_statat(td, 0, AT_FDCWD, args->path,
-			    UIO_SYSSPACE, &st, NULL) == 0) {
+			    UIO_USERSPACE, &st, NULL) == 0) {
 				if (S_ISDIR(st.st_mode))
 					error = EISDIR;
 			}
@@ -778,7 +769,7 @@ linux_unlinkat_impl(struct thread *td, enum uio_seg pathseg, const char *path,
 	if (error == EPERM && !(args->flag & LINUX_AT_REMOVEDIR)) {
 		/* Introduce POSIX noncompliant behaviour of Linux */
 		if (kern_statat(td, AT_SYMLINK_NOFOLLOW, dfd, path,
-		    UIO_SYSSPACE, &st, NULL) == 0 && S_ISDIR(st.st_mode))
+		    pathseg, &st, NULL) == 0 && S_ISDIR(st.st_mode))
 			error = EISDIR;
 	}
 	return (error);
@@ -1042,6 +1033,9 @@ linux_readlink(struct thread *td, struct linux_readlink_args *args)
 	char *name;
 	int error;
 
+	if (args->count <= 0)
+		return (EINVAL);
+
 	if (!LUSECONVPATH(td)) {
 		return (kern_readlinkat(td, AT_FDCWD, args->name, UIO_USERSPACE,
 		    args->buf, UIO_USERSPACE, args->count));
@@ -1059,6 +1053,9 @@ linux_readlinkat(struct thread *td, struct linux_readlinkat_args *args)
 {
 	char *name;
 	int error, dfd;
+
+	if (args->bufsiz <= 0)
+		return (EINVAL);
 
 	dfd = (args->dfd == LINUX_AT_FDCWD) ? AT_FDCWD : args->dfd;
 	if (!LUSECONVPATH(td)) {
@@ -1262,6 +1259,15 @@ linux_pwrite(struct thread *td, struct linux_pwrite_args *uap)
 	return (kern_pwrite(td, uap->fd, uap->buf, uap->nbyte, offset));
 }
 
+#define HALF_LONG_BITS ((sizeof(l_long) * NBBY / 2))
+
+static inline off_t
+pos_from_hilo(unsigned long high, unsigned long low)
+{
+
+	return (((off_t)high << HALF_LONG_BITS) << HALF_LONG_BITS) | low;
+}
+
 int
 linux_preadv(struct thread *td, struct linux_preadv_args *uap)
 {
@@ -1274,8 +1280,7 @@ linux_preadv(struct thread *td, struct linux_preadv_args *uap)
 	 * pos_l and pos_h, respectively, contain the
 	 * low order and high order 32 bits of offset.
 	 */
-	offset = (((off_t)uap->pos_h << (sizeof(offset) * 4)) <<
-	    (sizeof(offset) * 4)) | uap->pos_l;
+	offset = pos_from_hilo(uap->pos_h, uap->pos_l);
 	if (offset < 0)
 		return (EINVAL);
 #ifdef COMPAT_LINUX32
@@ -1302,8 +1307,7 @@ linux_pwritev(struct thread *td, struct linux_pwritev_args *uap)
 	 * pos_l and pos_h, respectively, contain the
 	 * low order and high order 32 bits of offset.
 	 */
-	offset = (((off_t)uap->pos_h << (sizeof(offset) * 4)) <<
-	    (sizeof(offset) * 4)) | uap->pos_l;
+	offset = pos_from_hilo(uap->pos_h, uap->pos_l);
 	if (offset < 0)
 		return (EINVAL);
 #ifdef COMPAT_LINUX32

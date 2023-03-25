@@ -7,7 +7,6 @@ TESTS_SUBDIRS+=	ioctl
 
 ATF_TESTS_SH+=	altq \
 		anchor \
-		checksum \
 		dup \
 		ether \
 		forward \
@@ -18,6 +17,7 @@ ATF_TESTS_SH+=	altq \
 		macro \
 		map_e \
 		match \
+		modulate \
 		names \
 		nat \
 		pass_block \
@@ -27,7 +27,9 @@ ATF_TESTS_SH+=	altq \
 		rdr \
 		ridentifier \
 		route_to \
+		rtable \
 		rules_counter \
+		scrub \
 		set_skip \
 		set_tos \
 		src_track \
@@ -45,6 +47,7 @@ ${PACKAGE}FILES+=	CVE-2019-5597.py \
 			frag-overlimit.py \
 			frag-overreplace.py \
 			pfsync_defer.py \
+			pft_ether.py \
 			utils.subr
 
 ${PACKAGE}FILESMODE_CVE-2019-5597.py=	0555
@@ -54,5 +57,6 @@ ${PACKAGE}FILESMODE_frag-overindex.py=	0555
 ${PACKAGE}FILESMODE_frag-overlimit.py=	0555
 ${PACKAGE}FILESMODE_frag-overreplace.py=	0555
 ${PACKAGE}FILESMODE_pfsync_defer.py=	0555
+${PACKAGE}FILESMODE_pft_ether.py=	0555
 
 .include <bsd.test.mk>

@@ -740,6 +740,12 @@ static struct witness_blessed blessed_list[] = {
 	 * parent directory vnode is locked.
 	 */
 	{ "ufs",	"bufwait" },
+
+	/*
+	 * The tarfs decompression stream vnode may be locked while a
+	 * buffer belonging to a tarfs data vnode is locked.
+	 */
+	{ "tarfs",	"bufwait" },
 };
 
 /*
@@ -2604,9 +2610,9 @@ DB_SHOW_ALL_COMMAND(locks, db_witness_list_all)
 		}
 	}
 }
-DB_SHOW_ALIAS(alllocks, db_witness_list_all)
+DB_SHOW_ALIAS_FLAGS(alllocks, db_witness_list_all, DB_CMD_MEMSAFE)
 
-DB_SHOW_COMMAND(witness, db_witness_display)
+DB_SHOW_COMMAND_FLAGS(witness, db_witness_display, DB_CMD_MEMSAFE)
 {
 
 	witness_ddb_display(db_printf);
@@ -2782,7 +2788,7 @@ sbuf_db_printf_drain(void *arg __unused, const char *data, int len)
 	return (db_printf("%.*s", len, data));
 }
 
-DB_SHOW_COMMAND(badstacks, db_witness_badstacks)
+DB_SHOW_COMMAND_FLAGS(badstacks, db_witness_badstacks, DB_CMD_MEMSAFE)
 {
 	struct sbuf sb;
 	char buffer[128];
@@ -3081,7 +3087,6 @@ witness_lock_order_add(struct witness *parent, struct witness *child)
 	data->wlod_key = key;
 	w_lohash.wloh_array[hash] = data;
 	w_lohash.wloh_count++;
-	stack_zero(&data->wlod_stack);
 	stack_save(&data->wlod_stack);
 	return (1);
 }
@@ -3118,7 +3123,6 @@ witness_debugger(int cond, const char *msg)
 		sbuf_new(&sb, buf, sizeof(buf), SBUF_FIXEDLEN);
 		sbuf_set_drain(&sb, witness_output_drain, NULL);
 
-		stack_zero(&st);
 		stack_save(&st);
 		witness_output("stack backtrace:\n");
 		stack_sbuf_print_ddb(&sb, &st);

@@ -55,7 +55,7 @@ struct tsec_bufmap {
 
 struct tsec_softc {
 	/* XXX MII bus requires that struct ifnet is first!!! */
-	struct ifnet	*tsec_ifp;
+	if_t		tsec_ifp;
 
 	struct mtx	transmit_lock;	/* transmitter lock */
 	struct mtx	receive_lock;	/* receiver lock */
@@ -290,8 +290,6 @@ struct tsec_rx_fcb {
 		== (TSEC_RX_FCB_TCP_UDP_FOUND | TSEC_RX_FCB_TCP_UDP_CSUM))
 
 /* Prototypes */
-extern devclass_t tsec_devclass;
-
 int	tsec_attach(struct tsec_softc *sc);
 int	tsec_detach(struct tsec_softc *sc);
 

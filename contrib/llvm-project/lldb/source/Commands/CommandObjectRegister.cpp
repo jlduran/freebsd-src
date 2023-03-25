@@ -10,6 +10,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionValueArray.h"
@@ -43,8 +44,7 @@ public:
             nullptr,
             eCommandRequiresFrame | eCommandRequiresRegContext |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-        m_option_group(), m_format_options(eFormatDefault),
-        m_command_options() {
+        m_format_options(eFormatDefault) {
     CommandArgumentEntry arg;
     CommandArgumentData register_arg;
 
@@ -232,8 +232,7 @@ protected:
   class CommandOptions : public OptionGroup {
   public:
     CommandOptions()
-        : OptionGroup(),
-          set_indexes(OptionValue::ConvertTypeToMask(OptionValue::eTypeUInt64)),
+        : set_indexes(OptionValue::ConvertTypeToMask(OptionValue::eTypeUInt64)),
           dump_all_sets(false, false), // Initial and default values are false
           alternate_name(false, false) {}
 

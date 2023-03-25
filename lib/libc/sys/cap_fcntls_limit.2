@@ -1,6 +1,5 @@
 .\"
 .\" Copyright (c) 2012 The FreeBSD Foundation
-.\" All rights reserved.
 .\"
 .\" This documentation was written by Pawel Jakub Dawidek under sponsorship
 .\" the FreeBSD Foundation.
@@ -28,7 +27,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd May 5, 2020
+.Dd March 9, 2023
 .Dt CAP_FCNTLS_LIMIT 2
 .Os
 .Sh NAME
@@ -111,6 +110,9 @@ argument is not a valid descriptor.
 The
 .Fa fcntlrightsp
 argument points at an invalid address.
+.It Bq Er ENOSYS
+The running kernel was compiled without
+.Cd "options CAPABILITY_MODE" .
 .El
 .Sh SEE ALSO
 .Xr cap_ioctls_limit 2 ,

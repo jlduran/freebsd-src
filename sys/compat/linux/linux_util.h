@@ -36,13 +36,6 @@
 #ifndef	_LINUX_UTIL_H_
 #define	_LINUX_UTIL_H_
 
-#include <vm/vm.h>
-#include <vm/vm_param.h>
-#include <vm/pmap.h>
-#include <sys/exec.h>
-#include <sys/sysent.h>
-#include <sys/syslog.h>
-#include <sys/cdefs.h>
 #include <sys/uio.h>
 
 MALLOC_DECLARE(M_LINUX);
@@ -120,15 +113,6 @@ int	linux_vn_get_major_minor(const struct vnode *vn, int *major, int *minor);
 char	*linux_get_char_devices(void);
 void	linux_free_get_char_devices(char *string);
 
-/*
- * Criteria for interface name translation
- */
-#define	IFP_IS_ETH(ifp)		((ifp)->if_type == IFT_ETHER)
-#define	IFP_IS_LOOP(ifp)	((ifp)->if_type == IFT_LOOP)
-
-struct ifnet;
-bool	linux_use_real_ifname(const struct ifnet *ifp);
-
 #if defined(KTR)
 
 #define	KTR_LINUX				KTR_SUBSYS
@@ -192,6 +176,18 @@ bool	linux_use_real_ifname(const struct ifnet *ifp);
 								\
 		if (seen == 0) {				\
 			linux_msg(curthread, _message, _opt1);	\
+								\
+			if (linux_debug < 3)			\
+				seen = 1;			\
+		}						\
+	} while (0)
+
+#define LINUX_RATELIMIT_MSG_OPT2(_message, _opt1, _opt2)	\
+	do {							\
+		static int seen = 0;				\
+								\
+		if (seen == 0) {				\
+			linux_msg(curthread, _message, _opt1, _opt2); \
 								\
 			if (linux_debug < 3)			\
 				seen = 1;			\

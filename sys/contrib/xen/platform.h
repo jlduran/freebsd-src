@@ -465,7 +465,11 @@ struct xen_processor_performance {
     uint32_t state_count;     /* total available performance states */
     XEN_GUEST_HANDLE(xen_processor_px_t) states;
     struct xen_psd_package domain_info;
-    uint32_t shared_type;     /* coordination type of this processor */
+    /* Coordination type of this processor */
+#define XEN_CPUPERF_SHARED_TYPE_HW   1 /* HW does needed coordination */
+#define XEN_CPUPERF_SHARED_TYPE_ALL  2 /* All dependent CPUs should set freq */
+#define XEN_CPUPERF_SHARED_TYPE_ANY  3 /* Freq can be set from any dependent CPU */
+    uint32_t shared_type;
 };
 typedef struct xen_processor_performance xen_processor_performance_t;
 DEFINE_XEN_GUEST_HANDLE(xen_processor_performance_t);
@@ -618,6 +622,10 @@ struct xenpf_symdata {
 typedef struct xenpf_symdata xenpf_symdata_t;
 DEFINE_XEN_GUEST_HANDLE(xenpf_symdata_t);
 
+#define XENPF_get_dom0_console 64
+typedef struct dom0_vga_console_info xenpf_dom0_console_t;
+DEFINE_XEN_GUEST_HANDLE(xenpf_dom0_console_t);
+
 /*
  * ` enum neg_errnoval
  * ` HYPERVISOR_platform_op(const struct xen_platform_op*);
@@ -648,6 +656,7 @@ struct xen_platform_op {
         xenpf_core_parking_t          core_parking;
         xenpf_resource_op_t           resource_op;
         xenpf_symdata_t               symdata;
+        xenpf_dom0_console_t          dom0_console;
         uint8_t                       pad[128];
     } u;
 };

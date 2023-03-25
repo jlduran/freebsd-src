@@ -1007,9 +1007,11 @@ archive_read_format_rar_read_header(struct archive_read *a,
 
       crc32_val = crc32(0, (const unsigned char *)p + 2, (unsigned)skip - 2);
       if ((crc32_val & 0xffff) != archive_le16dec(p)) {
+#ifndef DONT_FAIL_ON_CRC_ERROR
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
           "Header CRC error");
         return (ARCHIVE_FATAL);
+#endif
       }
       __archive_read_consume(a, skip);
       break;
@@ -1065,9 +1067,11 @@ archive_read_format_rar_read_header(struct archive_read *a,
 	      skip -= to_read;
       }
       if ((crc32_val & 0xffff) != crc32_expected) {
+#ifndef DONT_FAIL_ON_CRC_ERROR
 	      archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
 		  "Header CRC error");
 	      return (ARCHIVE_FATAL);
+#endif
       }
       if (head_type == ENDARC_HEAD)
 	      return (ARCHIVE_EOF);
@@ -1432,9 +1436,11 @@ read_header(struct archive_read *a, struct archive_entry *entry,
   /* File Header CRC check. */
   crc32_val = crc32(crc32_val, h, (unsigned)(header_size - 7));
   if ((crc32_val & 0xffff) != archive_le16dec(rar_header.crc)) {
+#ifndef DONT_FAIL_ON_CRC_ERROR
     archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
       "Header CRC error");
     return (ARCHIVE_FATAL);
+#endif
   }
   /* If no CRC error, Go on parsing File Header. */
   p = h;
@@ -1952,9 +1958,11 @@ read_data_stored(struct archive_read *a, const void **buff, size_t *size,
     *size = 0;
     *offset = rar->offset;
     if (rar->file_crc != rar->crc_calculated) {
+#ifndef DONT_FAIL_ON_CRC_ERROR
       archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                         "File CRC error");
       return (ARCHIVE_FATAL);
+#endif
     }
     rar->entry_eof = 1;
     return (ARCHIVE_EOF);
@@ -2045,9 +2053,11 @@ read_data_compressed(struct archive_read *a, const void **buff, size_t *size,
       *size = 0;
       *offset = rar->offset;
       if (rar->file_crc != rar->crc_calculated) {
+#ifndef DONT_FAIL_ON_CRC_ERROR
         archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
                           "File CRC error");
         return (ARCHIVE_FATAL);
+#endif
       }
       rar->entry_eof = 1;
       return (ARCHIVE_EOF);
@@ -3328,6 +3338,7 @@ run_filters(struct archive_read *a)
   struct rar *rar = (struct rar *)(a->format->data);
   struct rar_filters *filters = &rar->filters;
   struct rar_filter *filter = filters->stack;
+  struct rar_filter *f;
   size_t start, end;
   int64_t tend;
   uint32_t lastfilteraddress;
@@ -3345,6 +3356,22 @@ run_filters(struct archive_read *a)
   ret = expand(a, &tend);
   if (ret != ARCHIVE_OK)
     return 0;
+
+  /* Check if filter stack was modified in expand() */
+  ret = ARCHIVE_FATAL;
+  f = filters->stack;
+  while (f)
+  {
+    if (f == filter)
+    {
+      ret = ARCHIVE_OK;
+      break;
+    }
+    f = f->next;
+  }
+  if (ret != ARCHIVE_OK)
+    return 0;
+
   if (tend < 0)
     return 0;
   end = (size_t)tend;

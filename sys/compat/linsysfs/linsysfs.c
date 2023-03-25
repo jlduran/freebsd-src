@@ -72,18 +72,23 @@ atoi(const char *str)
 static int
 linsysfs_ifnet_addr(PFS_FILL_ARGS)
 {
+	struct epoch_tracker et;
 	struct l_sockaddr lsa;
 	struct ifnet *ifp;
+	int error;
 
-	ifp = ifname_linux_to_bsd(td, pn->pn_parent->pn_name, NULL);
-	if (ifp == NULL)
-		return (ENOENT);
-	if (linux_ifhwaddr(ifp, &lsa) != 0)
-		return (ENOENT);
-	sbuf_printf(sb, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
-	    lsa.sa_data[0], lsa.sa_data[1], lsa.sa_data[2],
-	    lsa.sa_data[3], lsa.sa_data[4], lsa.sa_data[5]);
-	return (0);
+	CURVNET_SET(TD_TO_VNET(td));
+	NET_EPOCH_ENTER(et);
+	ifp = ifname_linux_to_ifp(td, pn->pn_parent->pn_name);
+	if (ifp != NULL && (error = linux_ifhwaddr(ifp, &lsa)) == 0)
+		error = sbuf_printf(sb, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
+		    lsa.sa_data[0], lsa.sa_data[1], lsa.sa_data[2],
+		    lsa.sa_data[3], lsa.sa_data[4], lsa.sa_data[5]);
+	else
+		error = ENOENT;
+	NET_EPOCH_EXIT(et);
+	CURVNET_RESTORE();
+	return (error == -1 ? ERANGE : error);
 }
 
 static int
@@ -97,39 +102,58 @@ linsysfs_ifnet_addrlen(PFS_FILL_ARGS)
 static int
 linsysfs_ifnet_flags(PFS_FILL_ARGS)
 {
+	struct epoch_tracker et;
 	struct ifnet *ifp;
-	unsigned short flags;
+	int error;
 
-	ifp = ifname_linux_to_bsd(td, pn->pn_parent->pn_name, NULL);
-	if (ifp == NULL)
-		return (ENOENT);
-	linux_ifflags(ifp, &flags);
-	sbuf_printf(sb, "0x%x\n", flags);
-	return (0);
+	CURVNET_SET(TD_TO_VNET(td));
+	NET_EPOCH_ENTER(et);
+	ifp = ifname_linux_to_ifp(td, pn->pn_parent->pn_name);
+	if (ifp != NULL)
+		error = sbuf_printf(sb, "0x%x\n", linux_ifflags(ifp));
+	else
+		error = ENOENT;
+	NET_EPOCH_EXIT(et);
+	CURVNET_RESTORE();
+	return (error == -1 ? ERANGE : error);
 }
 
 static int
 linsysfs_ifnet_ifindex(PFS_FILL_ARGS)
 {
+	struct epoch_tracker et;
 	struct ifnet *ifp;
+	int error;
 
-	ifp = ifname_linux_to_bsd(td, pn->pn_parent->pn_name, NULL);
-	if (ifp == NULL)
-		return (ENOENT);
-	sbuf_printf(sb, "%u\n", ifp->if_index);
-	return (0);
+	CURVNET_SET(TD_TO_VNET(td));
+	NET_EPOCH_ENTER(et);
+	ifp = ifname_linux_to_ifp(td, pn->pn_parent->pn_name);
+	if (ifp != NULL)
+		error = sbuf_printf(sb, "%u\n", if_getindex(ifp));
+	else
+		error = ENOENT;
+	NET_EPOCH_EXIT(et);
+	CURVNET_RESTORE();
+	return (error == -1 ? ERANGE : error);
 }
 
 static int
 linsysfs_ifnet_mtu(PFS_FILL_ARGS)
 {
+	struct epoch_tracker et;
 	struct ifnet *ifp;
+	int error;
 
-	ifp = ifname_linux_to_bsd(td, pn->pn_parent->pn_name, NULL);
-	if (ifp == NULL)
-		return (ENOENT);
-	sbuf_printf(sb, "%u\n", ifp->if_mtu);
-	return (0);
+	CURVNET_SET(TD_TO_VNET(td));
+	NET_EPOCH_ENTER(et);
+	ifp = ifname_linux_to_ifp(td, pn->pn_parent->pn_name);
+	if (ifp != NULL)
+		error = sbuf_printf(sb, "%u\n", if_getmtu(ifp));
+	else
+		error = ENOENT;
+	NET_EPOCH_EXIT(et);
+	CURVNET_RESTORE();
+	return (error == -1 ? ERANGE : error);
 }
 
 static int
@@ -144,16 +168,21 @@ linsysfs_ifnet_tx_queue_len(PFS_FILL_ARGS)
 static int
 linsysfs_ifnet_type(PFS_FILL_ARGS)
 {
+	struct epoch_tracker et;
 	struct l_sockaddr lsa;
 	struct ifnet *ifp;
+	int error;
 
-	ifp = ifname_linux_to_bsd(td, pn->pn_parent->pn_name, NULL);
-	if (ifp == NULL)
-		return (ENOENT);
-	if (linux_ifhwaddr(ifp, &lsa) != 0)
-		return (ENOENT);
-	sbuf_printf(sb, "%d\n", lsa.sa_family);
-	return (0);
+	CURVNET_SET(TD_TO_VNET(td));
+	NET_EPOCH_ENTER(et);
+	ifp = ifname_linux_to_ifp(td, pn->pn_parent->pn_name);
+	if (ifp != NULL && (error = linux_ifhwaddr(ifp, &lsa)) == 0)
+		error = sbuf_printf(sb, "%d\n", lsa.sa_family);
+	else
+		error = ENOENT;
+	NET_EPOCH_EXIT(et);
+	CURVNET_RESTORE();
+	return (error == -1 ? ERANGE : error);
 }
 
 static void
@@ -622,10 +651,8 @@ linsysfs_init(PFS_INIT_ARGS)
 	struct pfs_node *pci;
 	struct pfs_node *scsi;
 	struct pfs_node *net;
-	struct pfs_node *power_supply;
 	struct pfs_node *devdir, *chardev;
 	struct pfs_node *kernel;
-	struct pfs_node *debug;
 	devclass_t devclass;
 	device_t dev;
 
@@ -640,7 +667,7 @@ linsysfs_init(PFS_INIT_ARGS)
 	class = pfs_create_dir(root, "class", NULL, NULL, NULL, 0);
 	scsi = pfs_create_dir(class, "scsi_host", NULL, NULL, NULL, 0);
 	drm = pfs_create_dir(class, "drm", NULL, NULL, NULL, 0);
-	power_supply = pfs_create_dir(class, "power_supply", NULL, NULL, NULL, 0);
+	pfs_create_dir(class, "power_supply", NULL, NULL, NULL, 0);
 
 	/* /sys/class/net/.. */
 	net = pfs_create_dir(class, "net", NULL, NULL, NULL, 0);
@@ -680,7 +707,7 @@ linsysfs_init(PFS_INIT_ARGS)
 	/* /sys/kernel */
 	kernel = pfs_create_dir(root, "kernel", NULL, NULL, NULL, 0);
 	/* /sys/kernel/debug, mountpoint for lindebugfs. */
-	debug = pfs_create_dir(kernel, "debug", NULL, NULL, NULL, 0);
+	pfs_create_dir(kernel, "debug", NULL, NULL, NULL, 0);
 
 	/* /sys/subsystem/... */
 	dir = pfs_create_dir(root, "subsystem", NULL, NULL, NULL, 0);

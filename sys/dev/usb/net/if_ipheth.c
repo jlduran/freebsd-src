@@ -131,8 +131,6 @@ static driver_t ipheth_driver = {
 	.size = sizeof(struct ipheth_softc),
 };
 
-static devclass_t ipheth_devclass;
-
 static const STRUCT_USB_HOST_ID ipheth_devs[] = {
 #if 0
 	{IPHETH_ID(USB_VENDOR_APPLE, USB_PRODUCT_APPLE_IPHONE,
@@ -162,7 +160,7 @@ static const STRUCT_USB_HOST_ID ipheth_devs[] = {
 #endif
 };
 
-DRIVER_MODULE(ipheth, uhub, ipheth_driver, ipheth_devclass, NULL, 0);
+DRIVER_MODULE(ipheth, uhub, ipheth_driver, NULL, NULL);
 MODULE_VERSION(ipheth, 1);
 MODULE_DEPEND(ipheth, uether, 1, 1, 1);
 MODULE_DEPEND(ipheth, usb, 1, 1, 1);
@@ -345,11 +343,11 @@ static void
 ipheth_init(struct usb_ether *ue)
 {
 	struct ipheth_softc *sc = uether_getsc(ue);
-	struct ifnet *ifp = uether_getifp(ue);
+	if_t ifp = uether_getifp(ue);
 
 	IPHETH_LOCK_ASSERT(sc, MA_OWNED);
 
-	ifp->if_drv_flags |= IFF_DRV_RUNNING;
+	if_setdrvflagbits(ifp, IFF_DRV_RUNNING, 0);
 
 	/* stall data write direction, which depends on USB mode */
 	usbd_xfer_set_stall(sc->sc_xfer[IPHETH_BULK_TX]);
@@ -387,7 +385,7 @@ static void
 ipheth_bulk_write_callback(struct usb_xfer *xfer, usb_error_t error)
 {
 	struct ipheth_softc *sc = usbd_xfer_softc(xfer);
-	struct ifnet *ifp = uether_getifp(&sc->sc_ue);
+	if_t ifp = uether_getifp(&sc->sc_ue);
 	struct usb_page_cache *pc;
 	struct mbuf *m;
 	uint8_t x;
@@ -412,7 +410,7 @@ ipheth_bulk_write_callback(struct usb_xfer *xfer, usb_error_t error)
 	case USB_ST_SETUP:
 tr_setup:
 		for (x = 0; x != IPHETH_TX_FRAMES_MAX; x++) {
-			IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
+			m = if_dequeue(ifp);
 
 			if (m == NULL)
 				break;

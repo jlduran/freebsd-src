@@ -106,7 +106,10 @@ protected:
       : symbolKind(k), isExternal(true), isCOMDAT(false),
         writtenToSymtab(false), pendingArchiveLoad(false), isGCRoot(false),
         isRuntimePseudoReloc(false), deferUndefined(false), canInline(true),
-        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {}
+        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {
+    assert((!n.empty() || k <= LastDefinedCOFFKind) &&
+           "If the name is empty, the Symbol must be a DefinedCOFF.");
+  }
 
   const unsigned symbolKind : 8;
   unsigned isExternal : 1;
@@ -305,10 +308,9 @@ public:
 
 class LazyObject : public Symbol {
 public:
-  LazyObject(LazyObjFile *f, StringRef n)
-      : Symbol(LazyObjectKind, n), file(f) {}
+  LazyObject(InputFile *f, StringRef n) : Symbol(LazyObjectKind, n), file(f) {}
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
-  LazyObjFile *file;
+  InputFile *file;
 };
 
 // MinGW only.

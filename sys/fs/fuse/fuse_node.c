@@ -263,6 +263,7 @@ fuse_vnode_alloc(struct mount *mp,
 	if (data->dataflags & FSESS_ASYNC_READ && vtyp != VFIFO)
 		VN_LOCK_ASHARE(*vpp);
 
+	vn_set_state(*vpp, VSTATE_CONSTRUCTED);
 	err = vfs_hash_insert(*vpp, fuse_vnode_hash(nodeid), LK_EXCLUSIVE,
 	    td, &vp2, fuse_vnode_cmp, &nodeid);
 	if (err) {
@@ -297,6 +298,12 @@ fuse_vnode_get(struct mount *mp,
 	 */
 	uint64_t generation = feo ? feo->generation : 0;
 	int err = 0;
+
+	if (dvp != NULL && VTOFUD(dvp)->nid == nodeid) {
+		fuse_warn(fuse_get_mpdata(mp), FSESS_WARN_ILLEGAL_INODE,
+			"Assigned same inode to both parent and child.");
+		return EIO;
+	}
 
 	err = fuse_vnode_alloc(mp, td, nodeid, vtyp, vpp);
 	if (err) {

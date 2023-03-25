@@ -136,7 +136,7 @@ acpi_uhub_upc_type(uint8_t type)
 }
 
 static int
-acpi_uhub_parse_upc(device_t dev, unsigned int p, ACPI_HANDLE ah, struct sysctl_oid_list *poid)
+acpi_uhub_parse_upc(device_t dev, unsigned p, ACPI_HANDLE ah, struct sysctl_oid_list *poid)
 {
 	ACPI_BUFFER buf;
 	struct acpi_uhub_softc *sc = device_get_softc(dev);
@@ -262,7 +262,7 @@ end:
 }
 
 static int
-acpi_uhub_parse_pld(device_t dev, unsigned int p, ACPI_HANDLE ah, struct sysctl_oid_list *tree)
+acpi_uhub_parse_pld(device_t dev, unsigned p, ACPI_HANDLE ah, struct sysctl_oid_list *tree)
 {
 	ACPI_BUFFER buf;
 	struct acpi_uhub_softc *sc = device_get_softc(dev);
@@ -584,7 +584,6 @@ static device_method_t acpi_uhub_root_methods[] = {
 	DEVMETHOD_END
 };
 
-static devclass_t uhub_devclass;
 extern driver_t uhub_driver;
 static kobj_class_t uhub_baseclasses[] = {&uhub_driver, NULL};
 
@@ -602,8 +601,8 @@ static driver_t acpi_uhub_root_driver = {
 	.baseclasses = uhub_baseclasses,
 };
 
-DRIVER_MODULE(uacpi, uhub, acpi_uhub_driver, uhub_devclass, 0, 0);
-DRIVER_MODULE(uacpi, usbus, acpi_uhub_root_driver, uhub_devclass, 0, 0);
+DRIVER_MODULE(uacpi, uhub, acpi_uhub_driver, 0, 0);
+DRIVER_MODULE(uacpi, usbus, acpi_uhub_root_driver, 0, 0);
 
 MODULE_DEPEND(uacpi, acpi, 1, 1, 1);
 MODULE_DEPEND(uacpi, usb, 1, 1, 1);

@@ -1,4 +1,4 @@
-/*	$NetBSD: make.h,v 1.298 2022/02/05 00:26:21 rillig Exp $	*/
+/*	$NetBSD: make.h,v 1.311 2023/01/26 20:48:17 sjg Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -141,7 +141,7 @@
 #define MAKE_ATTR_USE		/* delete */
 #endif
 
-#if __STDC__ >= 199901L || defined(lint)
+#if __STDC_VERSION__ >= 199901L || defined(lint)
 #define MAKE_INLINE static inline MAKE_ATTR_UNUSED
 #else
 #define MAKE_INLINE static MAKE_ATTR_UNUSED
@@ -522,6 +522,17 @@ typedef struct GNode {
 	unsigned lineno;
 } GNode;
 
+/*
+ * Keep track of whether to include <posix.mk> when parsing the line
+ * '.POSIX:'.
+ */
+extern enum PosixState {
+	PS_NOT_YET,
+	PS_MAYBE_NEXT_LINE,
+	PS_NOW_OR_NEVER,
+	PS_TOO_LATE
+} posix_state;
+
 /* Error levels for diagnostics during parsing. */
 typedef enum ParseErrorLevel {
 	/*
@@ -621,7 +632,6 @@ extern pid_t myPid;
 #define MAKE_MAKEFILES	".MAKE.MAKEFILES"	/* all loaded makefiles */
 #define MAKE_LEVEL	".MAKE.LEVEL"		/* recursion level */
 #define MAKE_MAKEFILE_PREFERENCE ".MAKE.MAKEFILE_PREFERENCE"
-#define MAKE_DEPENDFILE	".MAKE.DEPENDFILE"	/* .depend */
 #define MAKE_MODE	".MAKE.MODE"
 #ifndef MAKE_LEVEL_ENV
 # define MAKE_LEVEL_ENV	"MAKELEVEL"
@@ -774,6 +784,11 @@ typedef struct CmdOpts {
 	 */
 	StringList create;
 
+	/*
+	 * Randomize the order in which the targets from toBeMade are made,
+	 * to catch undeclared dependencies.
+	 */
+	bool randomizeTargets;
 } CmdOpts;
 
 extern CmdOpts opts;
@@ -793,14 +808,14 @@ bool Arch_IsLib(GNode *) MAKE_ATTR_USE;
 
 /* compat.c */
 bool Compat_RunCommand(const char *, GNode *, StringListNode *);
-void Compat_Run(GNodeList *);
+void Compat_MakeAll(GNodeList *);
 void Compat_Make(GNode *, GNode *);
 
 /* cond.c */
+extern unsigned int cond_depth;
 CondResult Cond_EvalCondition(const char *) MAKE_ATTR_USE;
 CondResult Cond_EvalLine(const char *) MAKE_ATTR_USE;
-void Cond_restore_depth(unsigned int);
-unsigned int Cond_save_depth(void) MAKE_ATTR_USE;
+void Cond_EndFile(void);
 
 /* dir.c; see also dir.h */
 
@@ -829,6 +844,7 @@ void For_Run(unsigned, unsigned);
 bool For_NextIteration(struct ForLoop *, Buffer *);
 char *ForLoop_Details(struct ForLoop *);
 void ForLoop_Free(struct ForLoop *);
+void For_Break(struct ForLoop *);
 
 /* job.c */
 void JobReapChild(pid_t, int, bool);
@@ -841,7 +857,7 @@ void Fatal(const char *, ...) MAKE_ATTR_PRINTFLIKE(1, 2) MAKE_ATTR_DEAD;
 void Punt(const char *, ...) MAKE_ATTR_PRINTFLIKE(1, 2) MAKE_ATTR_DEAD;
 void DieHorribly(void) MAKE_ATTR_DEAD;
 void Finish(int) MAKE_ATTR_DEAD;
-bool unlink_file(const char *) MAKE_ATTR_USE;
+int unlink_file(const char *) MAKE_ATTR_USE;
 void execDie(const char *, const char *);
 char *getTmpdir(void) MAKE_ATTR_USE;
 bool ParseBoolean(const char *, bool) MAKE_ATTR_USE;
@@ -852,7 +868,7 @@ bool GetBooleanExpr(const char *, bool);
 void Parse_Init(void);
 void Parse_End(void);
 
-void PrintLocation(FILE *, bool, const char *, unsigned);
+void PrintLocation(FILE *, bool, const GNode *);
 void PrintStackTrace(bool);
 void Parse_Error(ParseErrorLevel, const char *, ...) MAKE_ATTR_PRINTFLIKE(2, 3);
 bool Parse_VarAssign(const char *, bool, GNode *) MAKE_ATTR_USE;
@@ -862,6 +878,7 @@ void Parse_PushInput(const char *, unsigned, unsigned, Buffer,
 		     struct ForLoop *);
 void Parse_MainName(GNodeList *);
 int Parse_NumErrors(void) MAKE_ATTR_USE;
+unsigned int CurFile_CondMinDepth(void) MAKE_ATTR_USE;
 
 
 /* suff.c */
@@ -1025,10 +1042,12 @@ void Var_ReexportVars(void);
 void Var_Export(VarExportMode, const char *);
 void Var_ExportVars(const char *);
 void Var_UnExport(bool, const char *);
+void Var_ReadOnly(const char *, bool);
 
 void Global_Set(const char *, const char *);
 void Global_Append(const char *, const char *);
 void Global_Delete(const char *);
+void Global_Set_ReadOnly(const char *, const char *);
 
 /* util.c */
 typedef void (*SignalProc)(int);
@@ -1051,6 +1070,10 @@ int mkTempFile(const char *, char *, size_t) MAKE_ATTR_USE;
 int str2Lst_Append(StringList *, char *);
 void GNode_FprintDetails(FILE *, const char *, const GNode *, const char *);
 bool GNode_ShouldExecute(GNode *gn) MAKE_ATTR_USE;
+
+#ifndef HAVE_STRLCPY
+size_t strlcpy(char *, const char *, size_t);
+#endif
 
 /* See if the node was seen on the left-hand side of a dependency operator. */
 MAKE_INLINE bool MAKE_ATTR_USE

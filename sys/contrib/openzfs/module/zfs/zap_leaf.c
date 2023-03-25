@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -207,7 +207,7 @@ zap_leaf_chunk_free(zap_leaf_t *l, uint16_t chunk)
 
 	zlf->lf_type = ZAP_CHUNK_FREE;
 	zlf->lf_next = zap_leaf_phys(l)->l_hdr.lh_freelist;
-	bzero(zlf->lf_pad, sizeof (zlf->lf_pad)); /* help it to compress */
+	memset(zlf->lf_pad, 0, sizeof (zlf->lf_pad)); /* help it to compress */
 	zap_leaf_phys(l)->l_hdr.lh_freelist = chunk;
 
 	zap_leaf_phys(l)->l_hdr.lh_nfree++;
@@ -304,7 +304,7 @@ zap_leaf_array_read(zap_leaf_t *l, uint16_t chunk,
 		while (chunk != CHAIN_END) {
 			struct zap_leaf_array *la =
 			    &ZAP_LEAF_CHUNK(l, chunk).l_array;
-			bcopy(la->la_array, p, ZAP_LEAF_ARRAY_BYTES);
+			memcpy(p, la->la_array, ZAP_LEAF_ARRAY_BYTES);
 			p += ZAP_LEAF_ARRAY_BYTES;
 			chunk = la->la_next;
 		}
@@ -344,7 +344,7 @@ zap_leaf_array_match(zap_leaf_t *l, zap_name_t *zn,
 
 		zap_leaf_array_read(l, chunk, sizeof (*thiskey), array_numints,
 		    sizeof (*thiskey), array_numints, thiskey);
-		boolean_t match = bcmp(thiskey, zn->zn_key_orig,
+		boolean_t match = memcmp(thiskey, zn->zn_key_orig,
 		    array_numints * sizeof (*thiskey)) == 0;
 		kmem_free(thiskey, array_numints * sizeof (*thiskey));
 		return (match);
@@ -372,7 +372,8 @@ zap_leaf_array_match(zap_leaf_t *l, zap_name_t *zn,
 		struct zap_leaf_array *la = &ZAP_LEAF_CHUNK(l, chunk).l_array;
 		int toread = MIN(array_numints - bseen, ZAP_LEAF_ARRAY_BYTES);
 		ASSERT3U(chunk, <, ZAP_LEAF_NUMCHUNKS(l));
-		if (bcmp(la->la_array, (char *)zn->zn_key_orig + bseen, toread))
+		if (memcmp(la->la_array, (char *)zn->zn_key_orig + bseen,
+		    toread))
 			break;
 		chunk = la->la_next;
 		bseen += toread;
@@ -645,7 +646,7 @@ zap_entry_create(zap_leaf_t *l, zap_name_t *zn, uint32_t cd,
  * form of the name.  But all callers have one of these on hand anyway,
  * so might as well take advantage.  A cleaner but slower interface
  * would accept neither argument, and compute the normalized name as
- * needed (using zap_name_alloc(zap_entry_read_name(zeh))).
+ * needed (using zap_name_alloc_str(zap_entry_read_name(zeh))).
  */
 boolean_t
 zap_entry_normalization_conflict(zap_entry_handle_t *zeh, zap_name_t *zn,
@@ -666,7 +667,7 @@ zap_entry_normalization_conflict(zap_entry_handle_t *zeh, zap_name_t *zn,
 			continue;
 
 		if (zn == NULL) {
-			zn = zap_name_alloc(zap, name, MT_NORMALIZE);
+			zn = zap_name_alloc_str(zap, name, MT_NORMALIZE);
 			allocdzn = B_TRUE;
 		}
 		if (zap_leaf_array_match(zeh->zeh_leaf, zn,

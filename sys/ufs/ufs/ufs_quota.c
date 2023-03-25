@@ -523,7 +523,7 @@ quotaon(struct thread *td, struct mount *mp, int type, void *fname,
 		vfs_rel(mp);
 		return (error);
 	}
-	NDFREE(&nd, NDF_ONLY_PNBUF);
+	NDFREE_PNBUF(&nd);
 	vp = nd.ni_vp;
 	error = vfs_busy(mp, MBF_NOWAIT);
 	vfs_rel(mp);
@@ -615,13 +615,11 @@ again:
 			goto again;
 		}
 		if (vp->v_type == VNON || vp->v_writecount <= 0) {
-			VOP_UNLOCK(vp);
-			vrele(vp);
+			vput(vp);
 			continue;
 		}
 		error = getinoquota(VTOI(vp));
-		VOP_UNLOCK(vp);
-		vrele(vp);
+		vput(vp);
 		if (error) {
 			MNT_VNODE_FOREACH_ALL_ABORT(mp, mvp);
 			break;
@@ -684,8 +682,7 @@ again:
 		dq = ip->i_dquot[type];
 		ip->i_dquot[type] = NODQUOT;
 		dqrele(vp, dq);
-		VOP_UNLOCK(vp);
-		vrele(vp);
+		vput(vp);
 	}
 
 	error = dqflush(qvp);
@@ -1681,9 +1678,7 @@ dqflush(struct vnode *vp)
  * Return count of number of quota structures found.
  */
 int
-quotaref(vp, qrp)
-	struct vnode *vp;
-	struct dquot **qrp;
+quotaref(struct vnode *vp, struct dquot **qrp)
 {
 	struct inode *ip;
 	struct dquot *dq;
@@ -1718,8 +1713,7 @@ quotaref(vp, qrp)
  * Release a set of quota structures obtained from a vnode.
  */
 void
-quotarele(qrp)
-	struct dquot **qrp;
+quotarele(struct dquot **qrp)
 {
 	struct dquot *dq;
 	int i;
@@ -1736,10 +1730,7 @@ quotarele(qrp)
  * Positive numbers when adding blocks; negative numbers when freeing blocks.
  */
 void
-quotaadj(qrp, ump, blkcount)
-	struct dquot **qrp;
-	struct ufsmount *ump;
-	int64_t blkcount;
+quotaadj(struct dquot **qrp, struct ufsmount *ump, int64_t blkcount)
 {
 	struct dquot *dq;
 	ufs2_daddr_t ncurblocks;

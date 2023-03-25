@@ -111,9 +111,7 @@ static driver_t adb_kbd_driver = {
 	sizeof(struct adb_kbd_softc),
 };
 
-static devclass_t adb_kbd_devclass;
-
-DRIVER_MODULE(akbd, adb, adb_kbd_driver, adb_kbd_devclass, 0, 0);
+DRIVER_MODULE(akbd, adb, adb_kbd_driver, 0, 0);
 
 #ifdef AKBD_EMULATE_ATKBD
 
@@ -797,9 +795,12 @@ static int akbd_ioctl(keyboard_t *kbd, u_long cmd, caddr_t data)
 		break;
 
 	case PIO_KEYMAP:
-	case OPIO_KEYMAP:
 	case PIO_KEYMAPENT:
 	case PIO_DEADKEYMAP:
+#ifdef COMPAT_FREEBSD13
+	case OPIO_KEYMAP:
+	case OPIO_DEADKEYMAP:
+#endif /* COMPAT_FREEBSD13 */
 	default:
 		return (genkbd_commonioctl(kbd, cmd, data));
 	}

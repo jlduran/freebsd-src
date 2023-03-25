@@ -1,5 +1,4 @@
-/* $OpenBSD: readconf.h,v 1.145 2021/09/15 06:56:01 djm Exp $ */
-/* $FreeBSD$ */
+/* $OpenBSD: readconf.h,v 1.150 2023/01/13 02:58:20 dtucker Exp $ */
 
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
@@ -29,6 +28,7 @@ struct allowed_cname {
 };
 
 typedef struct {
+	char   *host_arg;	/* Host arg as specified on command line. */
 	int     forward_agent;	/* Forward authentication agent. */
 	char   *forward_agent_sock_path; /* Optional path of the agent. */
 	int     forward_x11;	/* Forward X11 display. */
@@ -125,10 +125,10 @@ typedef struct {
 	int	server_alive_interval;
 	int	server_alive_count_max;
 
-	int     num_send_env;
-	char   **send_env;
-	int     num_setenv;
-	char   **setenv;
+	u_int	num_send_env;
+	char	**send_env;
+	u_int	num_setenv;
+	char	**setenv;
 
 	char	*control_path;
 	int	control_master;
@@ -170,8 +170,6 @@ typedef struct {
 	char   *hostbased_accepted_algos;
 	char   *pubkey_accepted_algos;
 
-	char   *version_addendum; /* Appended to SSH banner */
-
 	char   *jump_user;
 	char   *jump_host;
 	int	jump_port;
@@ -179,8 +177,16 @@ typedef struct {
 
 	char   *known_hosts_command;
 
+	int	required_rsa_size;	/* minimum size of RSA keys */
+	int	enable_escape_commandline;	/* ~C commandline */
+
 	char	*ignored_unknown; /* Pattern list of unknown tokens to ignore */
 }       Options;
+
+#define SSH_PUBKEY_AUTH_NO	0x00
+#define SSH_PUBKEY_AUTH_UNBOUND	0x01
+#define SSH_PUBKEY_AUTH_HBOUND	0x02
+#define SSH_PUBKEY_AUTH_ALL	0x03
 
 #define SSH_CANONICALISE_NO	0
 #define SSH_CANONICALISE_YES	1
