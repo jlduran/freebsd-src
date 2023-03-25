@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
  *
@@ -37,15 +37,12 @@ __FBSDID("$FreeBSD$");
 int
 libbe_errno(libbe_handle_t *lbh)
 {
-
 	return (lbh->error);
 }
-
 
 const char *
 libbe_error_description(libbe_handle_t *lbh)
 {
-
 	switch (lbh->error) {
 	case BE_ERR_INVALIDNAME:
 		return ("invalid boot environment name");
@@ -83,6 +80,9 @@ libbe_error_description(libbe_handle_t *lbh)
 	case BE_ERR_MOUNTED:
 		return ("boot environment is already mounted");
 
+	case BE_ERR_MOUNTFROM:
+		return ("could not set vfs.root.mountfrom");
+
 	case BE_ERR_NOMOUNT:
 		return ("boot environment is not mounted");
 
@@ -116,20 +116,16 @@ libbe_error_description(libbe_handle_t *lbh)
 	}
 }
 
-
 void
 libbe_print_on_error(libbe_handle_t *lbh, bool val)
 {
-
 	lbh->print_on_err = val;
 	libzfs_print_on_error(lbh->lzh, val);
 }
 
-
 int
 set_error(libbe_handle_t *lbh, be_error_t err)
 {
-
 	lbh->error = err;
 	if (lbh->print_on_err && (err != BE_ERR_SUCCESS))
 		fprintf(stderr, "%s\n", libbe_error_description(lbh));

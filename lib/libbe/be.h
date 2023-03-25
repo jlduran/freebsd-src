@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
  *
@@ -39,29 +39,29 @@ typedef struct libbe_handle libbe_handle_t;
 
 typedef enum be_error {
 	BE_ERR_SUCCESS = 0,     /* No error */
-	BE_ERR_INVALIDNAME,     /* invalid boot env name */
-	BE_ERR_EXISTS,          /* boot env name already taken */
-	BE_ERR_NOENT,           /* boot env doesn't exist */
-	BE_ERR_PERMS,           /* insufficient permissions */
+	BE_ERR_BADMOUNT,        /* mountpoint is not '/' */
+	BE_ERR_BADPATH,         /* path not suitable for operation */
 	BE_ERR_DESTROYACT,      /* cannot destroy active boot env */
 	BE_ERR_DESTROYMNT,      /* destroying a mounted be requires force */
-	BE_ERR_BADPATH,		/* path not suitable for operation */
-	BE_ERR_PATHBUSY,	/* requested path is busy */
-	BE_ERR_PATHLEN,         /* provided name exceeds maximum length limit */
-	BE_ERR_BADMOUNT,        /* mountpoint is not '/' */
-	BE_ERR_NOORIGIN,        /* could not open snapshot's origin */
-	BE_ERR_MOUNTED,         /* boot environment is already mounted */
-	BE_ERR_NOMOUNT,         /* boot environment is not mounted */
-	BE_ERR_ZFSOPEN,         /* calling zfs_open() failed */
-	BE_ERR_ZFSCLONE,        /* error when calling zfs_clone to create be */
-	BE_ERR_IO,		/* error when doing some I/O operation */
-	BE_ERR_NOPOOL,		/* operation not supported on this pool */
-	BE_ERR_NOMEM,		/* insufficient memory */
-	BE_ERR_UNKNOWN,         /* unknown error */
+	BE_ERR_EXISTS,          /* boot env name already taken */
+	BE_ERR_HASCLONES,       /* snapshot has clones */
+	BE_ERR_INVALIDNAME,     /* invalid boot env name */
 	BE_ERR_INVORIGIN,       /* invalid origin */
-	BE_ERR_HASCLONES,	/* snapshot has clones */
+	BE_ERR_IO,              /* error when doing some I/O operation */
+	BE_ERR_MOUNTED,         /* boot environment is already mounted */
+	BE_ERR_MOUNTFROM,       /* error when setting vfs.root.mountfrom */
+	BE_ERR_NOENT,           /* boot env doesn't exist */
+	BE_ERR_NOMEM,           /* insufficient memory */
+	BE_ERR_NOMOUNT,         /* boot environment is not mounted */
+	BE_ERR_NOORIGIN,        /* could not open snapshot's origin */
+	BE_ERR_NOPOOL,          /* operation not supported on this pool */
+	BE_ERR_PATHBUSY,        /* requested path is busy */
+	BE_ERR_PATHLEN,         /* provided name exceeds maximum length limit */
+	BE_ERR_PERMS,           /* insufficient permissions */
+	BE_ERR_UNKNOWN,         /* unknown error */
+	BE_ERR_ZFSCLONE,        /* error when calling zfs_clone to create be */
+	BE_ERR_ZFSOPEN,         /* calling zfs_open() failed */
 } be_error_t;
-
 
 /* Library handling functions: be.c */
 libbe_handle_t *libbe_init(const char *root);

@@ -501,4 +501,3 @@ bectl_cmd_list(int argc, char *argv[])
 
 	return (0);
 }
-

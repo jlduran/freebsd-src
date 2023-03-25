@@ -76,7 +76,6 @@
 .Brq Cm umount | unmount
 .Op Fl f
 .Ar beName
-.Pp
 .Nm
 .Op Fl h\&?
 .Sh DESCRIPTION
@@ -435,11 +434,37 @@ A future version of
 may default to handling both styles and deprecate the various
 .Fl r
 flags.
-\" .Sh EXAMPLES
-\" .Bl -bullet
-\" .It
-\" To fill in with jail upgrade example when behavior is firm.
-\" .El
+.Sh EXAMPLES
+.Bl -tag -width indent
+.It Perform a system upgrade in a Xr jail 8 :
+.Pp
+Create a new boot environment called
+.Em jailed :
+.Bd -literal -offset indent
+bectl create -e default jailed
+.Ed
+.Pp
+Set a mountpoint for the new jail to
+.Pa /usr/jails/jailed :
+.Bd -literal -offset indent
+bectl mount jailed /usr/jails/jailed
+.Ed
+.Pp
+The currently active boot environment is now replicated into the jailed system
+and ready for an upgrade.
+Start up the jail, log in and perform the normal upgrade process.
+Once this is done, stop the jail and disable it in
+.Pa /etc/rc.conf .
+Now activate the boot environment for the next boot:
+.Bd -literal -offset indent
+bectl activate jailed
+.Ed
+.Pp
+Reboot into the new environment:
+.Bd -literal -offset indent
+shutdown -r now
+.Ed
+.El
 .Sh SEE ALSO
 .Xr libbe 3 ,
 .Xr beinstall.sh 8 ,

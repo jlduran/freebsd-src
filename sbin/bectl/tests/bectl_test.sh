@@ -279,14 +279,12 @@ bectl_export_import_body()
 }
 bectl_export_import_cleanup()
 {
-
 	bectl_cleanup $(get_zpool_name)
 }
 
 atf_test_case bectl_list cleanup
 bectl_list_head()
 {
-
 	atf_set "descr" "Check bectl list"
 	atf_set "require.user" root
 }
@@ -324,14 +322,12 @@ bectl_list_body()
 }
 bectl_list_cleanup()
 {
-
 	bectl_cleanup $(get_zpool_name)
 }
 
 atf_test_case bectl_mount cleanup
 bectl_mount_head()
 {
-
 	atf_set "descr" "Check bectl mount/unmount"
 	atf_set "require.user" root
 }
@@ -368,14 +364,12 @@ bectl_mount_body()
 }
 bectl_mount_cleanup()
 {
-
 	bectl_cleanup $(get_zpool_name)
 }
 
 atf_test_case bectl_rename cleanup
 bectl_rename_head()
 {
-
 	atf_set "descr" "Check bectl rename"
 	atf_set "require.user" root
 }
@@ -401,10 +395,11 @@ bectl_rename_body()
 	atf_check -o not-empty zfs get mountpoint ${zpool}/ROOT/default2
 	atf_check -e not-empty -s not-exit:0 zfs get mountpoint \
 	    ${zpool}/ROOT/default
+	atf_check_equal "zfs:${zpool}/ROOT/default2" \
+	    "$(kenv vfs.root.mountfrom)"
 }
 bectl_rename_cleanup()
 {
-
 	bectl_cleanup $(get_zpool_name)
 }
 
@@ -412,7 +407,7 @@ atf_test_case bectl_jail cleanup
 bectl_jail_head()
 {
 
-	atf_set "descr" "Check bectl rename"
+	atf_set "descr" "Check bectl jail/unjail"
 	atf_set "require.user" root
 	atf_set "require.progs" jail
 }

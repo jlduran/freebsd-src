@@ -1,5 +1,5 @@
 .\"
-.\" SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+.\" SPDX-License-Identifier: BSD-2-Clause
 .\"
 .\" Copyright (c) 2017 Kyle Kneitinger
 .\" Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
@@ -27,7 +27,7 @@
 .\"
 .\" $FreeBSD$
 .\"
-.Dd August 18, 2020
+.Dd December 20, 2022
 .Dt LIBBE 3
 .Os
 .Sh NAME
@@ -101,6 +101,9 @@
 .Pp
 .Ft int
 .Fn be_mounted_at "libbe_handle_t *hdl" "const char *path" "nvlist_t *details"
+.Pp
+.Ft int
+.Fn be_set_mountfrom "const char *be_old" "const char *be_new"
 .Pp
 .Ft int
 .Fn be_unmount "libbe_handle_t *hdl" "const char *be_name" "int flags"
@@ -385,6 +388,17 @@ This list of properties matches the properties collected by
 .Fn be_get_bootenv_props .
 .Pp
 The
+.Fn be_set_mountfrom
+function will set the vfs.root.mountfrom
+.Xr kenv 1
+variable, if necessary.
+This is useful when rerooting.
+See
+.Xr reboot 8
+.Fl r
+for details.
+.Pp
+The
 .Fn be_unmount
 function will unmount the given boot environment.
 Setting the
@@ -549,6 +563,8 @@ BE_ERR_BADMOUNT
 BE_ERR_NOORIGIN
 .It
 BE_ERR_MOUNTED
+.It
+BE_ERR_MOUNTFROM
 .It
 BE_ERR_NOMOUNT
 .It
