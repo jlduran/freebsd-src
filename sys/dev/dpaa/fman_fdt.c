@@ -64,14 +64,16 @@ static device_method_t fman_methods[] = {
 
 DEFINE_CLASS_1(fman, fman_driver, fman_methods,
     sizeof(struct fman_softc), simplebus_driver);
-static devclass_t fman_devclass;
-EARLY_DRIVER_MODULE(fman, simplebus, fman_driver, fman_devclass, 0, 0,
+EARLY_DRIVER_MODULE(fman, simplebus, fman_driver, 0, 0,
     BUS_PASS_BUS + BUS_PASS_ORDER_MIDDLE);
 
 
 static int
 fman_fdt_probe(device_t dev)
 {
+
+	if (!ofw_bus_status_okay(dev))
+		return (ENXIO);
 
 	if (!ofw_bus_is_compatible(dev, "fsl,fman"))
 		return (ENXIO);

@@ -47,6 +47,7 @@ struct kobj_type {
 	void (*release)(struct kobject *kobj);
 	const struct sysfs_ops *sysfs_ops;
 	struct attribute **default_attrs;
+	const struct attribute_group **default_groups;
 };
 
 extern const struct kobj_type linux_kfree_type;
@@ -107,22 +108,10 @@ kobject_get(struct kobject *kobj)
 	return kobj;
 }
 
+struct kobject *kobject_create(void);
 int	kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list);
 int	kobject_add(struct kobject *kobj, struct kobject *parent,
 	    const char *fmt, ...);
-
-static inline struct kobject *
-kobject_create(void)
-{
-	struct kobject *kobj;
-
-	kobj = kzalloc(sizeof(*kobj), GFP_KERNEL);
-	if (kobj == NULL)
-		return (NULL);
-	kobject_init(kobj, &linux_kfree_type);
-
-	return (kobj);
-}
 
 static inline struct kobject *
 kobject_create_and_add(const char *name, struct kobject *parent)

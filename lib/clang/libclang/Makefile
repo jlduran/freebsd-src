@@ -122,6 +122,7 @@ SRCS_MIN+=	AST/ParentMap.cpp
 SRCS_MIN+=	AST/ParentMapContext.cpp
 SRCS_MIN+=	AST/PrintfFormatString.cpp
 SRCS_MIN+=	AST/QualTypeNames.cpp
+SRCS_MIN+=	AST/Randstruct.cpp
 SRCS_MIN+=	AST/RawCommentList.cpp
 SRCS_MIN+=	AST/RecordLayout.cpp
 SRCS_MIN+=	AST/RecordLayoutBuilder.cpp
@@ -176,6 +177,7 @@ SRCS_MIN+=	Analysis/ThreadSafetyTIL.cpp
 SRCS_MIN+=	Analysis/UninitializedValues.cpp
 SRCS_MIN+=	Basic/Attributes.cpp
 SRCS_MIN+=	Basic/Builtins.cpp
+SRCS_MIN+=	Basic/CLWarnings.cpp
 SRCS_MIN+=	Basic/CharInfo.cpp
 SRCS_MIN+=	Basic/CodeGenOptions.cpp
 SRCS_MIN+=	Basic/Cuda.cpp
@@ -190,6 +192,7 @@ SRCS_MIN+=	Basic/FileSystemStatCache.cpp
 SRCS_MIN+=	Basic/IdentifierTable.cpp
 SRCS_MIN+=	Basic/LangOptions.cpp
 SRCS_MIN+=	Basic/LangStandards.cpp
+SRCS_MIN+=	Basic/MakeSupport.cpp
 SRCS_MIN+=	Basic/Module.cpp
 SRCS_MIN+=	Basic/NoSanitizeList.cpp
 SRCS_MIN+=	Basic/ObjCRuntime.cpp
@@ -211,6 +214,8 @@ SRCS_MIN+=	Basic/Targets/ARC.cpp
 SRCS_MIN+=	Basic/Targets/ARM.cpp
 SRCS_MIN+=	Basic/Targets/AVR.cpp
 SRCS_MIN+=	Basic/Targets/BPF.cpp
+SRCS_MIN+=	Basic/Targets/CSKY.cpp
+SRCS_MIN+=	Basic/Targets/DirectX.cpp
 SRCS_MIN+=	Basic/Targets/Hexagon.cpp
 SRCS_MIN+=	Basic/Targets/Lanai.cpp
 SRCS_MIN+=	Basic/Targets/Le64.cpp
@@ -259,6 +264,7 @@ SRCS_MIN+=	CodeGen/CGExprComplex.cpp
 SRCS_MIN+=	CodeGen/CGExprConstant.cpp
 SRCS_MIN+=	CodeGen/CGExprScalar.cpp
 SRCS_MIN+=	CodeGen/CGGPUBuiltin.cpp
+SRCS_MIN+=	CodeGen/CGHLSLRuntime.cpp
 SRCS_MIN+=	CodeGen/CGLoopInfo.cpp
 SRCS_MIN+=	CodeGen/CGNonTrivialStruct.cpp
 SRCS_MIN+=	CodeGen/CGObjC.cpp
@@ -267,9 +273,7 @@ SRCS_MIN+=	CodeGen/CGObjCMac.cpp
 SRCS_MIN+=	CodeGen/CGObjCRuntime.cpp
 SRCS_MIN+=	CodeGen/CGOpenCLRuntime.cpp
 SRCS_MIN+=	CodeGen/CGOpenMPRuntime.cpp
-SRCS_MIN+=	CodeGen/CGOpenMPRuntimeAMDGCN.cpp
 SRCS_MIN+=	CodeGen/CGOpenMPRuntimeGPU.cpp
-SRCS_MIN+=	CodeGen/CGOpenMPRuntimeNVPTX.cpp
 SRCS_MIN+=	CodeGen/CGRecordLayoutBuilder.cpp
 SRCS_MIN+=	CodeGen/CGStmt.cpp
 SRCS_MIN+=	CodeGen/CGStmtOpenMP.cpp
@@ -313,6 +317,7 @@ SRCS_MIN+=	Driver/ToolChains/AVR.cpp
 SRCS_MIN+=	Driver/ToolChains/Ananas.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/AArch64.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/ARM.cpp
+SRCS_MIN+=	Driver/ToolChains/Arch/CSKY.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/M68k.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/Mips.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/PPC.cpp
@@ -322,6 +327,7 @@ SRCS_MIN+=	Driver/ToolChains/Arch/SystemZ.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/VE.cpp
 SRCS_MIN+=	Driver/ToolChains/Arch/X86.cpp
 SRCS_MIN+=	Driver/ToolChains/BareMetal.cpp
+SRCS_MIN+=	Driver/ToolChains/CSKYToolChain.cpp
 SRCS_MIN+=	Driver/ToolChains/Clang.cpp
 SRCS_MIN+=	Driver/ToolChains/CloudABI.cpp
 SRCS_MIN+=	Driver/ToolChains/CommonArgs.cpp
@@ -334,7 +340,10 @@ SRCS_MIN+=	Driver/ToolChains/Flang.cpp
 SRCS_MIN+=	Driver/ToolChains/FreeBSD.cpp
 SRCS_MIN+=	Driver/ToolChains/Fuchsia.cpp
 SRCS_MIN+=	Driver/ToolChains/Gnu.cpp
-SRCS_MIN+=	Driver/ToolChains/HIP.cpp
+SRCS_MIN+=	Driver/ToolChains/HIPAMD.cpp
+SRCS_MIN+=	Driver/ToolChains/HIPSPV.cpp
+SRCS_MIN+=	Driver/ToolChains/HIPUtility.cpp
+SRCS_MIN+=	Driver/ToolChains/HLSL.cpp
 SRCS_MIN+=	Driver/ToolChains/Haiku.cpp
 SRCS_MIN+=	Driver/ToolChains/Hexagon.cpp
 SRCS_MIN+=	Driver/ToolChains/Hurd.cpp
@@ -349,9 +358,11 @@ SRCS_MIN+=	Driver/ToolChains/Myriad.cpp
 SRCS_MIN+=	Driver/ToolChains/NaCl.cpp
 SRCS_MIN+=	Driver/ToolChains/NetBSD.cpp
 SRCS_MIN+=	Driver/ToolChains/OpenBSD.cpp
+SRCS_MIN+=	Driver/ToolChains/PPCFreeBSD.cpp
 SRCS_MIN+=	Driver/ToolChains/PPCLinux.cpp
 SRCS_MIN+=	Driver/ToolChains/PS4CPU.cpp
 SRCS_MIN+=	Driver/ToolChains/RISCVToolchain.cpp
+SRCS_MIN+=	Driver/ToolChains/SPIRV.cpp
 SRCS_MIN+=	Driver/ToolChains/Solaris.cpp
 SRCS_MIN+=	Driver/ToolChains/TCE.cpp
 SRCS_MIN+=	Driver/ToolChains/VEToolchain.cpp
@@ -363,13 +374,20 @@ SRCS_MIN+=	Driver/XRayArgs.cpp
 SRCS_MIN+=	Edit/Commit.cpp
 SRCS_MIN+=	Edit/EditedSource.cpp
 SRCS_MIN+=	Edit/RewriteObjCFoundationAPI.cpp
+SRCS_MIN+=	ExtractAPI/API.cpp
+SRCS_MIN+=	ExtractAPI/DeclarationFragments.cpp
+SRCS_MIN+=	ExtractAPI/ExtractAPIConsumer.cpp
+SRCS_MIN+=	ExtractAPI/Serialization/SymbolGraphSerializer.cpp
+SRCS_MIN+=	ExtractAPI/TypedefUnderlyingTypeResolver.cpp
 SRCS_EXT+=	Format/AffectedRangeManager.cpp
 SRCS_EXT+=	Format/BreakableToken.cpp
 SRCS_EXT+=	Format/ContinuationIndenter.cpp
+SRCS_EXT+=	Format/DefinitionBlockSeparator.cpp
 SRCS_EXT+=	Format/Format.cpp
 SRCS_EXT+=	Format/FormatToken.cpp
 SRCS_EXT+=	Format/FormatTokenLexer.cpp
 SRCS_EXT+=	Format/NamespaceEndCommentsFixer.cpp
+SRCS_EXT+=	Format/QualifierAlignmentFixer.cpp
 SRCS_EXT+=	Format/SortJavaScriptImports.cpp
 SRCS_EXT+=	Format/TokenAnalyzer.cpp
 SRCS_EXT+=	Format/TokenAnnotator.cpp
@@ -392,7 +410,6 @@ SRCS_MIN+=	Frontend/FrontendAction.cpp
 SRCS_MIN+=	Frontend/FrontendActions.cpp
 SRCS_MIN+=	Frontend/FrontendOptions.cpp
 SRCS_MIN+=	Frontend/HeaderIncludeGen.cpp
-SRCS_MIN+=	Frontend/InitHeaderSearch.cpp
 SRCS_MIN+=	Frontend/InitPreprocessor.cpp
 SRCS_MIN+=	Frontend/InterfaceStubFunctionsConsumer.cpp
 SRCS_MIN+=	Frontend/LayoutOverrideSource.cpp
@@ -423,7 +440,8 @@ SRCS_MIN+=	Index/IndexTypeSourceInfo.cpp
 SRCS_MIN+=	Index/IndexingAction.cpp
 SRCS_MIN+=	Index/IndexingContext.cpp
 SRCS_MIN+=	Index/USRGeneration.cpp
-SRCS_MIN+=	Lex/DependencyDirectivesSourceMinimizer.cpp
+SRCS_MIN+=	Lex/DependencyDirectivesScanner.cpp
+SRCS_MIN+=	Lex/InitHeaderSearch.cpp
 SRCS_MIN+=	Lex/HeaderMap.cpp
 SRCS_MIN+=	Lex/HeaderSearch.cpp
 SRCS_MIN+=	Lex/Lexer.cpp
@@ -451,6 +469,7 @@ SRCS_MIN+=	Parse/ParseDecl.cpp
 SRCS_MIN+=	Parse/ParseDeclCXX.cpp
 SRCS_MIN+=	Parse/ParseExpr.cpp
 SRCS_MIN+=	Parse/ParseExprCXX.cpp
+SRCS_MIN+=	Parse/ParseHLSL.cpp
 SRCS_MIN+=	Parse/ParseInit.cpp
 SRCS_MIN+=	Parse/ParseObjc.cpp
 SRCS_MIN+=	Parse/ParseOpenMP.cpp
@@ -469,6 +488,7 @@ SRCS_MIN+=	Sema/AnalysisBasedWarnings.cpp
 SRCS_MIN+=	Sema/CodeCompleteConsumer.cpp
 SRCS_MIN+=	Sema/DeclSpec.cpp
 SRCS_MIN+=	Sema/DelayedDiagnostic.cpp
+SRCS_MIN+=	Sema/HLSLExternalSemaSource.cpp
 SRCS_MIN+=	Sema/IdentifierResolver.cpp
 SRCS_MIN+=	Sema/JumpDiagnostics.cpp
 SRCS_MIN+=	Sema/MultiplexExternalSemaSource.cpp
@@ -505,6 +525,7 @@ SRCS_MIN+=	Sema/SemaObjCProperty.cpp
 SRCS_MIN+=	Sema/SemaOpenMP.cpp
 SRCS_MIN+=	Sema/SemaOverload.cpp
 SRCS_MIN+=	Sema/SemaPseudoObject.cpp
+SRCS_MIN+=	Sema/SemaRISCVVectorLookup.cpp
 SRCS_MIN+=	Sema/SemaSYCL.cpp
 SRCS_MIN+=	Sema/SemaStmt.cpp
 SRCS_MIN+=	Sema/SemaStmtAsm.cpp
@@ -566,6 +587,9 @@ SRCS_FUL+=	StaticAnalyzer/Checkers/DivZeroChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/DynamicTypeChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/DynamicTypePropagation.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/EnumCastOutOfRangeChecker.cpp
+SRCS_FUL+=	StaticAnalyzer/Checkers/ErrnoChecker.cpp
+SRCS_FUL+=	StaticAnalyzer/Checkers/ErrnoModeling.cpp
+SRCS_FUL+=	StaticAnalyzer/Checkers/ErrnoTesterChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/ExprInspectionChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/FixedAddressChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/FuchsiaHandleChecker.cpp
@@ -628,11 +652,13 @@ SRCS_FUL+=	StaticAnalyzer/Checkers/SmartPtrModeling.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/StackAddrEscapeChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/StdLibraryFunctionsChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/StreamChecker.cpp
+SRCS_FUL+=	StaticAnalyzer/Checkers/StringChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/Taint.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/TaintTesterChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/TestAfterDivZeroChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/TraversalChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/TrustNonnullChecker.cpp
+SRCS_FUL+=	StaticAnalyzer/Checkers/TrustReturnsNonnullChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/UndefBranchChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/UndefCapturedBlockVarChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/UndefResultChecker.cpp
@@ -654,6 +680,7 @@ SRCS_FUL+=	StaticAnalyzer/Checkers/WebKit/RefCntblBaseVirtualDtorChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/WebKit/UncountedCallArgsChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/WebKit/UncountedLambdaCapturesChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Checkers/WebKit/UncountedLocalVarsChecker.cpp
+SRCS_FUL+=	StaticAnalyzer/Checkers/cert/InvalidPtrChecker.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/APSIntType.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/AnalysisManager.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/AnalyzerOptions.cpp
@@ -661,6 +688,7 @@ SRCS_FUL+=	StaticAnalyzer/Core/BasicValueFactory.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/BlockCounter.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/BugReporter.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/BugReporterVisitors.cpp
+SRCS_FUL+=	StaticAnalyzer/Core/CallDescription.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/CallEvent.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/Checker.cpp
 SRCS_FUL+=	StaticAnalyzer/Core/CheckerContext.cpp
@@ -706,6 +734,7 @@ SRCS_FUL+=	StaticAnalyzer/Frontend/CreateCheckerManager.cpp
 SRCS_FUL+=	StaticAnalyzer/Frontend/FrontendActions.cpp
 SRCS_FUL+=	StaticAnalyzer/Frontend/ModelConsumer.cpp
 SRCS_FUL+=	StaticAnalyzer/Frontend/ModelInjector.cpp
+SRCS_MIN+=	Support/RISCVVIntrinsicUtils.cpp
 SRCS_MIN+=	Tooling/ArgumentsAdjusters.cpp
 SRCS_MIN+=	Tooling/CommonOptionsParser.cpp
 SRCS_MIN+=	Tooling/CompilationDatabase.cpp
@@ -1001,12 +1030,12 @@ clang/Basic/riscv_vector_builtin_cg.inc: \
 	    -o ${.TARGET} ${CLANG_SRCS}/include/clang/Basic/riscv_vector.td
 TGHDRS+=	clang/Basic/riscv_vector_builtin_cg.inc
 
-clang/Driver/Options.inc: ${CLANG_SRCS}/include/clang/Driver/Options.td
-	${LLVM_TBLGEN} -gen-opt-parser-defs \
-	    -I ${LLVM_SRCS}/include -I ${CLANG_SRCS}/include/clang/Driver \
-	    -d ${.TARGET:C/$/.d/} -o ${.TARGET} \
-	    ${CLANG_SRCS}/include/clang/Driver/Options.td
-TGHDRS+=	clang/Driver/Options.inc
+clang/Basic/riscv_vector_builtin_sema.inc: \
+	${CLANG_SRCS}/include/clang/Basic/riscv_vector.td
+	${CLANG_TBLGEN} -gen-riscv-vector-builtin-sema \
+	    -I ${CLANG_SRCS}/include/clang/Basic -d ${.TARGET:C/$/.d/} \
+	    -o ${.TARGET} ${CLANG_SRCS}/include/clang/Basic/riscv_vector.td
+TGHDRS+=	clang/Basic/riscv_vector_builtin_sema.inc
 
 clang/Parse/AttrParserStringSwitches.inc: \
 	${CLANG_SRCS}/include/clang/Basic/Attr.td
@@ -1085,9 +1114,24 @@ OpenCLBuiltins.inc: ${CLANG_SRCS}/lib/Sema/OpenCLBuiltins.td
 	    ${CLANG_SRCS}/lib/Sema/OpenCLBuiltins.td
 TGHDRS+=	OpenCLBuiltins.inc
 
+${TGHDRS}: ${CLANG_TBLGEN_BIN}
+
 DEPENDFILES+=	${TGHDRS:C/$/.d/}
 DPSRCS+=	${TGHDRS}
 CLEANFILES+=	${TGHDRS} ${TGHDRS:C/$/.d/}
+
+clang/Driver/Options.inc: ${CLANG_SRCS}/include/clang/Driver/Options.td
+	${LLVM_TBLGEN} -gen-opt-parser-defs \
+	    -I ${LLVM_SRCS}/include -I ${CLANG_SRCS}/include/clang/Driver \
+	    -d ${.TARGET:C/$/.d/} -o ${.TARGET} \
+	    ${CLANG_SRCS}/include/clang/Driver/Options.td
+LTGHDRS+=	clang/Driver/Options.inc
+
+${LTGHDRS}: ${LLVM_TBLGEN_BIN}
+
+DEPENDFILES+=	${LTGHDRS:C/$/.d/}
+DPSRCS+=	${LTGHDRS}
+CLEANFILES+=	${LTGHDRS} ${LTGHDRS:C/$/.d/}
 
 .include "../clang.build.mk"
 

@@ -33,30 +33,17 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
-
 #include <sys/param.h>
-#include <sys/capsicum.h>
-#include <sys/clock.h>
 #include <sys/fcntl.h>
-#include <sys/file.h>
 #include <sys/imgact.h>
-#include <sys/kernel.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
-#include <sys/mman.h>
 #include <sys/mutex.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
 #include <sys/reg.h>
-#include <sys/resource.h>
-#include <sys/resourcevar.h>
 #include <sys/syscallsubr.h>
-#include <sys/sysproto.h>
-#include <sys/systm.h>
-#include <sys/unistd.h>
-#include <sys/wait.h>
 
 #include <machine/frame.h>
 #include <machine/md_var.h>
@@ -134,11 +121,15 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 	char *path;
 	int error;
 
-	LCONVPATHEXIST(args->path, &path);
-
-	error = freebsd32_exec_copyin_args(&eargs, path, UIO_SYSSPACE,
-	    args->argp, args->envp);
-	free(path, M_TEMP);
+	if (!LUSECONVPATH(td)) {
+		error = freebsd32_exec_copyin_args(&eargs, args->path, UIO_USERSPACE,
+		    args->argp, args->envp);
+	} else {
+		LCONVPATHEXIST(args->path, &path);
+		error = freebsd32_exec_copyin_args(&eargs, path, UIO_SYSSPACE,
+		    args->argp, args->envp);
+		LFREEPATH(path);
+	}
 	if (error == 0)
 		error = linux_common_execve(td, &eargs);
 	AUDIT_SYSCALL_EXIT(error == EJUSTRETURN ? 0 : error, td);
@@ -255,12 +246,9 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 	switch (args->what & 0xFFFF) {
 	case LINUX_SEMOP: {
-		struct linux_semop_args a;
 
-		a.semid = args->arg1;
-		a.tsops = PTRIN(args->ptr);
-		a.nsops = args->arg2;
-		return (linux_semop(td, &a));
+		return (kern_semop(td, args->arg1, PTRIN(args->ptr),
+		    args->arg2, NULL));
 	}
 	case LINUX_SEMGET: {
 		struct linux_semget_args a;
@@ -281,6 +269,15 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		if (error)
 			return (error);
 		return (linux_semctl(td, &a));
+	}
+	case LINUX_SEMTIMEDOP: {
+		struct linux_semtimedop_args a;
+
+		a.semid = args->arg1;
+		a.tsops = PTRIN(args->ptr);
+		a.nsops = args->arg2;
+		a.timeout = PTRIN(args->arg5);
+		return (linux_semtimedop(td, &a));
 	}
 	case LINUX_MSGSND: {
 		struct linux_msgsnd_args a;

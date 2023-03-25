@@ -41,6 +41,9 @@ MODULE_LICENSE("BSD");
 MODULE_VERSION(if_iwlwifi, 1);
 MODULE_DEPEND(if_iwlwifi, linuxkpi, 1, 1, 1);
 MODULE_DEPEND(if_iwlwifi, linuxkpi_wlan, 1, 1, 1);
+#ifdef CONFIG_IWLWIFI_DEBUGFS
+MODULE_DEPEND(if_iwlwifi, lindebugfs, 1, 1, 1);
+#endif
 #endif
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 
@@ -74,6 +77,9 @@ struct iwl_drv {
 	char firmware_name[64];         /* name of firmware file to load */
 
 	struct completion request_firmware_complete;
+#if defined(__FreeBSD__)
+	struct completion drv_start_complete;
+#endif
 
 #ifdef CONFIG_IWLWIFI_DEBUGFS
 	struct dentry *dbgfs_drv;
@@ -333,30 +339,6 @@ static void set_sec_offset(struct iwl_firmware_pieces *pieces,
 	alloc_sec_data(pieces, type, sec);
 
 	pieces->img[type].sec[sec].offset = offset;
-}
-
-static int iwl_store_cscheme(struct iwl_fw *fw, const u8 *data, const u32 len)
-{
-	int i, j;
-	const struct iwl_fw_cscheme_list *l =
-		(const struct iwl_fw_cscheme_list *)data;
-	const struct iwl_fw_cipher_scheme *fwcs;
-
-	if (len < sizeof(*l) ||
-	    len < sizeof(l->size) + l->size * sizeof(l->cs[0]))
-		return -EINVAL;
-
-	for (i = 0, j = 0; i < IWL_UCODE_MAX_CS && i < l->size; i++) {
-		fwcs = &l->cs[j];
-
-		/* we skip schemes with zero cipher suite selector */
-		if (!fwcs->cipher)
-			continue;
-
-		fw->cs[j++] = *fwcs;
-	}
-
-	return 0;
 }
 
 /*
@@ -936,10 +918,6 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 				IWL_ERR(drv, "Driver support upto 2 CPUs\n");
 				return -EINVAL;
 			}
-			break;
-		case IWL_UCODE_TLV_CSCHEME:
-			if (iwl_store_cscheme(&drv->fw, tlv_data, tlv_len))
-				goto invalid_tlv_len;
 			break;
 		case IWL_UCODE_TLV_N_SCAN_CHANNELS:
 			if (tlv_len != sizeof(u32))
@@ -1732,6 +1710,8 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
  out_unbind:
 	complete(&drv->request_firmware_complete);
 	device_release_driver(drv->trans->dev);
+	/* drv has just been freed by the release */
+	failure = false;
  free:
 	if (failure)
 		iwl_dealloc_ucode(drv);
@@ -1759,6 +1739,9 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans)
 	drv->dev = trans->dev;
 
 	init_completion(&drv->request_firmware_complete);
+#if defined(__FreeBSD__)
+	init_completion(&drv->drv_start_complete);
+#endif
 	INIT_LIST_HEAD(&drv->list);
 
 #ifdef CONFIG_IWLWIFI_DEBUGFS
@@ -1778,6 +1761,17 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans)
 		goto err_fw;
 	}
 
+#if defined(__FreeBSD__)
+	/*
+	 * Wait until initilization is done before returning in order to
+	 * replicate FreeBSD's synchronous behaviour -- we cannot create
+	 * a vap before the com is fully created but if LinuxKPI "probe"
+	 * returned before it was all done that is what could happen.
+	 */
+	wait_for_completion(&drv->request_firmware_complete);
+	complete(&drv->drv_start_complete);
+#endif
+
 	return drv;
 
 err_fw:
@@ -1792,7 +1786,11 @@ err:
 
 void iwl_drv_stop(struct iwl_drv *drv)
 {
+#if defined(__linux__)
 	wait_for_completion(&drv->request_firmware_complete);
+#elif defined(__FreeBSD__)
+	wait_for_completion(&drv->drv_start_complete);
+#endif
 
 	_iwl_op_mode_stop(drv);
 
@@ -1819,6 +1817,7 @@ void iwl_drv_stop(struct iwl_drv *drv)
 	kfree(drv);
 }
 
+#define ENABLE_INI	(IWL_DBG_TLV_MAX_PRESET + 1)
 
 /* shared module parameters */
 struct iwl_mod_params iwlwifi_mod_params = {
@@ -1826,7 +1825,7 @@ struct iwl_mod_params iwlwifi_mod_params = {
 	.bt_coex_active = true,
 	.power_level = IWL_POWER_INDEX_1,
 	.uapsd_disable = IWL_DISABLE_UAPSD_BSS | IWL_DISABLE_UAPSD_P2P_CLIENT,
-	.enable_ini = true,
+	.enable_ini = ENABLE_INI,
 #if defined(__FreeBSD__)
 	.disable_11n = 1,
 	.disable_11ac = true,
@@ -1943,10 +1942,44 @@ MODULE_PARM_DESC(nvm_file, "NVM file name");
 module_param_named(uapsd_disable, iwlwifi_mod_params.uapsd_disable, uint, 0644);
 MODULE_PARM_DESC(uapsd_disable,
 		 "disable U-APSD functionality bitmap 1: BSS 2: P2P Client (default: 3)");
-module_param_named(enable_ini, iwlwifi_mod_params.enable_ini,
-		   bool, S_IRUGO | S_IWUSR);
+
+#if defined(__linux__)
+static int enable_ini_set(const char *arg, const struct kernel_param *kp)
+{
+	int ret = 0;
+	bool res;
+	__u32 new_enable_ini;
+
+	/* in case the argument type is a number */
+	ret = kstrtou32(arg, 0, &new_enable_ini);
+	if (!ret) {
+		if (new_enable_ini > ENABLE_INI) {
+			pr_err("enable_ini cannot be %d, in range 0-16\n", new_enable_ini);
+			return -EINVAL;
+		}
+		goto out;
+	}
+
+	/* in case the argument type is boolean */
+	ret = kstrtobool(arg, &res);
+	if (ret)
+		return ret;
+	new_enable_ini = (res ? ENABLE_INI : 0);
+
+out:
+	iwlwifi_mod_params.enable_ini = new_enable_ini;
+	return 0;
+}
+
+static const struct kernel_param_ops enable_ini_ops = {
+	.set = enable_ini_set
+};
+
+module_param_cb(enable_ini, &enable_ini_ops, &iwlwifi_mod_params.enable_ini, 0644);
 MODULE_PARM_DESC(enable_ini,
-		 "Enable debug INI TLV FW debug infrastructure (default: true");
+		 "0:disable, 1-15:FW_DBG_PRESET Values, 16:enabled without preset value defined,"
+		 "Debug INI TLV FW debug infrastructure (default: 16)");
+#endif
 
 /*
  * set bt_coex_active to true, uCode will do kill/defer

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
-/*  Copyright (c) 2021, Intel Corporation
+/*  Copyright (c) 2022, Intel Corporation
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -269,14 +269,7 @@ static struct if_shared_ctx ice_sctx = {
 	.isc_ntxd_default = {ICE_DEFAULT_DESC_COUNT},
 };
 
-/**
- * @var ice_devclass
- * @brief ice driver device class
- *
- * device class used to setup the ice driver module kobject class.
- */
-devclass_t ice_devclass;
-DRIVER_MODULE(ice, pci, ice_driver, ice_devclass, ice_module_event_handler, 0);
+DRIVER_MODULE(ice, pci, ice_driver, ice_module_event_handler, NULL);
 
 MODULE_VERSION(ice, 1);
 MODULE_DEPEND(ice, pci, 1, 1, 1);
@@ -480,6 +473,8 @@ ice_if_attach_pre(if_ctx_t ctx)
 	/* Setup ControlQ lengths */
 	ice_set_ctrlq_len(hw);
 
+reinit_hw:
+
 	fw_mode = ice_get_fw_mode(hw);
 	if (fw_mode == ICE_FW_MODE_REC) {
 		device_printf(dev, "Firmware recovery mode detected. Limiting functionality. Refer to Intel(R) Ethernet Adapters and Devices User Guide for details on firmware recovery mode.\n");
@@ -514,12 +509,22 @@ ice_if_attach_pre(if_ctx_t ctx)
 		goto free_pci_mapping;
 	}
 
+	ice_init_device_features(sc);
+
 	/* Notify firmware of the device driver version */
 	err = ice_send_version(sc);
 	if (err)
 		goto deinit_hw;
 
-	ice_load_pkg_file(sc);
+	/*
+	 * Success indicates a change was made that requires a reinitialization
+	 * of the hardware
+	 */
+	err = ice_load_pkg_file(sc);
+	if (err == ICE_SUCCESS) {
+		ice_deinit_hw(hw);
+		goto reinit_hw;
+	}
 
 	err = ice_init_link_events(sc);
 	if (err) {
@@ -528,9 +533,19 @@ ice_if_attach_pre(if_ctx_t ctx)
 		goto deinit_hw;
 	}
 
-	ice_print_nvm_version(sc);
+	/* Initialize VLAN mode in FW; if dual VLAN mode is supported by the package
+	 * and firmware, this will force them to use single VLAN mode.
+	 */
+	status = ice_set_vlan_mode(hw);
+	if (status) {
+		err = EIO;
+		device_printf(dev, "Unable to initialize VLAN mode, err %s aq_err %s\n",
+			      ice_status_str(status),
+			      ice_aq_str(hw->adminq.sq_last_status));
+		goto deinit_hw;
+	}
 
-	ice_init_device_features(sc);
+	ice_print_nvm_version(sc);
 
 	/* Setup the MAC address */
 	iflib_set_mac(ctx, hw->port_info->mac.lan_addr);
@@ -682,12 +697,14 @@ ice_update_link_status(struct ice_softc *sc, bool update_media)
 			ice_set_default_local_lldp_mib(sc);
 
 			iflib_link_state_change(sc->ctx, LINK_STATE_UP, baudrate);
+			ice_rdma_link_change(sc, LINK_STATE_UP, baudrate);
 
 			ice_link_up_msg(sc);
 
 			update_media = true;
 		} else { /* link is down */
 			iflib_link_state_change(sc->ctx, LINK_STATE_DOWN, 0);
+			ice_rdma_link_change(sc, LINK_STATE_DOWN, 0);
 
 			update_media = true;
 		}
@@ -734,7 +751,7 @@ ice_if_attach_post(if_ctx_t ctx)
 	 */
 
 	sc->ifp = ifp;
-	sc->scctx->isc_max_frame_size = ifp->if_mtu +
+	sc->scctx->isc_max_frame_size = if_getmtu(ifp) +
 		ETHER_HDR_LEN + ETHER_CRC_LEN + ETHER_VLAN_ENCAP_LEN;
 
 	/*
@@ -794,6 +811,10 @@ ice_if_attach_post(if_ctx_t ctx)
 
 	/* Enable ITR 0 right away, so that we can handle admin interrupts */
 	ice_enable_intr(&sc->hw, sc->irqvs[0].me);
+
+	err = ice_rdma_pf_attach(sc);
+	if (err)
+		return (err);
 
 	/* Start the admin timer */
 	mtx_lock(&sc->admin_mtx);
@@ -891,6 +912,8 @@ ice_if_detach(if_ctx_t ctx)
 	mtx_unlock(&sc->admin_mtx);
 	mtx_destroy(&sc->admin_mtx);
 
+	ice_rdma_pf_detach(sc);
+
 	/* Free allocated media types */
 	ifmedia_removeall(sc->media);
 
@@ -970,7 +993,7 @@ ice_if_tx_queues_alloc(if_ctx_t ctx, caddr_t *vaddrs, uint64_t *paddrs,
 
 	/* Allocate queue structure memory */
 	if (!(vsi->tx_queues =
-	      (struct ice_tx_queue *) malloc(sizeof(struct ice_tx_queue) * ntxqsets, M_ICE, M_WAITOK | M_ZERO))) {
+	      (struct ice_tx_queue *) malloc(sizeof(struct ice_tx_queue) * ntxqsets, M_ICE, M_NOWAIT | M_ZERO))) {
 		device_printf(sc->dev, "Unable to allocate Tx queue memory\n");
 		return (ENOMEM);
 	}
@@ -978,7 +1001,7 @@ ice_if_tx_queues_alloc(if_ctx_t ctx, caddr_t *vaddrs, uint64_t *paddrs,
 	/* Allocate report status arrays */
 	for (i = 0, txq = vsi->tx_queues; i < ntxqsets; i++, txq++) {
 		if (!(txq->tx_rsq =
-		      (uint16_t *) malloc(sizeof(uint16_t) * sc->scctx->isc_ntxd[0], M_ICE, M_WAITOK))) {
+		      (uint16_t *) malloc(sizeof(uint16_t) * sc->scctx->isc_ntxd[0], M_ICE, M_NOWAIT))) {
 			device_printf(sc->dev, "Unable to allocate tx_rsq memory\n");
 			err = ENOMEM;
 			goto free_tx_queues;
@@ -1062,7 +1085,7 @@ ice_if_rx_queues_alloc(if_ctx_t ctx, caddr_t *vaddrs, uint64_t *paddrs,
 
 	/* Allocate queue structure memory */
 	if (!(vsi->rx_queues =
-	      (struct ice_rx_queue *) malloc(sizeof(struct ice_rx_queue) * nrxqsets, M_ICE, M_WAITOK | M_ZERO))) {
+	      (struct ice_rx_queue *) malloc(sizeof(struct ice_rx_queue) * nrxqsets, M_ICE, M_NOWAIT | M_ZERO))) {
 		device_printf(sc->dev, "Unable to allocate Rx queue memory\n");
 		return (ENOMEM);
 	}
@@ -1248,7 +1271,7 @@ ice_msix_admin(void *arg)
 		 * soon as the driver has determined that the hardware is out
 		 * of reset.
 		 *
-		 * If the driver wishes to trigger a reqest, it can set one of
+		 * If the driver wishes to trigger a request, it can set one of
 		 * the ICE_STATE_RESET_*_REQ bits, which will trigger the
 		 * correct type of reset.
 		 */
@@ -1315,6 +1338,7 @@ ice_allocate_msix(struct ice_softc *sc)
 	cpuset_t cpus;
 	int bar, queues, vectors, requested;
 	int err = 0;
+	int rdma;
 
 	/* Allocate the MSI-X bar */
 	bar = scctx->isc_msix_bar;
@@ -1360,11 +1384,24 @@ ice_allocate_msix(struct ice_softc *sc)
 	queues = imin(queues, sc->ifc_sysctl_ntxqs ?: scctx->isc_ntxqsets);
 	queues = imin(queues, sc->ifc_sysctl_nrxqs ?: scctx->isc_nrxqsets);
 
+	if (ice_is_bit_set(sc->feat_cap, ICE_FEATURE_RDMA)) {
+		/*
+		 * Choose a number of RDMA vectors based on the number of CPUs
+		 * up to a maximum
+		 */
+		rdma = min(CPU_COUNT(&cpus), ICE_RDMA_MAX_MSIX);
+
+		/* Further limit by the user configurable tunable */
+		rdma = min(rdma, ice_rdma_max_msix);
+	} else {
+		rdma = 0;
+	}
+
 	/*
 	 * Determine the number of vectors to request. Note that we also need
 	 * to allocate one vector for administrative tasks.
 	 */
-	requested = queues + 1;
+	requested = rdma + queues + 1;
 
 	vectors = requested;
 
@@ -1383,6 +1420,23 @@ ice_allocate_msix(struct ice_softc *sc)
 			      requested, vectors);
 
 		/*
+		 * The OS didn't grant us the requested number of vectors.
+		 * Check to see if we can reduce demands by limiting the
+		 * number of vectors allocated to certain features.
+		 */
+
+		if (rdma >= diff) {
+			/* Reduce the number of RDMA vectors we reserve */
+			rdma -= diff;
+			diff = 0;
+		} else {
+			/* Disable RDMA and reduce the difference */
+			ice_clear_bit(ICE_FEATURE_RDMA, sc->feat_cap);
+			diff -= rdma;
+			rdma = 0;
+		}
+
+		/*
 		 * If we still have a difference, we need to reduce the number
 		 * of queue pairs.
 		 *
@@ -1399,6 +1453,9 @@ ice_allocate_msix(struct ice_softc *sc)
 	}
 
 	device_printf(dev, "Using %d Tx and Rx queues\n", queues);
+	if (rdma)
+		device_printf(dev, "Reserving %d MSI-X interrupts for iRDMA\n",
+			      rdma);
 	device_printf(dev, "Using MSI-X interrupts with %d vectors\n",
 		      vectors);
 
@@ -1407,6 +1464,8 @@ ice_allocate_msix(struct ice_softc *sc)
 	scctx->isc_ntxqsets = queues;
 	scctx->isc_intr = IFLIB_INTR_MSIX;
 
+	sc->irdma_vectors = rdma;
+
 	/* Interrupt allocation tracking isn't required in recovery mode,
 	 * since neither RDMA nor VFs are enabled.
 	 */
@@ -1414,11 +1473,19 @@ ice_allocate_msix(struct ice_softc *sc)
 		return (0);
 
 	/* Keep track of which interrupt indices are being used for what */
-	sc->lan_vectors = vectors;
+	sc->lan_vectors = vectors - rdma;
 	err = ice_resmgr_assign_contiguous(&sc->imgr, sc->pf_imap, sc->lan_vectors);
 	if (err) {
 		device_printf(dev, "Unable to assign PF interrupt mapping: %s\n",
 			      ice_err_str(err));
+		goto err_pci_release_msi;
+	}
+	err = ice_resmgr_assign_contiguous(&sc->imgr, sc->rdma_imap, rdma);
+	if (err) {
+		device_printf(dev, "Unable to assign PF RDMA interrupt mapping: %s\n",
+			      ice_err_str(err));
+		ice_resmgr_release_map(&sc->imgr, sc->pf_imap,
+					    sc->lan_vectors);
 		goto err_pci_release_msi;
 	}
 
@@ -1923,6 +1990,8 @@ ice_if_init(if_ctx_t ctx)
 	/* Configure promiscuous mode */
 	ice_if_promisc_set(ctx, if_getflags(sc->ifp));
 
+	ice_rdma_pf_init(sc);
+
 	ice_set_state(&sc->state, ICE_STATE_DRIVER_INITIALIZED);
 	return;
 
@@ -2068,6 +2137,9 @@ ice_transition_recovery_mode(struct ice_softc *sc)
 	/* Request that the device be re-initialized */
 	ice_request_stack_reinit(sc);
 
+	ice_rdma_pf_detach(sc);
+	ice_clear_bit(ICE_FEATURE_RDMA, sc->feat_cap);
+
 	ice_clear_bit(ICE_FEATURE_SRIOV, sc->feat_en);
 	ice_clear_bit(ICE_FEATURE_SRIOV, sc->feat_cap);
 
@@ -2112,6 +2184,9 @@ ice_transition_safe_mode(struct ice_softc *sc)
 	/* Indicate that we are in Safe mode */
 	ice_set_bit(ICE_FEATURE_SAFE_MODE, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_SAFE_MODE, sc->feat_en);
+
+	ice_rdma_pf_detach(sc);
+	ice_clear_bit(ICE_FEATURE_RDMA, sc->feat_cap);
 
 	ice_clear_bit(ICE_FEATURE_SRIOV, sc->feat_en);
 	ice_clear_bit(ICE_FEATURE_SRIOV, sc->feat_cap);
@@ -2223,11 +2298,14 @@ ice_prepare_for_reset(struct ice_softc *sc)
 	if (ice_testandset_state(&sc->state, ICE_STATE_PREPARED_FOR_RESET))
 		return;
 
-	log(LOG_INFO, "%s: preparing to reset device logic\n", sc->ifp->if_xname);
+	log(LOG_INFO, "%s: preparing to reset device logic\n", if_name(sc->ifp));
 
 	/* In recovery mode, hardware is not initialized */
 	if (ice_test_state(&sc->state, ICE_STATE_RECOVERY_MODE))
 		return;
+
+	/* stop the RDMA client */
+	ice_rdma_pf_stop(sc);
 
 	/* Release the main PF VSI queue mappings */
 	ice_resmgr_release_map(&sc->tx_qmgr, sc->pf_vsi.tx_qmap,
@@ -2240,7 +2318,7 @@ ice_prepare_for_reset(struct ice_softc *sc)
 	if (hw->port_info)
 		ice_sched_clear_port(hw->port_info);
 
-	ice_shutdown_all_ctrlq(hw);
+	ice_shutdown_all_ctrlq(hw, false);
 }
 
 /**
@@ -2322,7 +2400,7 @@ ice_rebuild_recovery_mode(struct ice_softc *sc)
 	/* Now that the rebuild is finished, we're no longer prepared to reset */
 	ice_clear_state(&sc->state, ICE_STATE_PREPARED_FOR_RESET);
 
-	log(LOG_INFO, "%s: device rebuild successful\n", sc->ifp->if_xname);
+	log(LOG_INFO, "%s: device rebuild successful\n", if_name(sc->ifp));
 
 	/* In order to completely restore device functionality, the iflib core
 	 * needs to be reset. We need to request an iflib reset. Additionally,
@@ -2347,6 +2425,7 @@ ice_rebuild(struct ice_softc *sc)
 {
 	struct ice_hw *hw = &sc->hw;
 	device_t dev = sc->dev;
+	enum ice_ddp_state pkg_state;
 	enum ice_status status;
 	int err;
 
@@ -2441,10 +2520,9 @@ ice_rebuild(struct ice_softc *sc)
 
 	/* If we previously loaded the package, it needs to be reloaded now */
 	if (!ice_is_bit_set(sc->feat_en, ICE_FEATURE_SAFE_MODE)) {
-		status = ice_init_pkg(hw, hw->pkg_copy, hw->pkg_size);
-		if (status) {
-			ice_log_pkg_init(sc, &status);
-
+		pkg_state = ice_init_pkg(hw, hw->pkg_copy, hw->pkg_size);
+		if (!ice_is_init_pkg_successful(pkg_state)) {
+			ice_log_pkg_init(sc, pkg_state);
 			ice_transition_safe_mode(sc);
 		}
 	}
@@ -2487,6 +2565,8 @@ ice_rebuild(struct ice_softc *sc)
 	ice_get_link_status(sc->hw.port_info, &sc->link_up);
 	ice_update_link_status(sc, true);
 
+	/* RDMA interface will be restarted by the stack re-init */
+
 	/* Configure interrupt causes for the administrative interrupt */
 	ice_configure_misc_interrupts(sc);
 
@@ -2496,7 +2576,7 @@ ice_rebuild(struct ice_softc *sc)
 	/* Now that the rebuild is finished, we're no longer prepared to reset */
 	ice_clear_state(&sc->state, ICE_STATE_PREPARED_FOR_RESET);
 
-	log(LOG_INFO, "%s: device rebuild successful\n", sc->ifp->if_xname);
+	log(LOG_INFO, "%s: device rebuild successful\n", if_name(sc->ifp));
 
 	/* In order to completely restore device functionality, the iflib core
 	 * needs to be reset. We need to request an iflib reset. Additionally,
@@ -2518,7 +2598,8 @@ err_release_queue_allocations:
 err_sched_cleanup:
 	ice_sched_cleanup_all(hw);
 err_shutdown_ctrlq:
-	ice_shutdown_all_ctrlq(hw);
+	ice_shutdown_all_ctrlq(hw, false);
+	ice_clear_state(&sc->state, ICE_STATE_PREPARED_FOR_RESET);
 	ice_set_state(&sc->state, ICE_STATE_RESET_FAILED);
 	device_printf(dev, "Driver rebuild failed, please reload the device driver\n");
 }
@@ -2630,26 +2711,26 @@ ice_handle_pf_reset_request(struct ice_softc *sc)
 static void
 ice_init_device_features(struct ice_softc *sc)
 {
-	/*
-	 * A failed pkg file download triggers safe mode, disabling advanced
-	 * device feature support
-	 */
-	if (ice_is_bit_set(sc->feat_en, ICE_FEATURE_SAFE_MODE))
-		return;
-
 	/* Set capabilities that all devices support */
 	ice_set_bit(ICE_FEATURE_SRIOV, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_RSS, sc->feat_cap);
+	ice_set_bit(ICE_FEATURE_RDMA, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_LENIENT_LINK_MODE, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_LINK_MGMT_VER_1, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_LINK_MGMT_VER_2, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_HEALTH_STATUS, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_FW_LOGGING, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_HAS_PBA, sc->feat_cap);
+	ice_set_bit(ICE_FEATURE_DCB, sc->feat_cap);
+	ice_set_bit(ICE_FEATURE_TX_BALANCE, sc->feat_cap);
 
 	/* Disable features due to hardware limitations... */
 	if (!sc->hw.func_caps.common_cap.rss_table_size)
 		ice_clear_bit(ICE_FEATURE_RSS, sc->feat_cap);
+	if (!sc->hw.func_caps.common_cap.iwarp || !ice_enable_irdma)
+		ice_clear_bit(ICE_FEATURE_RDMA, sc->feat_cap);
+	if (!sc->hw.func_caps.common_cap.dcb)
+		ice_clear_bit(ICE_FEATURE_DCB, sc->feat_cap);
 	/* Disable features due to firmware limitations... */
 	if (!ice_is_fw_health_report_supported(&sc->hw))
 		ice_clear_bit(ICE_FEATURE_HEALTH_STATUS, sc->feat_cap);
@@ -2668,6 +2749,10 @@ ice_init_device_features(struct ice_softc *sc)
 	/* RSS is always enabled for iflib */
 	if (ice_is_bit_set(sc->feat_cap, ICE_FEATURE_RSS))
 		ice_set_bit(ICE_FEATURE_RSS, sc->feat_en);
+
+	/* Disable features based on sysctl settings */
+	if (!ice_tx_balance_en)
+		ice_clear_bit(ICE_FEATURE_TX_BALANCE, sc->feat_cap);
 }
 
 /**
@@ -2802,6 +2887,8 @@ ice_if_stop(if_ctx_t ctx)
 		return;
 	}
 
+	ice_rdma_pf_stop(sc);
+
 	/* Remove the MAC filters, stop Tx, and stop Rx. We don't check the
 	 * return of these functions because there's nothing we can really do
 	 * if they fail, and the functions already print error messages.
@@ -2929,6 +3016,8 @@ ice_if_priv_ioctl(if_ctx_t ctx, u_long command, caddr_t data)
 	switch (ifd->ifd_cmd) {
 	case ICE_NVM_ACCESS:
 		return ice_handle_nvm_access_ioctl(sc, ifd);
+	case ICE_DEBUG_DUMP:
+		return ice_handle_debug_dump_ioctl(sc, ifd);
 	default:
 		return EINVAL;
 	}

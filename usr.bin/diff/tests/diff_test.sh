@@ -7,6 +7,7 @@ atf_test_case header_ns
 atf_test_case ifdef
 atf_test_case group_format
 atf_test_case side_by_side
+atf_test_case side_by_side_tabbed
 atf_test_case brief_format
 atf_test_case b230049
 atf_test_case stripcr_o
@@ -145,6 +146,23 @@ side_by_side_body()
 	    diff -W 65 -y --suppress-common-lines A B
 }
 
+side_by_side_tabbed_body()
+{
+	file_a=$(atf_get_srcdir)/side_by_side_tabbed_a.in
+	file_b=$(atf_get_srcdir)/side_by_side_tabbed_b.in
+
+	atf_check -o save:diffout -s not-exit:0 \
+	    diff -y ${file_a} ${file_b}
+	atf_check -o save:diffout_expanded -s not-exit:0 \
+	    diff -yt ${file_a} ${file_b}
+
+	atf_check -o not-empty grep -Ee 'file A.+file B' diffout
+	atf_check -o not-empty grep -Ee 'file A.+file B' diffout_expanded
+
+	atf_check -o not-empty grep -Ee 'tabs.+tabs' diffout
+	atf_check -o not-empty grep -Ee 'tabs.+tabs' diffout_expanded
+}
+
 brief_format_body()
 {
 	atf_check mkdir A B
@@ -243,17 +261,15 @@ label_body()
 
 report_identical_head()
 {
-	atf_set "require.config" unprivileged_user
-	atf_set "require.user" root
+	atf_set "require.user" unprivileged
 }
 report_identical_body()
 {
-	UNPRIVILEGED_USER=$(atf_config_get unprivileged_user)
 	printf "\tA\n" > A
 	printf "\tB\n" > B
 	chmod -r B
 	atf_check -s exit:2 -e inline:"diff: B: Permission denied\n" \
-		-o empty su -m "$UNPRIVILEGED_USER" -c 'diff -s A B'
+		-o empty diff -s A B
 }
 
 non_regular_file_body()
@@ -345,6 +361,7 @@ atf_init_test_cases()
 	atf_add_test_case ifdef
 	atf_add_test_case group_format
 	atf_add_test_case side_by_side
+	atf_add_test_case side_by_side_tabbed
 	atf_add_test_case brief_format
 	atf_add_test_case b230049
 	atf_add_test_case stripcr_o

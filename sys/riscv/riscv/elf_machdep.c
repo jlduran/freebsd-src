@@ -66,7 +66,6 @@ u_long elf_hwcap;
 static struct sysentvec elf64_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
-	.sv_transtrap	= NULL,
 	.sv_fixup	= __elfN(freebsd_fixup),
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
@@ -172,7 +171,7 @@ elf64_dump_thread(struct thread *td, void *dst, size_t *off)
 }
 
 /*
- * Following 4 functions are used to manupilate bits on 32bit interger value.
+ * Following 4 functions are used to manipulate bits on 32bit integer value.
  * FIXME: I implemetend for ease-to-understand rather than for well-optimized.
  */
 static uint32_t
@@ -341,15 +340,25 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		break;
 
 	case R_RISCV_64:
+		error = lookup(lf, symidx, 1, &addr);
+		if (error != 0)
+			return (-1);
+
+		before64 = *where;
+		*where = addr + addend;
+		if (debug_kld)
+			printf("%p %c %-24s %016lx -> %016lx\n", where,
+			    (local ? 'l' : 'g'), reloctype_to_str(rtype),
+			    before64, *where);
+		break;
+
 	case R_RISCV_JUMP_SLOT:
 		error = lookup(lf, symidx, 1, &addr);
 		if (error != 0)
 			return (-1);
 
-		val = addr;
 		before64 = *where;
-		if (*where != val)
-			*where = val;
+		*where = addr;
 		if (debug_kld)
 			printf("%p %c %-24s %016lx -> %016lx\n", where,
 			    (local ? 'l' : 'g'), reloctype_to_str(rtype),

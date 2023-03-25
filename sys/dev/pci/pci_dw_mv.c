@@ -221,6 +221,8 @@ pci_mv_probe(device_t dev)
 static int
 pci_mv_attach(device_t dev)
 {
+	struct resource_map_request req;
+	struct resource_map map;
 	struct pci_mv_softc *sc;
 	phandle_t node;
 	int rv;
@@ -233,12 +235,22 @@ pci_mv_attach(device_t dev)
 
 	rid = 0;
 	sc->dw_sc.dbi_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
-	    RF_ACTIVE);
+	    RF_ACTIVE | RF_UNMAPPED);
 	if (sc->dw_sc.dbi_res == NULL) {
 		device_printf(dev, "Cannot allocate DBI memory\n");
 		rv = ENXIO;
 		goto out;
 	}
+
+	resource_init_map_request(&req);
+	req.memattr = VM_MEMATTR_DEVICE_NP;
+	rv = bus_map_resource(dev, SYS_RES_MEMORY, sc->dw_sc.dbi_res, &req,
+	    &map);
+	if (rv != 0) {
+		device_printf(dev, "could not map memory.\n");
+		return (rv);
+	}
+	rman_set_mapping(sc->dw_sc.dbi_res, &map);
 
 	/* PCI interrupt */
 	rid = 0;
@@ -315,6 +327,4 @@ static device_method_t pci_mv_methods[] = {
 
 DEFINE_CLASS_1(pcib, pci_mv_driver, pci_mv_methods,
     sizeof(struct pci_mv_softc), pci_dw_driver);
-static devclass_t pci_mv_devclass;
-DRIVER_MODULE( pci_mv, simplebus, pci_mv_driver, pci_mv_devclass,
-    NULL, NULL);
+DRIVER_MODULE( pci_mv, simplebus, pci_mv_driver, NULL, NULL);

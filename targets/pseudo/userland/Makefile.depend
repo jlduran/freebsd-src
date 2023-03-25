@@ -147,6 +147,7 @@ DIRDEPS+= \
 	usr.bin/basename \
 	usr.bin/bc \
 	usr.bin/biff \
+	usr.bin/bintrans \
 	usr.bin/bluetooth/bthost \
 	usr.bin/bluetooth/btsockstat \
 	usr.bin/bluetooth/rfcomm_sppd \
@@ -365,8 +366,6 @@ DIRDEPS+= \
 	usr.bin/usbhidaction \
 	usr.bin/usbhidctl \
 	usr.bin/users \
-	usr.bin/uudecode \
-	usr.bin/uuencode \
 	usr.bin/vacation \
 	usr.bin/vgrind \
 	usr.bin/vi \
@@ -701,7 +700,6 @@ DIRDEPS+= \
 	usr.sbin/timed/timedc \
 	usr.sbin/traceroute \
 	usr.sbin/traceroute6 \
-	usr.sbin/trpt \
 	usr.sbin/tzsetup \
 	usr.sbin/uathload \
 	usr.sbin/uefisign \
@@ -786,7 +784,6 @@ DIRDEPS.i386= \
 	sbin/bsdlabel \
 	sbin/fdisk \
 	sbin/nvmecontrol \
-	sbin/sconfig \
 	usr.sbin/apm \
 	usr.sbin/apmd \
 	usr.sbin/btxld \

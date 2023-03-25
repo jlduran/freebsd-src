@@ -32,6 +32,7 @@ __FBSDID("$FreeBSD$");
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/asan.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
@@ -134,7 +135,7 @@ int
 cpu_fetch_syscall_args(struct thread *td)
 {
 	struct proc *p;
-	register_t *ap, *dst_ap;
+	syscallarg_t *ap, *dst_ap;
 	struct syscall_args *sa;
 
 	p = td->td_proc;
@@ -159,7 +160,7 @@ cpu_fetch_syscall_args(struct thread *td)
 	KASSERT(sa->callp->sy_narg <= nitems(sa->args),
 	    ("Syscall %d takes too many arguments", sa->code));
 
-	memcpy(dst_ap, ap, (nitems(sa->args) - 1) * sizeof(register_t));
+	memcpy(dst_ap, ap, (nitems(sa->args) - 1) * sizeof(*dst_ap));
 
 	td->td_retval[0] = 0;
 	td->td_retval[1] = 0;
@@ -212,7 +213,7 @@ align_abort(struct thread *td, struct trapframe *frame, uint64_t esr,
 	if (!lower) {
 		print_registers(frame);
 		print_gp_register("far", far);
-		printf(" esr:         %.8lx\n", esr);
+		printf(" esr: %.16lx\n", esr);
 		panic("Misaligned access from kernel space!");
 	}
 
@@ -241,12 +242,17 @@ external_abort(struct thread *td, struct trapframe *frame, uint64_t esr,
 	panic("Unhandled EL%d external data abort", lower ? 0: 1);
 }
 
-static void
+/*
+ * It is unsafe to access the stack canary value stored in "td" until
+ * kernel map translation faults are handled, see the pmap_klookup() call below.
+ * Thus, stack-smashing detection with per-thread canaries must be disabled in
+ * this function.
+ */
+static void NO_PERTHREAD_SSP
 data_abort(struct thread *td, struct trapframe *frame, uint64_t esr,
     uint64_t far, int lower)
 {
 	struct vm_map *map;
-	struct proc *p;
 	struct pcb *pcb;
 	vm_prot_t ftype;
 	int error, sig, ucode;
@@ -268,28 +274,44 @@ data_abort(struct thread *td, struct trapframe *frame, uint64_t esr,
 	}
 #endif
 
-	pcb = td->td_pcb;
-	p = td->td_proc;
-	if (lower)
-		map = &p->p_vmspace->vm_map;
-	else {
-		intr_enable();
-
+	if (lower) {
+		map = &td->td_proc->p_vmspace->vm_map;
+	} else if (!ADDR_IS_CANONICAL(far)) {
 		/* We received a TBI/PAC/etc. fault from the kernel */
-		if (!ADDR_IS_CANONICAL(far)) {
-			error = KERN_INVALID_ADDRESS;
-			goto bad_far;
+		error = KERN_INVALID_ADDRESS;
+		goto bad_far;
+	} else if (ADDR_IS_KERNEL(far)) {
+		/*
+		 * Handle a special case: the data abort was caused by accessing
+		 * a thread structure while its mapping was being promoted or
+		 * demoted, as a consequence of the break-before-make rule.  It
+		 * is not safe to enable interrupts or dereference "td" before
+		 * this case is handled.
+		 *
+		 * In principle, if pmap_klookup() fails, there is no need to
+		 * call pmap_fault() below, but avoiding that call is not worth
+		 * the effort.
+		 */
+		if (ESR_ELx_EXCEPTION(esr) == EXCP_DATA_ABORT) {
+			switch (esr & ISS_DATA_DFSC_MASK) {
+			case ISS_DATA_DFSC_TF_L0:
+			case ISS_DATA_DFSC_TF_L1:
+			case ISS_DATA_DFSC_TF_L2:
+			case ISS_DATA_DFSC_TF_L3:
+				if (pmap_klookup(far, NULL))
+					return;
+				break;
+			}
 		}
-
-		/* The top bit tells us which range to use */
-		if (ADDR_IS_KERNEL(far)) {
+		intr_enable();
+		map = kernel_map;
+	} else {
+		intr_enable();
+		map = &td->td_proc->p_vmspace->vm_map;
+		if (map == NULL)
 			map = kernel_map;
-		} else {
-			map = &p->p_vmspace->vm_map;
-			if (map == NULL)
-				map = kernel_map;
-		}
 	}
+	pcb = td->td_pcb;
 
 	/*
 	 * Try to handle translation, access flag, and permission faults.
@@ -308,7 +330,7 @@ data_abort(struct thread *td, struct trapframe *frame, uint64_t esr,
 	    WARN_GIANTOK, NULL, "Kernel page fault") != 0) {
 		print_registers(frame);
 		print_gp_register("far", far);
-		printf(" esr:         %.8lx\n", esr);
+		printf(" esr: %.16lx\n", esr);
 		panic("data abort in critical section or under mutex");
 	}
 
@@ -318,19 +340,27 @@ data_abort(struct thread *td, struct trapframe *frame, uint64_t esr,
 		ftype = VM_PROT_EXECUTE;
 		break;
 	default:
-		ftype = (esr & ISS_DATA_WnR) == 0 ? VM_PROT_READ :
-		    VM_PROT_WRITE;
+		/*
+		 * If the exception was because of a read or cache operation
+		 * pass a read fault type into the vm code. Cache operations
+		 * need read permission but will set the WnR flag when the
+		 * memory is unmapped.
+		 */
+		if ((esr & ISS_DATA_WnR) == 0 || (esr & ISS_DATA_CM) != 0)
+			ftype = VM_PROT_READ;
+		else
+			ftype = VM_PROT_WRITE;
 		break;
 	}
 
 	/* Fault in the page. */
 	error = vm_fault_trap(map, far, ftype, VM_FAULT_NORMAL, &sig, &ucode);
 	if (error != KERN_SUCCESS) {
-bad_far:
 		if (lower) {
 			call_trapsignal(td, sig, ucode, (void *)far,
 			    ESR_ELx_EXCEPTION(esr));
 		} else {
+bad_far:
 			if (td->td_intr_nesting_level == 0 &&
 			    pcb->pcb_onfault != 0) {
 				frame->tf_x[0] = error;
@@ -341,7 +371,7 @@ bad_far:
 			printf("Fatal data abort:\n");
 			print_registers(frame);
 			print_gp_register("far", far);
-			printf(" esr:         %.8lx\n", esr);
+			printf(" esr: %.16lx\n", esr);
 
 #ifdef KDB
 			if (debugger_on_trap) {
@@ -400,16 +430,44 @@ print_registers(struct trapframe *frame)
 	printf("  sp: %16lx\n", frame->tf_sp);
 	print_gp_register(" lr", frame->tf_lr);
 	print_gp_register("elr", frame->tf_elr);
-	printf("spsr:         %8x\n", frame->tf_spsr);
+	printf("spsr: %16lx\n", frame->tf_spsr);
 }
 
-void
+#ifdef VFP
+static void
+fpe_trap(struct thread *td, void *addr, uint32_t exception)
+{
+	int code;
+
+	code = FPE_FLTIDO;
+	if ((exception & ISS_FP_TFV) != 0) {
+		if ((exception & ISS_FP_IOF) != 0)
+			code = FPE_FLTINV;
+		else if ((exception & ISS_FP_DZF) != 0)
+			code = FPE_FLTDIV;
+		else if ((exception & ISS_FP_OFF) != 0)
+			code = FPE_FLTOVF;
+		else if ((exception & ISS_FP_UFF) != 0)
+			code = FPE_FLTUND;
+		else if ((exception & ISS_FP_IXF) != 0)
+			code = FPE_FLTRES;
+	}
+	call_trapsignal(td, SIGFPE, code, addr, exception);
+}
+#endif
+
+/*
+ * See the comment above data_abort().
+ */
+void NO_PERTHREAD_SSP
 do_el1h_sync(struct thread *td, struct trapframe *frame)
 {
 	uint32_t exception;
 	uint64_t esr, far;
 	int dfsc;
 
+	kasan_mark(frame, sizeof(*frame), sizeof(*frame), 0);
+	far = frame->tf_far;
 	/* Read the esr register to get the exception details */
 	esr = frame->tf_esr;
 	exception = ESR_ELx_EXCEPTION(esr);
@@ -441,13 +499,12 @@ do_el1h_sync(struct thread *td, struct trapframe *frame)
 #endif
 		{
 			print_registers(frame);
-			printf(" esr:         %.8lx\n", esr);
+			printf(" esr: %.16lx\n", esr);
 			panic("VFP exception in the kernel");
 		}
 		break;
 	case EXCP_INSN_ABORT:
 	case EXCP_DATA_ABORT:
-		far = READ_SPECIALREG(far_el1);
 		dfsc = esr & ISS_DATA_DFSC_MASK;
 		if (dfsc < nitems(abort_handlers) &&
 		    abort_handlers[dfsc] != NULL) {
@@ -455,7 +512,7 @@ do_el1h_sync(struct thread *td, struct trapframe *frame)
 		} else {
 			print_registers(frame);
 			print_gp_register("far", far);
-			printf(" esr:         %.8lx\n", esr);
+			printf(" esr: %.16lx\n", esr);
 			panic("Unhandled EL1 %s abort: %x",
 			    exception == EXCP_INSN_ABORT ? "instruction" :
 			    "data", dfsc);
@@ -486,7 +543,7 @@ do_el1h_sync(struct thread *td, struct trapframe *frame)
 	case EXCP_FPAC:
 		/* We can see this if the authentication on PAC fails */
 		print_registers(frame);
-		printf(" far: %16lx\n", READ_SPECIALREG(far_el1));
+		print_gp_register("far", far);
 		panic("FPAC kernel exception");
 		break;
 	case EXCP_UNKNOWN:
@@ -497,7 +554,7 @@ do_el1h_sync(struct thread *td, struct trapframe *frame)
 		/* FALLTHROUGH */
 	default:
 		print_registers(frame);
-		print_gp_register("far", READ_SPECIALREG(far_el1));
+		print_gp_register("far", far);
 		panic("Unknown kernel exception %x esr_el1 %lx", exception,
 		    esr);
 	}
@@ -516,29 +573,19 @@ do_el0_sync(struct thread *td, struct trapframe *frame)
 	    ("Invalid pcpu address from userland: %p (tpidr %lx)",
 	     get_pcpu(), READ_SPECIALREG(tpidr_el1)));
 
+	kasan_mark(frame, sizeof(*frame), sizeof(*frame), 0);
+	far = frame->tf_far;
 	esr = frame->tf_esr;
 	exception = ESR_ELx_EXCEPTION(esr);
-	switch (exception) {
-	case EXCP_INSN_ABORT_L:
-		far = READ_SPECIALREG(far_el1);
-
+	if (exception == EXCP_INSN_ABORT_L && far > VM_MAXUSER_ADDRESS) {
 		/*
 		 * Userspace may be trying to train the branch predictor to
 		 * attack the kernel. If we are on a CPU affected by this
 		 * call the handler to clear the branch predictor state.
 		 */
-		if (far > VM_MAXUSER_ADDRESS) {
-			bp_harden = PCPU_GET(bp_harden);
-			if (bp_harden != NULL)
-				bp_harden();
-		}
-		break;
-	case EXCP_UNKNOWN:
-	case EXCP_DATA_ABORT_L:
-	case EXCP_DATA_ABORT:
-	case EXCP_WATCHPT_EL0:
-		far = READ_SPECIALREG(far_el1);
-		break;
+		bp_harden = PCPU_GET(bp_harden);
+		if (bp_harden != NULL)
+			bp_harden();
 	}
 	intr_enable();
 
@@ -548,12 +595,24 @@ do_el0_sync(struct thread *td, struct trapframe *frame)
 
 	switch (exception) {
 	case EXCP_FP_SIMD:
-	case EXCP_TRAP_FP:
 #ifdef VFP
 		vfp_restore_state();
 #else
 		panic("VFP exception in userland");
 #endif
+		break;
+	case EXCP_TRAP_FP:
+#ifdef VFP
+		fpe_trap(td, (void *)frame->tf_elr, esr);
+		userret(td, frame);
+#else
+		panic("VFP exception in userland");
+#endif
+		break;
+	case EXCP_SVE:
+		call_trapsignal(td, SIGILL, ILL_ILLTRP, (void *)frame->tf_elr,
+		    exception);
+		userret(td, frame);
 		break;
 	case EXCP_SVC32:
 	case EXCP_SVC64:
@@ -569,7 +628,7 @@ do_el0_sync(struct thread *td, struct trapframe *frame)
 		else {
 			print_registers(frame);
 			print_gp_register("far", far);
-			printf(" esr:         %.8lx\n", esr);
+			printf(" esr: %.16lx\n", esr);
 			panic("Unhandled EL0 %s abort: %x",
 			    exception == EXCP_INSN_ABORT_L ? "instruction" :
 			    "data", dfsc);
@@ -656,12 +715,13 @@ do_serror(struct trapframe *frame)
 {
 	uint64_t esr, far;
 
-	far = READ_SPECIALREG(far_el1);
+	kasan_mark(frame, sizeof(*frame), sizeof(*frame), 0);
+	far = frame->tf_far;
 	esr = frame->tf_esr;
 
 	print_registers(frame);
 	print_gp_register("far", far);
-	printf(" esr:         %.8lx\n", esr);
+	printf(" esr: %.16lx\n", esr);
 	panic("Unhandled System Error");
 }
 
@@ -670,11 +730,12 @@ unhandled_exception(struct trapframe *frame)
 {
 	uint64_t esr, far;
 
-	far = READ_SPECIALREG(far_el1);
+	kasan_mark(frame, sizeof(*frame), sizeof(*frame), 0);
+	far = frame->tf_far;
 	esr = frame->tf_esr;
 
 	print_registers(frame);
 	print_gp_register("far", far);
-	printf(" esr:         %.8lx\n", esr);
+	printf(" esr: %.16lx\n", esr);
 	panic("Unhandled exception");
 }

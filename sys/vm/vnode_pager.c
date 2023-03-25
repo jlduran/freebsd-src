@@ -155,7 +155,6 @@ vnode_create_vobject(struct vnode *vp, off_t isize, struct thread *td)
 {
 	vm_object_t object;
 	vm_ooffset_t size = isize;
-	struct vattr va;
 	bool last;
 
 	if (!vn_isdisk(vp) && vn_canvmio(vp) == FALSE)
@@ -169,9 +168,8 @@ vnode_create_vobject(struct vnode *vp, off_t isize, struct thread *td)
 		if (vn_isdisk(vp)) {
 			size = IDX_TO_OFF(INT_MAX);
 		} else {
-			if (VOP_GETATTR(vp, &va, td->td_ucred))
+			if (vn_getsize_locked(vp, &size, td->td_ucred) != 0)
 				return (0);
-			size = va.va_size;
 		}
 	}
 
@@ -1290,7 +1288,7 @@ static void
 vnode_pager_putpages(vm_object_t object, vm_page_t *m, int count,
     int flags, int *rtvals)
 {
-	int rtval;
+	int rtval __diagused;
 	struct vnode *vp;
 	int bytes = count * PAGE_SIZE;
 

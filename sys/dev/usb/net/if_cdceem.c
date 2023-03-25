@@ -210,15 +210,13 @@ static driver_t cdceem_driver = {
 	.size = sizeof(struct cdceem_softc),
 };
 
-static devclass_t cdceem_devclass;
-
 static const STRUCT_USB_DUAL_ID cdceem_dual_devs[] = {
 	{USB_IFACE_CLASS(UICLASS_CDC),
 		USB_IFACE_SUBCLASS(UISUBCLASS_ETHERNET_EMULATION_MODEL),
 		0},
 };
 
-DRIVER_MODULE(cdceem, uhub, cdceem_driver, cdceem_devclass, NULL, NULL);
+DRIVER_MODULE(cdceem, uhub, cdceem_driver, NULL, NULL);
 MODULE_VERSION(cdceem, 1);
 MODULE_DEPEND(cdceem, uether, 1, 1, 1);
 MODULE_DEPEND(cdceem, usb, 1, 1, 1);
@@ -425,7 +423,7 @@ cdceem_handle_data(struct usb_xfer *xfer, uint16_t hdr, int *offp)
 	struct cdceem_softc *sc;
 	struct usb_page_cache *pc;
 	struct usb_ether *ue;
-	struct ifnet *ifp;
+	if_t ifp;
 	struct mbuf *m;
 	uint32_t computed_crc, received_crc;
 	int pktlen;
@@ -648,7 +646,7 @@ cdceem_send_data(struct usb_xfer *xfer, int *offp)
 {
 	struct cdceem_softc *sc;
 	struct usb_page_cache *pc;
-	struct ifnet *ifp;
+	if_t ifp;
 	struct mbuf *m;
 	int maxlen __diagused, off;
 	uint32_t crc;
@@ -660,7 +658,7 @@ cdceem_send_data(struct usb_xfer *xfer, int *offp)
 	ifp = uether_getifp(&sc->sc_ue);
 	maxlen = usbd_xfer_max_len(xfer);
 
-	IFQ_DRV_DEQUEUE(&ifp->if_snd, m);
+	m = if_dequeue(ifp);
 	if (m == NULL) {
 		CDCEEM_DEBUG(sc, "no Data packets to send");
 		return;
@@ -713,7 +711,7 @@ static void
 cdceem_bulk_write_callback(struct usb_xfer *xfer, usb_error_t usb_error)
 {
 	struct cdceem_softc *sc;
-	struct ifnet *ifp;
+	if_t ifp;
 	int actlen, aframes, maxlen __diagused, off;
 
 	sc = usbd_xfer_softc(xfer);
@@ -806,12 +804,12 @@ static void
 cdceem_init(struct usb_ether *ue)
 {
 	struct cdceem_softc *sc;
-	struct ifnet *ifp;
+	if_t ifp;
 
 	sc = uether_getsc(ue);
 	ifp = uether_getifp(ue);
 
-	ifp->if_drv_flags |= IFF_DRV_RUNNING;
+	if_setdrvflagbits(ifp, IFF_DRV_RUNNING, 0);
 
 	if (cdceem_send_echoes)
 		sc->sc_flags = CDCEEM_SC_FLAGS_ECHO_PENDING;
@@ -834,12 +832,12 @@ static void
 cdceem_stop(struct usb_ether *ue)
 {
 	struct cdceem_softc *sc;
-	struct ifnet *ifp;
+	if_t ifp;
 
 	sc = uether_getsc(ue);
 	ifp = uether_getifp(ue);
 
-	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
+	if_setdrvflagbits(ifp, 0, IFF_DRV_RUNNING);
 
 	usbd_transfer_stop(sc->sc_xfer[CDCEEM_BULK_RX]);
 	usbd_transfer_stop(sc->sc_xfer[CDCEEM_BULK_TX]);

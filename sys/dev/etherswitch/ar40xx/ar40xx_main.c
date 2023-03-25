@@ -627,7 +627,7 @@ ar40xx_setport(device_t dev, etherswitch_port_t *p)
 	struct ar40xx_softc *sc = device_get_softc(dev);
 	struct ifmedia *ifm;
 	struct mii_data *mii;
-	struct ifnet *ifp;
+	if_t ifp;
 	int ret;
 
 	if (p->es_port < 0 || p->es_port > sc->sc_info.es_nports)
@@ -955,13 +955,12 @@ static device_method_t ar40xx_methods[] = {
 
 DEFINE_CLASS_0(ar40xx, ar40xx_driver, ar40xx_methods,
     sizeof(struct ar40xx_softc));
-static devclass_t ar40xx_devclass;
 
-DRIVER_MODULE(ar40xx, simplebus, ar40xx_driver, ar40xx_devclass, 0, 0);
-DRIVER_MODULE(ar40xx, ofwbus, ar40xx_driver, ar40xx_devclass, 0, 0);
-DRIVER_MODULE(miibus, ar40xx, miibus_driver, miibus_devclass, 0, 0);
-DRIVER_MODULE(mdio, ar40xx, mdio_driver, mdio_devclass, 0, 0);
-DRIVER_MODULE(etherswitch, ar40xx, etherswitch_driver, etherswitch_devclass, 0, 0);
+DRIVER_MODULE(ar40xx, simplebus, ar40xx_driver, 0, 0);
+DRIVER_MODULE(ar40xx, ofwbus, ar40xx_driver, 0, 0);
+DRIVER_MODULE(miibus, ar40xx, miibus_driver, 0, 0);
+DRIVER_MODULE(mdio, ar40xx, mdio_driver, 0, 0);
+DRIVER_MODULE(etherswitch, ar40xx, etherswitch_driver, 0, 0);
 MODULE_DEPEND(ar40xx, mdio, 1, 1, 1);
 MODULE_DEPEND(ar40xx, miibus, 1, 1, 1);
 MODULE_DEPEND(ar40xx, etherswitch, 1, 1, 1);

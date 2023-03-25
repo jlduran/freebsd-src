@@ -35,7 +35,7 @@
  * http://www.moschip.com.  The datasheets don't contain full
  * programming information for the chip.
  *
- * It is nornal to have only two enabled ports in devices, based on
+ * It is normal to have only two enabled ports in devices, based on
  * quad-port mos7840.
  *
  */
@@ -268,15 +268,13 @@ static device_method_t umcs7840_methods[] = {
 	DEVMETHOD_END
 };
 
-static devclass_t umcs7840_devclass;
-
 static driver_t umcs7840_driver = {
 	.name = "umcs7840",
 	.methods = umcs7840_methods,
 	.size = sizeof(struct umcs7840_softc),
 };
 
-DRIVER_MODULE(umcs7840, uhub, umcs7840_driver, umcs7840_devclass, 0, 0);
+DRIVER_MODULE(umcs7840, uhub, umcs7840_driver, 0, 0);
 MODULE_DEPEND(umcs7840, ucom, 1, 1, 1);
 MODULE_DEPEND(umcs7840, usb, 1, 1, 1);
 MODULE_VERSION(umcs7840, UMCS7840_MODVER);
@@ -347,7 +345,7 @@ umcs7840_attach(device_t dev)
 	}
 	device_printf(dev, "Chip mcs%04x, found %d active ports\n", uaa->info.idProduct, sc->sc_numports);
 	if (!umcs7840_get_reg_sync(sc, MCS7840_DEV_REG_MODE, &data)) {
-		device_printf(dev, "On-die confguration: RST: active %s, HRD: %s, PLL: %s, POR: %s, Ports: %s, EEPROM write %s, IrDA is %savailable\n",
+		device_printf(dev, "On-die configuration: RST: active %s, HRD: %s, PLL: %s, POR: %s, Ports: %s, EEPROM write %s, IrDA is %savailable\n",
 		    (data & MCS7840_DEV_MODE_RESET) ? "low" : "high",
 		    (data & MCS7840_DEV_MODE_SER_PRSNT) ? "yes" : "no",
 		    (data & MCS7840_DEV_MODE_PLLBYPASS) ? "bypassed" : "avail",

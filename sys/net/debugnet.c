@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD$");
 #include <net/if_dl.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
+#include <net/if_private.h>
 #include <net/vnet.h>
 #include <net/route.h>
 #include <net/route/nhop.h>
@@ -523,7 +524,7 @@ debugnet_handle_udp(struct debugnet_pcb *pcb, struct mbuf **mb)
  *	m	an mbuf containing the packet received
  */
 static void
-debugnet_pkt_in(struct ifnet *ifp, struct mbuf *m)
+debugnet_input_one(struct ifnet *ifp, struct mbuf *m)
 {
 	struct ifreq ifr;
 	struct ether_header *eh;
@@ -582,6 +583,19 @@ done:
 		m_freem(m);
 }
 
+static void
+debugnet_input(struct ifnet *ifp, struct mbuf *m)
+{
+	struct mbuf *n;
+
+	do {
+		n = m->m_nextpkt;
+		m->m_nextpkt = NULL;
+		debugnet_input_one(ifp, m);
+		m = n;
+	} while (m != NULL);
+}
+
 /*
  * Network polling primitive.
  *
@@ -605,8 +619,8 @@ debugnet_free(struct debugnet_pcb *pcb)
 {
 	struct ifnet *ifp;
 
-	MPASS(g_debugnet_pcb_inuse);
 	MPASS(pcb == &g_dnet_pcb);
+	MPASS(pcb->dp_drv_input == NULL || g_debugnet_pcb_inuse);
 
 	ifp = pcb->dp_ifp;
 	if (ifp != NULL) {
@@ -646,6 +660,7 @@ debugnet_connect(const struct debugnet_conn_params *dcp,
 		.dp_seqno = 1,
 		.dp_ifp = dcp->dc_ifp,
 		.dp_rx_handler = dcp->dc_rx_handler,
+		.dp_drv_input = NULL,
 	};
 
 	/* Switch to the debugnet mbuf zones. */
@@ -735,13 +750,13 @@ debugnet_connect(const struct debugnet_conn_params *dcp,
 	/*
 	 * We maintain the invariant that g_debugnet_pcb_inuse is always true
 	 * while the debugnet ifp's if_input is overridden with
-	 * debugnet_pkt_in.
+	 * debugnet_input().
 	 */
 	g_debugnet_pcb_inuse = true;
 
 	/* Make the card use *our* receive callback. */
 	pcb->dp_drv_input = ifp->if_input;
-	ifp->if_input = debugnet_pkt_in;
+	ifp->if_input = debugnet_input;
 
 	printf("%s: searching for %s MAC...\n", __func__,
 	    (dcp->dc_gateway == INADDR_ANY) ? "server" : "gateway");
@@ -841,6 +856,9 @@ debugnet_any_ifnet_update(struct ifnet *ifp)
 	 * dn_init method is available.
 	 */
 	if (nmbuf == 0 || ncl == 0 || clsize == 0) {
+#ifndef INVARIANTS
+		if (bootverbose)
+#endif
 		printf("%s: Bad dn_init result from %s (ifp %p), ignoring.\n",
 		    __func__, if_name(ifp), ifp);
 		return;
@@ -1035,6 +1053,7 @@ debugnet_parse_ddb_cmd(const char *cmd, struct debugnet_ddb_config *result)
 			if (ifp == NULL) {
 				db_printf("Could not locate interface %s\n",
 				    db_tok_string);
+				error = ENOENT;
 				goto cleanup;
 			}
 		} else {

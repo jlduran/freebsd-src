@@ -166,7 +166,6 @@ static const struct pagerops deadpagerops = {
 };
 
 const struct pagerops *pagertab[16] __read_mostly = {
-	[OBJT_DEFAULT] =	&defaultpagerops,
 	[OBJT_SWAP] =		&swappagerops,
 	[OBJT_VNODE] =		&vnodepagerops,
 	[OBJT_DEVICE] =		&devicepagerops,
@@ -190,7 +189,7 @@ vm_pager_init(void)
 	 */
 	for (i = 0; i < OBJT_FIRST_DYN; i++) {
 		pgops = &pagertab[i];
-		if ((*pgops)->pgo_init != NULL)
+		if (*pgops != NULL && (*pgops)->pgo_init != NULL)
 			(*(*pgops)->pgo_init)();
 	}
 }
@@ -259,9 +258,14 @@ vm_object_t
 vm_pager_allocate(objtype_t type, void *handle, vm_ooffset_t size,
     vm_prot_t prot, vm_ooffset_t off, struct ucred *cred)
 {
+	vm_object_t object;
+
 	MPASS(type < nitems(pagertab));
 
-	return ((*pagertab[type]->pgo_alloc)(handle, size, prot, off, cred));
+	object = (*pagertab[type]->pgo_alloc)(handle, size, prot, off, cred);
+	if (object != NULL)
+		object->type = type;
+	return (object);
 }
 
 /*
@@ -402,7 +406,7 @@ vm_pager_alloc_dyn_type(struct pagerops *ops, int base_type)
 
 	mtx_lock(&pagertab_lock);
 	MPASS(base_type == -1 ||
-	    (base_type >= OBJT_DEFAULT && base_type < nitems(pagertab)));
+	    (base_type >= OBJT_SWAP && base_type < nitems(pagertab)));
 	for (res = OBJT_FIRST_DYN; res < nitems(pagertab); res++) {
 		if (pagertab[res] == NULL)
 			break;
@@ -431,6 +435,9 @@ vm_pager_alloc_dyn_type(struct pagerops *ops, int base_type)
 		FIX(mightbedirty);
 		FIX(getvp);
 		FIX(freespace);
+		FIX(page_inserted);
+		FIX(page_removed);
+		FIX(can_alloc_page);
 #undef FIX
 	}
 	pagertab[res] = ops;	/* XXXKIB should be rel, but acq is too much */
@@ -496,6 +503,8 @@ pbuf_init(void *mem, int size, int flags)
 {
 	struct buf *bp = mem;
 
+	TSENTER();
+
 	bp->b_kvabase = (void *)kva_alloc(ptoa(PBUF_PAGES));
 	if (bp->b_kvabase == NULL)
 		return (ENOMEM);
@@ -504,6 +513,8 @@ pbuf_init(void *mem, int size, int flags)
 	LIST_INIT(&bp->b_dep);
 	bp->b_rcred = bp->b_wcred = NOCRED;
 	bp->b_xflags = 0;
+
+	TSEXIT();
 
 	return (0);
 }

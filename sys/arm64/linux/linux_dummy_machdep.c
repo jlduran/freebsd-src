@@ -28,13 +28,10 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include "opt_compat.h"
-
 #include <sys/param.h>
 #include <sys/kernel.h>
-#include <sys/sdt.h>
-#include <sys/systm.h>
 #include <sys/proc.h>
+#include <sys/sdt.h>
 
 #include <arm64/linux/linux.h>
 #include <arm64/linux/linux_proto.h>
@@ -59,5 +56,4 @@ DUMMY(mq_timedsend);
 DUMMY(mq_timedreceive);
 DUMMY(mq_notify);
 DUMMY(mq_getsetattr);
-DUMMY(semtimedop);
 DUMMY(kexec_file_load);

@@ -78,7 +78,7 @@ int
 qlnx_make_cdev(qlnx_host_t *ha)
 {
 	ha->ioctl_dev = make_dev(&qlnx_cdevsw,
-				ha->ifp->if_dunit,
+				if_getdunit(ha->ifp),
 				UID_ROOT,
 				GID_WHEEL,
 				0600,
@@ -993,14 +993,11 @@ qlnx_eioctl(struct cdev *dev, u_long cmd, caddr_t data, int fflag,
 {
 	qlnx_host_t	*ha;
 	int		rval = 0;
-	struct ifnet	*ifp;
 	qlnx_trace_t	*trace;
 	int		i;
 
 	if ((ha = (qlnx_host_t *)dev->si_drv1) == NULL)
 		return ENXIO;
-
-	ifp = ha->ifp;
 
 	switch (cmd) {
 	case QLNX_GRC_DUMP_SIZE:

@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd March 4, 2022
+.Dd June 1, 2022
 .Dt TSLOG 4
 .Os
 .Sh NAME
@@ -38,7 +38,9 @@ place the following line in the kernel configuration file:
 .Sh DESCRIPTION
 .Nm
 is a boot-time event tracing facility.
-Its purpose is to ease diagnosing and reducing the overall
+It is suitable for tracing recursive events
+based on function entries and exits.
+Its purpose is to ease pinpointing and reducing the overall
 .Fx
 boot time by generating detailed timing information.
 .Pp
@@ -112,7 +114,7 @@ process.
 is not always the right tool for profiling early kernel initialization.
 The reason is it requires some kernel subroutines
 which are not yet available early in the boot process, e.g.:
-traps, memory allocation, or thread schedulling.
+traps, memory allocation, or thread scheduling.
 .Nm
 depends on fewer kernel subroutines than
 .Xr dtrace 1

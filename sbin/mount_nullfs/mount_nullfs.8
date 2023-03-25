@@ -33,7 +33,7 @@
 .\"     @(#)mount_null.8	8.6 (Berkeley) 5/1/95
 .\" $FreeBSD$
 .\"
-.Dd October 3, 2016
+.Dd December 19, 2022
 .Dt MOUNT_NULLFS 8
 .Os
 .Sh NAME
@@ -64,6 +64,17 @@ but in other respects it is indistinguishable from the original.
 .Pp
 The
 .Nm
+utility supports mounting both directories and single files.
+Both
+.Ar target
+and
+.Ar mount_point
+must be the same type.
+Mounting directories to files or files to
+directories is not supported.
+.Pp
+The
+.Nm
 file system differs from a traditional
 loopback file system in two respects: it is implemented using
 a stackable layers techniques, and its
@@ -80,6 +91,14 @@ flag followed by a comma separated string of options.
 See the
 .Xr mount 8
 man page for possible options and their meanings.
+Additionally the following option is supported:
+.Bl -tag -width indent
+.It Cm nocache
+Disable metadata caching in the null layer.
+Some lower-layer file systems may force this option.
+Depending on the access pattern,
+this may result in increased lock contention.
+.El
 .El
 .Pp
 The null layer has two purposes.

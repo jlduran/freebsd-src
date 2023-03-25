@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/vnode.h>
 
 #include <machine/elf.h>
+#include <machine/pcb.h>
 #ifdef VFP
 #include <machine/vfp.h>
 #endif
@@ -84,7 +85,6 @@ u_long __read_frequently elf32_hwcap2;
 static struct sysentvec elf32_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= freebsd32_sysent,
-	.sv_transtrap	= NULL,
 	.sv_fixup	= elf32_freebsd_fixup,
 	.sv_sendsig	= freebsd32_sendsig,
 	.sv_sigcode	= aarch32_sigcode,
@@ -153,8 +153,7 @@ elf32_arm_abi_supported(struct image_params *imgp, int32_t *osrel __unused,
 	    ID_AA64PFR0_EL0_64_32)
 		return (FALSE);
 
-#define	EF_ARM_EABI_VERSION(x)	(((x) & EF_ARM_EABIMASK) >> 24)
-#define	EF_ARM_EABI_FREEBSD_MIN	4
+#define	EF_ARM_EABI_FREEBSD_MIN	EF_ARM_EABI_VER4
 	hdr = (const Elf32_Ehdr *)imgp->image_header;
 	if (EF_ARM_EABI_VERSION(hdr->e_flags) < EF_ARM_EABI_FREEBSD_MIN) {
 		if (bootverbose)
@@ -288,5 +287,4 @@ freebsd32_setregs(struct thread *td, struct image_params *imgp,
 void
 elf32_dump_thread(struct thread *td, void *dst, size_t *off)
 {
-	/* XXX: VFP */
 }

@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
  * Copyright (c) 2020 Vladimir Kondratyev <wulf@FreeBSD.org>
- * Copyright (c) 2020 Greg V <greg@unrelenting.technology>
+ * Copyright (c) 2020 Val Packett <val@packett.cool>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -162,7 +162,6 @@ xb360gp_detach(device_t dev)
 	return (hidmap_detach(&sc->hm));
 }
 
-static devclass_t xb360gp_devclass;
 static device_method_t xb360gp_methods[] = {
 	DEVMETHOD(device_identify,	xb360gp_identify),
 	DEVMETHOD(device_probe,		xb360gp_probe),
@@ -173,7 +172,7 @@ static device_method_t xb360gp_methods[] = {
 
 DEFINE_CLASS_0(xb360gp, xb360gp_driver, xb360gp_methods,
     sizeof(struct hgame_softc));
-DRIVER_MODULE(xb360gp, hidbus, xb360gp_driver, xb360gp_devclass, NULL, 0);
+DRIVER_MODULE(xb360gp, hidbus, xb360gp_driver, NULL, NULL);
 MODULE_DEPEND(xb360gp, hid, 1, 1, 1);
 MODULE_DEPEND(xb360gp, hidbus, 1, 1, 1);
 MODULE_DEPEND(xb360gp, hidmap, 1, 1, 1);

@@ -1,4 +1,4 @@
-/*      $NetBSD: meta.c,v 1.197 2022/02/08 22:36:02 sjg Exp $ */
+/*      $NetBSD: meta.c,v 1.201 2022/09/28 16:34:47 sjg Exp $ */
 
 /*
  * Implement 'meta' mode.
@@ -281,15 +281,19 @@ meta_name(char *mname, size_t mnamelen,
     /* on some systems dirname may modify its arg */
     tp = bmake_strdup(tname);
     dtp = dirname(tp);
-    if (strcmp(dname, dtp) == 0)
-	snprintf(mname, mnamelen, "%s.meta", tname);
-    else {
+    if (strcmp(dname, dtp) == 0) {
+	if (snprintf(mname, mnamelen, "%s.meta", tname) >= (int)mnamelen)
+	    mname[mnamelen - 1] = '\0';
+    } else {
+	int x;
+
 	ldname = strlen(dname);
 	if (strncmp(dname, dtp, ldname) == 0 && dtp[ldname] == '/')
-	    snprintf(mname, mnamelen, "%s/%s.meta", dname, &tname[ldname+1]);
+	    x = snprintf(mname, mnamelen, "%s/%s.meta", dname, &tname[ldname+1]);
 	else
-	    snprintf(mname, mnamelen, "%s/%s.meta", dname, tname);
-
+	    x = snprintf(mname, mnamelen, "%s/%s.meta", dname, tname);
+	if (x >= (int)mnamelen)
+	    mname[mnamelen - 1] = '\0';
 	/*
 	 * Replace path separators in the file name after the
 	 * current object directory path.
@@ -387,12 +391,10 @@ printCMDs(GNode *gn, FILE *fp)
 /*
  * Certain node types never get a .meta file
  */
-#define SKIP_META_TYPE(_type) do { \
-    if ((gn->type & __CONCAT(OP_, _type))) { \
-	if (verbose) { \
-	    debug_printf("Skipping meta for %s: .%s\n", \
-		    gn->name, __STRING(_type)); \
-	} \
+#define SKIP_META_TYPE(flag, str) do { \
+    if ((gn->type & (flag))) { \
+	if (verbose) \
+	    debug_printf("Skipping meta for %s: .%s\n", gn->name, str); \
 	return false; \
     } \
 } while (false)
@@ -413,12 +415,12 @@ meta_needed(GNode *gn, const char *dname,
     /* This may be a phony node which we don't want meta data for... */
     /* Skip .meta for .BEGIN, .END, .ERROR etc as well. */
     /* Or it may be explicitly flagged as .NOMETA */
-    SKIP_META_TYPE(NOMETA);
+    SKIP_META_TYPE(OP_NOMETA, "NOMETA");
     /* Unless it is explicitly flagged as .META */
     if (!(gn->type & OP_META)) {
-	SKIP_META_TYPE(PHONY);
-	SKIP_META_TYPE(SPECIAL);
-	SKIP_META_TYPE(MAKE);
+	SKIP_META_TYPE(OP_PHONY, "PHONY");
+	SKIP_META_TYPE(OP_SPECIAL, "SPECIAL");
+	SKIP_META_TYPE(OP_MAKE, "MAKE");
     }
 
     /* Check if there are no commands to execute. */
@@ -675,7 +677,7 @@ meta_job_start(Job *job, GNode *gn)
  * It does not disturb our state.
  */
 void
-meta_job_child(Job *job)
+meta_job_child(Job *job MAKE_ATTR_UNUSED)
 {
 #ifdef USE_FILEMON
     BuildMon *pbm;
@@ -700,7 +702,7 @@ meta_job_child(Job *job)
 }
 
 void
-meta_job_parent(Job *job, pid_t pid)
+meta_job_parent(Job *job MAKE_ATTR_UNUSED, pid_t pid MAKE_ATTR_UNUSED)
 {
 #if defined(USE_FILEMON) && !defined(USE_FILEMON_DEV)
     BuildMon *pbm;
@@ -717,7 +719,7 @@ meta_job_parent(Job *job, pid_t pid)
 }
 
 int
-meta_job_fd(Job *job)
+meta_job_fd(Job *job MAKE_ATTR_UNUSED)
 {
 #if defined(USE_FILEMON) && !defined(USE_FILEMON_DEV)
     BuildMon *pbm;
@@ -735,7 +737,7 @@ meta_job_fd(Job *job)
 }
 
 int
-meta_job_event(Job *job)
+meta_job_event(Job *job MAKE_ATTR_UNUSED)
 {
 #if defined(USE_FILEMON) && !defined(USE_FILEMON_DEV)
     BuildMon *pbm;
@@ -771,7 +773,9 @@ meta_job_error(Job *job, GNode *gn, bool ignerr, int status)
     }
     if (gn != NULL)
 	Global_Set(".ERROR_TARGET", GNode_Path(gn));
-    getcwd(cwd, sizeof cwd);
+    if (getcwd(cwd, sizeof cwd) == NULL)
+	Punt("Cannot get cwd: %s", strerror(errno));
+
     Global_Set(".ERROR_CWD", cwd);
     if (pbm->meta_fname[0] != '\0') {
 	Global_Set(".ERROR_META_FILE", pbm->meta_fname);
@@ -1167,8 +1171,7 @@ meta_oodate(GNode *gn, bool oodate)
 	/* we want to track all the .meta we read */
 	Global_Append(".MAKE.META.FILES", fname);
 
-	cmp_filter = metaCmpFilter ? metaCmpFilter :
-	    Var_Exists(gn, MAKE_META_CMP_FILTER);
+	cmp_filter = metaCmpFilter || Var_Exists(gn, MAKE_META_CMP_FILTER);
 
 	cmdNode = gn->commands.first;
 	while (!oodate && (x = fgetLine(&buf, &bufsz, 0, fp)) > 0) {
@@ -1446,18 +1449,18 @@ meta_oodate(GNode *gn, bool oodate)
 				continue; /* no point */
 
 			    /* Check vs latestdir */
-			    snprintf(fname1, sizeof fname1, "%s/%s", latestdir, p);
-			    sdirs[sdx++] = fname1;
+			    if (snprintf(fname1, sizeof fname1, "%s/%s", latestdir, p) < (int)(sizeof fname1))
+				sdirs[sdx++] = fname1;
 
 			    if (strcmp(latestdir, lcwd) != 0) {
 				/* Check vs lcwd */
-				snprintf(fname2, sizeof fname2, "%s/%s", lcwd, p);
-				sdirs[sdx++] = fname2;
+				if (snprintf(fname2, sizeof fname2, "%s/%s", lcwd, p) < (int)(sizeof fname2))
+				    sdirs[sdx++] = fname2;
 			    }
 			    if (strcmp(lcwd, cwd) != 0) {
 				/* Check vs cwd */
-				snprintf(fname3, sizeof fname3, "%s/%s", cwd, p);
-				sdirs[sdx++] = fname3;
+				if (snprintf(fname3, sizeof fname3, "%s/%s", cwd, p) < (int)(sizeof fname3))
+				    sdirs[sdx++] = fname3;
 			    }
 			}
 			sdirs[sdx++] = NULL;

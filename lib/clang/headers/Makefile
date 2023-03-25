@@ -4,9 +4,10 @@
 
 .PATH:		${CLANG_SRCS}/lib/Headers
 
-INCSGROUPS=	INCS CUDA OMP PPC
-INCSDIR=	${LIBDIR}/clang/13.0.0/include
+INCSGROUPS=	INCS CUDA HLSL OMP PPC
+INCSDIR=	${LIBDIR}/clang/15.0.7/include
 CUDADIR=	${INCSDIR}/cuda_wrappers
+HLSLDIR=	${INCSDIR}/hlsl
 OMPDIR=		${INCSDIR}/openmp_wrappers
 PPCDIR=		${INCSDIR}/ppc_wrappers
 
@@ -19,6 +20,7 @@ INCS+=		__clang_cuda_libdevice_declares.h
 INCS+=		__clang_cuda_math.h
 INCS+=		__clang_cuda_math_forward_declares.h
 INCS+=		__clang_cuda_runtime_wrapper.h
+INCS+=		__clang_cuda_texture_intrinsics.h
 INCS+=		__clang_hip_cmath.h
 INCS+=		__clang_hip_libdevice_declares.h
 INCS+=		__clang_hip_math.h
@@ -33,6 +35,7 @@ INCS+=		amxintrin.h
 INCS+=		arm64intr.h
 INCS+=		arm_acle.h
 INCS+=		arm_cmse.h
+INCS+=		arm_neon_sve_bridge.h
 INCS+=		armintr.h
 INCS+=		avx2intrin.h
 INCS+=		avx512bf16intrin.h
@@ -42,6 +45,7 @@ INCS+=		avx512cdintrin.h
 INCS+=		avx512dqintrin.h
 INCS+=		avx512erintrin.h
 INCS+=		avx512fintrin.h
+INCS+=		avx512fp16intrin.h
 INCS+=		avx512ifmaintrin.h
 INCS+=		avx512ifmavlintrin.h
 INCS+=		avx512pfintrin.h
@@ -53,6 +57,7 @@ INCS+=		avx512vlbitalgintrin.h
 INCS+=		avx512vlbwintrin.h
 INCS+=		avx512vlcdintrin.h
 INCS+=		avx512vldqintrin.h
+INCS+=		avx512vlfp16intrin.h
 INCS+=		avx512vlintrin.h
 INCS+=		avx512vlvbmi2intrin.h
 INCS+=		avx512vlvnniintrin.h
@@ -73,6 +78,7 @@ INCS+=		clflushoptintrin.h
 INCS+=		clwbintrin.h
 INCS+=		clzerointrin.h
 INCS+=		cpuid.h
+INCS+=		crc32intrin.h
 INCS+=		emmintrin.h
 INCS+=		enqcmdintrin.h
 INCS+=		f16cintrin.h
@@ -83,6 +89,7 @@ INCS+=		gfniintrin.h
 INCS+=		hexagon_circ_brev_intrinsics.h
 INCS+=		hexagon_protos.h
 INCS+=		hexagon_types.h
+INCS+=		hlsl.h
 INCS+=		hresetintrin.h
 INCS+=		htmintrin.h
 INCS+=		htmxlintrin.h
@@ -109,6 +116,7 @@ INCS+=		pmmintrin.h
 INCS+=		popcntintrin.h
 INCS+=		prfchwintrin.h
 INCS+=		ptwriteintrin.h
+INCS+=		rdpruintrin.h
 INCS+=		rdseedintrin.h
 INCS+=		rtmintrin.h
 INCS+=		s390intrin.h
@@ -123,6 +131,9 @@ INCS+=		uintrintrin.h
 INCS+=		vadefs.h
 INCS+=		vaesintrin.h
 INCS+=		vecintrin.h
+INCS+=		velintrin.h
+INCS+=		velintrin_approx.h
+INCS+=		velintrin_gen.h
 INCS+=		vpclmulqdqintrin.h
 INCS+=		waitpkgintrin.h
 INCS+=		wasm_simd128.h
@@ -162,6 +173,9 @@ CUDA+=		cuda_wrappers/algorithm
 CUDA+=		cuda_wrappers/complex
 CUDA+=		cuda_wrappers/new
 
+HLSL+=		hlsl/hlsl_basic_types.h
+HLSL+=		hlsl/hlsl_intrinsics.h
+
 OMP+=		openmp_wrappers/__clang_openmp_device_functions.h
 OMP+=		openmp_wrappers/cmath
 OMP+=		openmp_wrappers/complex
@@ -170,12 +184,17 @@ OMP+=		openmp_wrappers/complex_cmath.h
 OMP+=		openmp_wrappers/math.h
 OMP+=		openmp_wrappers/new
 
+PPC+=		ppc_wrappers/bmi2intrin.h
+PPC+=		ppc_wrappers/bmiintrin.h
 PPC+=		ppc_wrappers/emmintrin.h
+PPC+=		ppc_wrappers/immintrin.h
 PPC+=		ppc_wrappers/mm_malloc.h
 PPC+=		ppc_wrappers/mmintrin.h
 PPC+=		ppc_wrappers/pmmintrin.h
 PPC+=		ppc_wrappers/smmintrin.h
 PPC+=		ppc_wrappers/tmmintrin.h
+PPC+=		ppc_wrappers/x86gprintrin.h
+PPC+=		ppc_wrappers/x86intrin.h
 PPC+=		ppc_wrappers/xmmintrin.h
 
 .for hdr in bf16/bf16 cde/cde-header fp16/fp16 mve/mve-header neon/neon \
@@ -194,6 +213,8 @@ riscv_${hdr:H}.h: ${CLANG_SRCS}/include/clang/Basic/riscv_${hdr:H}.td
 	    -o ${.TARGET} ${CLANG_SRCS}/include/clang/Basic/riscv_${hdr:H}.td
 GENINCS+=	riscv_${hdr:H}.h
 .endfor
+
+${GENINCS}: ${CLANG_TBLGEN_BIN}
 
 CLEANFILES=	${GENINCS} ${GENINCS:C/$/.d/}
 

@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <csignal>
 #include <list>
+#include <vector>
 
 #if !HAVE_PPOLL && !HAVE_SYS_EVENT_H && !defined(__ANDROID__)
 #define SIGNAL_POLLING_UNSUPPORTED 1
@@ -59,6 +60,11 @@ public:
   SignalHandleUP RegisterSignal(int signo, const Callback &callback,
                                 Status &error);
 
+  // Add a pending callback that will be executed once after all the pending
+  // events are processed. The callback will be executed even if termination
+  // was requested.
+  void AddPendingCallback(const Callback &callback) override;
+
   Status Run() override;
 
   // This should only be performed from a callback. Do not attempt to terminate
@@ -95,7 +101,7 @@ private:
 
   struct SignalInfo {
     std::list<Callback> callbacks;
-#if HAVE_SIGACTION
+#ifndef SIGNAL_POLLING_UNSUPPORTED
     struct sigaction old_action;
 #endif
     bool was_blocked : 1;
@@ -104,6 +110,7 @@ private:
 
   llvm::DenseMap<IOObject::WaitableHandle, Callback> m_read_fds;
   llvm::DenseMap<int, SignalInfo> m_signals;
+  std::vector<Callback> m_pending_callbacks;
 #if HAVE_SYS_EVENT_H
   int m_kqueue;
 #endif

@@ -80,6 +80,7 @@
 #include <net/route.h>
 
 #include <netinet/in.h>
+#include <netinet/in_pcb.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_var.h>
@@ -126,7 +127,13 @@ pf_syncookies_init(void)
 {
 	callout_init(&V_pf_syncookie_status.keytimeout, 1);
 	PF_RULES_WLOCK();
-	pf_syncookies_setmode(PF_SYNCOOKIES_NEVER);
+
+	V_pf_syncookie_status.hiwat = PF_SYNCOOKIES_HIWATPCT *
+	    V_pf_limits[PF_LIMIT_STATES].limit / 100;
+	V_pf_syncookie_status.lowat = PF_SYNCOOKIES_LOWATPCT *
+	    V_pf_limits[PF_LIMIT_STATES].limit / 100;
+	pf_syncookies_setmode(PF_SYNCOOKIES_ADAPTIVE);
+
 	PF_RULES_WUNLOCK();
 }
 
@@ -141,10 +148,13 @@ pf_get_syncookies(struct pfioc_nv *nv)
 {
 	nvlist_t	*nvl = NULL;
 	void		*nvlpacked = NULL;
+	int		 error;
+
+#define ERROUT(x)	ERROUT_FUNCTION(errout, x)
 
 	nvl = nvlist_create(0);
 	if (nvl == NULL)
-		return (ENOMEM);
+		ERROUT(ENOMEM);
 
 	nvlist_add_bool(nvl, "enabled",
 	    V_pf_status.syncookies_mode != PF_SYNCOOKIES_NEVER);
@@ -154,21 +164,23 @@ pf_get_syncookies(struct pfioc_nv *nv)
 	nvlist_add_number(nvl, "lowwater", V_pf_syncookie_status.lowat);
 
 	nvlpacked = nvlist_pack(nvl, &nv->len);
-	if (nvlpacked == NULL) {
-		nvlist_destroy(nvl);
-		return (ENOMEM);
-	}
+	if (nvlpacked == NULL)
+		ERROUT(ENOMEM);
+
 	if (nv->size == 0) {
-		nvlist_destroy(nvl);
-		free(nvlpacked, M_TEMP);
-		return (0);
+		ERROUT(0);
 	} else if (nv->size < nv->len) {
-		nvlist_destroy(nvl);
-		free(nvlpacked, M_TEMP);
-		return (ENOSPC);
+		ERROUT(ENOSPC);
 	}
 
-	return (copyout(nvlpacked, nv->data, nv->len));
+	error = copyout(nvlpacked, nv->data, nv->len);
+
+#undef ERROUT
+errout:
+	nvlist_destroy(nvl);
+	free(nvlpacked, M_NVLIST);
+
+	return (error);
 }
 
 int
@@ -186,7 +198,7 @@ pf_set_syncookies(struct pfioc_nv *nv)
 	if (nv->len > pf_ioctl_maxcount)
 		return (ENOMEM);
 
-	nvlpacked = malloc(nv->len, M_TEMP, M_WAITOK);
+	nvlpacked = malloc(nv->len, M_NVLIST, M_WAITOK);
 	if (nvlpacked == NULL)
 		return (ENOMEM);
 
@@ -227,7 +239,7 @@ pf_set_syncookies(struct pfioc_nv *nv)
 #undef ERROUT
 errout:
 	nvlist_destroy(nvl);
-	free(nvlpacked, M_TEMP);
+	free(nvlpacked, M_NVLIST);
 
 	return (error);
 }
@@ -295,8 +307,8 @@ pf_syncookie_send(struct mbuf *m, int off, struct pf_pdesc *pd)
 	    1);
 }
 
-uint8_t
-pf_syncookie_validate(struct pf_pdesc *pd)
+bool
+pf_syncookie_check(struct pf_pdesc *pd)
 {
 	uint32_t		 hash, ack, seq;
 	union pf_syncookie	 cookie;
@@ -309,13 +321,28 @@ pf_syncookie_validate(struct pf_pdesc *pd)
 	cookie.cookie = (ack & 0xff) ^ (ack >> 24);
 
 	/* we don't know oddeven before setting the cookie (union) */
-        if (atomic_load_64(&V_pf_status.syncookies_inflight[cookie.flags.oddeven])
+	if (atomic_load_64(&V_pf_status.syncookies_inflight[cookie.flags.oddeven])
 	    == 0)
-                return (0);
+		return (0);
 
 	hash = pf_syncookie_mac(pd, cookie, seq);
 	if ((ack & ~0xff) != (hash & ~0xff))
+		return (false);
+
+	return (true);
+}
+
+uint8_t
+pf_syncookie_validate(struct pf_pdesc *pd)
+{
+	uint32_t		 ack;
+	union pf_syncookie	 cookie;
+
+	if (! pf_syncookie_check(pd))
 		return (0);
+
+	ack = ntohl(pd->hdr.tcp.th_ack) - 1;
+	cookie.cookie = (ack & 0xff) ^ (ack >> 24);
 
 	counter_u64_add(V_pf_status.lcounters[KLCNT_SYNCOOKIES_VALID], 1);
 	atomic_add_64(&V_pf_status.syncookies_inflight[cookie.flags.oddeven], -1);

@@ -44,14 +44,14 @@
 #include <sys/param.h>
 #include <sys/byteorder.h>
 #include <sys/spa_checksum.h>
-#include <sys/strings.h>
+#include <sys/string.h>
 #include <zfs_fletcher.h>
 
 ZFS_NO_SANITIZE_UNDEFINED
 static void
 fletcher_4_superscalar_init(fletcher_4_ctx_t *ctx)
 {
-	bzero(ctx->superscalar, 4 * sizeof (zfs_fletcher_superscalar_t));
+	memset(ctx->superscalar, 0, 4 * sizeof (zfs_fletcher_superscalar_t));
 }
 
 ZFS_NO_SANITIZE_UNDEFINED
@@ -89,7 +89,7 @@ fletcher_4_superscalar_native(fletcher_4_ctx_t *ctx,
 	c2 = ctx->superscalar[2].v[1];
 	d2 = ctx->superscalar[3].v[1];
 
-	for (; ip < ipend; ip += 2) {
+	do {
 		a += ip[0];
 		a2 += ip[1];
 		b += a;
@@ -98,7 +98,7 @@ fletcher_4_superscalar_native(fletcher_4_ctx_t *ctx,
 		c2 += b2;
 		d += c;
 		d2 += c2;
-	}
+	} while ((ip += 2) < ipend);
 
 	ctx->superscalar[0].v[0] = a;
 	ctx->superscalar[1].v[0] = b;
@@ -129,7 +129,7 @@ fletcher_4_superscalar_byteswap(fletcher_4_ctx_t *ctx,
 	c2 = ctx->superscalar[2].v[1];
 	d2 = ctx->superscalar[3].v[1];
 
-	for (; ip < ipend; ip += 2) {
+	do {
 		a += BSWAP_32(ip[0]);
 		a2 += BSWAP_32(ip[1]);
 		b += a;
@@ -138,7 +138,7 @@ fletcher_4_superscalar_byteswap(fletcher_4_ctx_t *ctx,
 		c2 += b2;
 		d += c;
 		d2 += c2;
-	}
+	} while ((ip += 2) < ipend);
 
 	ctx->superscalar[0].v[0] = a;
 	ctx->superscalar[1].v[0] = b;

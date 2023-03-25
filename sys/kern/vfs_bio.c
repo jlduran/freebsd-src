@@ -72,6 +72,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/refcount.h>
 #include <sys/resourcevar.h>
 #include <sys/rwlock.h>
+#include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/sysctl.h>
 #include <sys/syscallsubr.h>
@@ -765,6 +766,9 @@ bufspace_daemon_shutdown(void *arg, int howto __unused)
 	struct bufdomain *bd = arg;
 	int error;
 
+	if (KERNEL_PANICKED())
+		return;
+
 	BD_RUN_LOCK(bd);
 	bd->bd_shutdown = true;
 	wakeup(&bd->bd_running);
@@ -1425,8 +1429,7 @@ bufshutdown(int show_busybufs)
 		 * threads to run.
 		 */
 		for (subiter = 0; subiter < 50 * iter; subiter++) {
-			thread_lock(curthread);
-			mi_switch(SW_VOL);
+			sched_relinquish(curthread);
 			DELAY(1000);
 		}
 #endif
@@ -3416,6 +3419,9 @@ buf_daemon_shutdown(void *arg __unused, int howto __unused)
 {
 	int error;
 
+	if (KERNEL_PANICKED())
+		return;
+
 	mtx_lock(&bdlock);
 	bd_shutdown = true;
 	wakeup(&bd_request);
@@ -3427,7 +3433,7 @@ buf_daemon_shutdown(void *arg __unused, int howto __unused)
 }
 
 static void
-buf_daemon()
+buf_daemon(void)
 {
 	struct bufdomain *bd;
 	int speedupreq;
@@ -4363,8 +4369,9 @@ allocbuf(struct buf *bp, int size)
 	if (bp->b_bcount == size)
 		return (1);
 
-	if (bp->b_kvasize != 0 && bp->b_kvasize < size)
-		panic("allocbuf: buffer too small");
+	KASSERT(bp->b_kvasize == 0 || bp->b_kvasize >= size,
+	    ("allocbuf: buffer too small %p %#x %#x",
+	    bp, bp->b_kvasize, size));
 
 	newbsize = roundup2(size, DEV_BSIZE);
 	if ((bp->b_flags & B_VMIO) == 0) {
@@ -4381,11 +4388,12 @@ allocbuf(struct buf *bp, int size)
 	} else {
 		int desiredpages;
 
-		desiredpages = (size == 0) ? 0 :
+		desiredpages = size == 0 ? 0 :
 		    num_pages((bp->b_offset & PAGE_MASK) + newbsize);
 
-		if (bp->b_flags & B_MALLOC)
-			panic("allocbuf: VMIO buffer can't be malloced");
+		KASSERT((bp->b_flags & B_MALLOC) == 0,
+		    ("allocbuf: VMIO buffer can't be malloced %p", bp));
+
 		/*
 		 * Set B_CACHE initially if buffer is 0 length or will become
 		 * 0-length.
@@ -4852,7 +4860,8 @@ vfs_bio_set_valid(struct buf *bp, int base, int size)
 void
 vfs_bio_clrbuf(struct buf *bp) 
 {
-	int i, j, mask, sa, ea, slide;
+	int i, j, sa, ea, slide, zbits;
+	vm_page_bits_t mask;
 
 	if ((bp->b_flags & (B_VMIO | B_MALLOC)) != B_VMIO) {
 		clrbuf(bp);
@@ -4871,7 +4880,9 @@ vfs_bio_clrbuf(struct buf *bp)
 		if (bp->b_pages[i] == bogus_page)
 			continue;
 		j = sa / DEV_BSIZE;
-		mask = ((1 << ((ea - sa) / DEV_BSIZE)) - 1) << j;
+		zbits = (sizeof(vm_page_bits_t) * NBBY) -
+		    (ea - sa) / DEV_BSIZE;
+		mask = (VM_PAGE_BITS_ALL >> zbits) << j;
 		if ((bp->b_pages[i]->valid & mask) == mask)
 			continue;
 		if ((bp->b_pages[i]->valid & mask) == 0)
@@ -5209,24 +5220,7 @@ bdata2bio(struct buf *bp, struct bio *bip)
 	}
 }
 
-/*
- * The MIPS pmap code currently doesn't handle aliased pages.
- * The VIPT caches may not handle page aliasing themselves, leading
- * to data corruption.
- *
- * As such, this code makes a system extremely unhappy if said
- * system doesn't support unaliasing the above situation in hardware.
- * Some "recent" systems (eg some mips24k/mips74k cores) don't enable
- * this feature at build time, so it has to be handled in software.
- *
- * Once the MIPS pmap/cache code grows to support this function on
- * earlier chips, it should be flipped back off.
- */
-#ifdef	__mips__
-static int buf_pager_relbuf = 1;
-#else
-static int buf_pager_relbuf = 0;
-#endif
+static int buf_pager_relbuf;
 SYSCTL_INT(_vfs, OID_AUTO, buf_pager_relbuf, CTLFLAG_RWTUN,
     &buf_pager_relbuf, 0,
     "Make buffer pager release buffers after reading");
@@ -5481,7 +5475,7 @@ DB_SHOW_COMMAND(buffer, db_show_buffer)
 	db_printf(" ");
 }
 
-DB_SHOW_COMMAND(bufqueues, bufqueues)
+DB_SHOW_COMMAND_FLAGS(bufqueues, bufqueues, DB_CMD_MEMSAFE)
 {
 	struct bufdomain *bd;
 	struct buf *bp;
@@ -5547,7 +5541,7 @@ DB_SHOW_COMMAND(bufqueues, bufqueues)
 	}
 }
 
-DB_SHOW_COMMAND(lockedbufs, lockedbufs)
+DB_SHOW_COMMAND_FLAGS(lockedbufs, lockedbufs, DB_CMD_MEMSAFE)
 {
 	struct buf *bp;
 	int i;
@@ -5585,7 +5579,7 @@ DB_SHOW_COMMAND(vnodebufs, db_show_vnodebufs)
 	}
 }
 
-DB_COMMAND(countfreebufs, db_coundfreebufs)
+DB_COMMAND_FLAGS(countfreebufs, db_coundfreebufs, DB_CMD_MEMSAFE)
 {
 	struct buf *bp;
 	int i, used = 0, nfree = 0;

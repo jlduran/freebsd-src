@@ -129,6 +129,26 @@ struct sctp_mcore_ctrl {
 };
 #endif
 
+/* This struct is here to cut out the compatiabilty
+ * pad that bulks up both the inp and stcb. The non
+ * pad portion MUST stay in complete sync with
+ * sctp_sndrcvinfo... i.e. if sinfo_xxxx is added
+ * this must be done here too.
+ */
+struct sctp_nonpad_sndrcvinfo {
+	uint16_t sinfo_stream;
+	uint16_t sinfo_ssn;
+	uint16_t sinfo_flags;
+	uint32_t sinfo_ppid;
+	uint32_t sinfo_context;
+	uint32_t sinfo_timetolive;
+	uint32_t sinfo_tsn;
+	uint32_t sinfo_cumtsn;
+	sctp_assoc_t sinfo_assoc_id;
+	uint16_t sinfo_keynumber;
+	uint16_t sinfo_keynumber_valid;
+};
+
 struct sctp_iterator {
 	TAILQ_ENTRY(sctp_iterator) sctp_nxt_itr;
 	struct vnet *vn;
@@ -159,7 +179,7 @@ TAILQ_HEAD(sctpiterators, sctp_iterator);
 struct sctp_copy_all {
 	struct sctp_inpcb *inp;	/* ep */
 	struct mbuf *m;
-	struct sctp_sndrcvinfo sndrcv;
+	struct sctp_nonpad_sndrcvinfo sndrcv;
 	ssize_t sndlen;
 	int cnt_sent;
 	int cnt_failed;
@@ -675,26 +695,6 @@ struct sctp_fs_spec_log {
 	uint8_t decr;
 };
 
-/* This struct is here to cut out the compatiabilty
- * pad that bulks up both the inp and stcb. The non
- * pad portion MUST stay in complete sync with
- * sctp_sndrcvinfo... i.e. if sinfo_xxxx is added
- * this must be done here too.
- */
-struct sctp_nonpad_sndrcvinfo {
-	uint16_t sinfo_stream;
-	uint16_t sinfo_ssn;
-	uint16_t sinfo_flags;
-	uint32_t sinfo_ppid;
-	uint32_t sinfo_context;
-	uint32_t sinfo_timetolive;
-	uint32_t sinfo_tsn;
-	uint32_t sinfo_cumtsn;
-	sctp_assoc_t sinfo_assoc_id;
-	uint16_t sinfo_keynumber;
-	uint16_t sinfo_keynumber_valid;
-};
-
 /*
  * JRS - Structure to hold function pointers to the functions responsible
  * for congestion control.
@@ -1184,6 +1184,12 @@ struct sctp_association {
 	uint8_t nrsack_supported;
 	uint8_t pktdrop_supported;
 	uint8_t idata_supported;
+
+	/*
+	 * Zero checksum supported information: 0: disabled 1: enabled for
+	 * rcv 2: enabled for snd/rcv
+	 */
+	uint8_t zero_checksum;
 
 	/* Did the peer make the stream config (add out) request */
 	uint8_t peer_req_out;

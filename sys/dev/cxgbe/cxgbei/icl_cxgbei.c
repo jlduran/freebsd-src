@@ -478,8 +478,7 @@ icl_cxgbei_tx_main(void *arg)
 		INP_WLOCK(inp);
 
 		ICL_CONN_UNLOCK(ic);
-		if (__predict_false(inp->inp_flags & (INP_DROPPED |
-		    INP_TIMEWAIT)) ||
+		if (__predict_false(inp->inp_flags & INP_DROPPED) ||
 		    __predict_false((toep->flags & TPF_ATTACHED) == 0)) {
 			mbufq_drain(&mq);
 		} else {
@@ -1007,7 +1006,7 @@ find_offload_adapter(struct adapter *sc, void *arg)
 
 	inp = sotoinpcb(so);
 	INP_WLOCK(inp);
-	if ((inp->inp_flags & (INP_DROPPED | INP_TIMEWAIT)) == 0) {
+	if ((inp->inp_flags & INP_DROPPED) == 0) {
 		tp = intotcpcb(inp);
 		if (tp->t_flags & TF_TOE && tp->tod == &td->tod)
 			fa->sc = sc;	/* Found. */
@@ -1103,7 +1102,7 @@ icl_cxgbei_conn_handoff(struct icl_conn *ic, int fd)
 	struct tcpcb *tp;
 	struct toepcb *toep;
 	cap_rights_t rights;
-	u_int max_rx_pdu_len, max_tx_pdu_len;
+	u_int max_iso_payload, max_rx_pdu_len, max_tx_pdu_len;
 	int error, max_iso_pdus;
 
 	MPASS(icc->icc_signature == CXGBEI_CONN_SIGNATURE);
@@ -1164,7 +1163,7 @@ icl_cxgbei_conn_handoff(struct icl_conn *ic, int fd)
 	inp = sotoinpcb(so);
 	INP_WLOCK(inp);
 	tp = intotcpcb(inp);
-	if (inp->inp_flags & (INP_DROPPED | INP_TIMEWAIT)) {
+	if (inp->inp_flags & INP_DROPPED) {
 		INP_WUNLOCK(inp);
 		error = ENOTCONN;
 		goto out;
@@ -1195,7 +1194,9 @@ icl_cxgbei_conn_handoff(struct icl_conn *ic, int fd)
 
 	if (icc->sc->tt.iso && chip_id(icc->sc) >= CHELSIO_T5 &&
 	    !is_memfree(icc->sc)) {
-		max_iso_pdus = CXGBEI_MAX_ISO_PAYLOAD / max_tx_pdu_len;
+		max_iso_payload = rounddown(CXGBEI_MAX_ISO_PAYLOAD,
+		    tp->t_maxseg);
+		max_iso_pdus = max_iso_payload / max_tx_pdu_len;
 		ic->ic_hw_isomax = max_iso_pdus *
 		    ic->ic_max_send_data_segment_length;
 	} else
@@ -1504,7 +1505,7 @@ no_ddp:
 	 */
 	inp = sotoinpcb(ic->ic_socket);
 	INP_WLOCK(inp);
-	if ((inp->inp_flags & (INP_DROPPED | INP_TIMEWAIT)) != 0) {
+	if ((inp->inp_flags & INP_DROPPED) != 0) {
 		INP_WUNLOCK(inp);
 		mbufq_drain(&mq);
 		t4_free_page_pods(prsv);
@@ -1681,7 +1682,7 @@ no_ddp:
 		inp = sotoinpcb(ic->ic_socket);
 		INP_WLOCK(inp);
 		ICL_CONN_UNLOCK(ic);
-		if ((inp->inp_flags & (INP_DROPPED | INP_TIMEWAIT)) != 0) {
+		if ((inp->inp_flags & INP_DROPPED) != 0) {
 			INP_WUNLOCK(inp);
 			mbufq_drain(&mq);
 			t4_free_page_pods(prsv);
@@ -1745,6 +1746,7 @@ icl_cxgbei_conn_transfer_done(struct icl_conn *ic, void *arg)
 	}
 }
 
+#ifdef COMPAT_FREEBSD13
 static void
 cxgbei_limits(struct adapter *sc, void *arg)
 {
@@ -1771,9 +1773,65 @@ cxgbei_limits(struct adapter *sc, void *arg)
 
 	end_synchronized_op(sc, LOCK_HELD);
 }
+#endif
 
 static int
-icl_cxgbei_limits(struct icl_drv_limits *idl)
+cxgbei_limits_fd(struct icl_drv_limits *idl, int fd)
+{
+	struct find_ofld_adapter_rr fa;
+	struct file *fp;
+	struct socket *so;
+	struct adapter *sc;
+	struct cxgbei_data *ci;
+	cap_rights_t rights;
+	int error;
+
+	error = fget(curthread, fd,
+	    cap_rights_init_one(&rights, CAP_SOCK_CLIENT), &fp);
+	if (error != 0)
+		return (error);
+	if (fp->f_type != DTYPE_SOCKET) {
+		fdrop(fp, curthread);
+		return (EINVAL);
+	}
+	so = fp->f_data;
+	if (so->so_type != SOCK_STREAM ||
+	    so->so_proto->pr_protocol != IPPROTO_TCP) {
+		fdrop(fp, curthread);
+		return (EINVAL);
+	}
+
+	/* Find the adapter offloading this socket. */
+	fa.sc = NULL;
+	fa.so = so;
+	t4_iterate(find_offload_adapter, &fa);
+	if (fa.sc == NULL) {
+		fdrop(fp, curthread);
+		return (ENXIO);
+	}
+	fdrop(fp, curthread);
+
+	sc = fa.sc;
+	error = begin_synchronized_op(sc, NULL, HOLD_LOCK, "t4lims");
+	if (error != 0)
+		return (error);
+
+	if (uld_active(sc, ULD_ISCSI)) {
+		ci = sc->iscsi_ulp_softc;
+		MPASS(ci != NULL);
+
+		idl->idl_max_recv_data_segment_length = ci->max_rx_data_len;
+		idl->idl_max_send_data_segment_length = ci->max_tx_data_len;
+	} else
+		error = ENXIO;
+
+	end_synchronized_op(sc, LOCK_HELD);
+
+	return (error);
+}
+
+static int
+icl_cxgbei_limits(struct icl_drv_limits *idl, int socket)
 {
 
 	/* Maximum allowed by the RFC.	cxgbei_limits will clip them. */
@@ -1784,9 +1842,14 @@ icl_cxgbei_limits(struct icl_drv_limits *idl)
 	idl->idl_max_burst_length = max_burst_length;
 	idl->idl_first_burst_length = first_burst_length;
 
-	t4_iterate(cxgbei_limits, idl);
+#ifdef COMPAT_FREEBSD13
+	if (socket == 0) {
+		t4_iterate(cxgbei_limits, idl);
+		return (0);
+	}
+#endif
 
-	return (0);
+	return (cxgbei_limits_fd(idl, socket));
 }
 
 int

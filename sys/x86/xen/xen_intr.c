@@ -71,6 +71,9 @@ __FBSDID("$FreeBSD$");
 #include <ddb/ddb.h>
 #endif
 
+/* The code below is the implementation of 2L event channels. */
+#define NR_EVENT_CHANNELS EVTCHN_2L_NR_CHANNELS
+
 static MALLOC_DEFINE(M_XENINTR, "xen_intr", "Xen Interrupt Services");
 
 static u_int first_evtchn_irq;
@@ -459,7 +462,7 @@ xen_intr_bind_isrc(struct xenisrc **isrcp, evtchn_port_t local_port,
  * Determine the event channel ports at the given section of the
  * event port bitmap which have pending events for the given cpu.
  * 
- * \param pcpu  The Xen interrupt pcpu data for the cpu being querried.
+ * \param pcpu  The Xen interrupt pcpu data for the cpu being queried.
  * \param sh    The Xen shared info area.
  * \param idx   The index of the section of the event channel bitmap to
  *              inspect.

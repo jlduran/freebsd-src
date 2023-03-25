@@ -144,6 +144,13 @@
 #define	NFS_READDIRBLKSIZ	DIRBLKSIZ	/* Minimal nm_readdirsize */
 
 /*
+ * The NFSv4 RFCs do not define an upper limit on the length of Owner and
+ * OwnerGroup strings.  Since FreeBSD handles a group name > 1024bytes in
+ * length, set a generous sanity limit of 10Kbytes.
+ */
+#define	NFSV4_MAXOWNERGROUPLEN	(10 * 1024)
+
+/*
  * Oddballs
  */
 #define	NFS_CMPFH(n, f, s) 						\
@@ -513,6 +520,13 @@ typedef struct {
 	(b)->bits[0] = NFSGETATTRBIT_STATFS0;	 			\
 	(b)->bits[1] = NFSGETATTRBIT_STATFS1;				\
 	(b)->bits[2] = NFSGETATTRBIT_STATFS2;				\
+} while (0)
+
+#define	NFSROOTFS_GETATTRBIT(b)	do { 					\
+	(b)->bits[0] = NFSGETATTRBIT_STATFS0 | NFSATTRBIT_GETATTR0 |	\
+	    NFSATTRBM_LEASETIME;					\
+	(b)->bits[1] = NFSGETATTRBIT_STATFS1 | NFSATTRBIT_GETATTR1;	\
+	(b)->bits[2] = NFSGETATTRBIT_STATFS2 | NFSATTRBIT_GETATTR2;	\
 } while (0)
 
 #define	NFSISSETSTATFS_ATTRBIT(b) 					\

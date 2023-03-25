@@ -435,7 +435,7 @@ SYSCTL_INT(_kern_cam_ctl, OID_AUTO, max_luns, CTLFLAG_RDTUN,
 /*
  * Maximum number of ports registered at one time.
  */
-#define	CTL_DEFAULT_MAX_PORTS		256
+#define	CTL_DEFAULT_MAX_PORTS		1024
 static int ctl_max_ports = CTL_DEFAULT_MAX_PORTS;
 TUNABLE_INT("kern.cam.ctl.max_ports", &ctl_max_ports);
 SYSCTL_INT(_kern_cam_ctl, OID_AUTO, max_ports, CTLFLAG_RDTUN,
@@ -800,6 +800,7 @@ ctl_isc_handler_finish_xfer(struct ctl_softc *ctl_softc,
 	}
 
 	ctsio = &msg_info->hdr.original_sc->scsiio;
+	ctsio->io_hdr.flags &= ~CTL_FLAG_SENT_2OTHER_SC;
 	ctsio->io_hdr.flags |= CTL_FLAG_IO_ACTIVE;
 	ctsio->io_hdr.msg_type = CTL_MSG_FINISH_IO;
 	ctsio->io_hdr.status = msg_info->hdr.status;
@@ -2442,7 +2443,7 @@ ctl_serialize_other_sc_cmd(struct ctl_scsiio *ctsio)
 	case CTL_ACTION_OVERLAP_TAG:
 		LIST_REMOVE(&ctsio->io_hdr, ooa_links);
 		mtx_unlock(&lun->lun_lock);
-		ctl_set_overlapped_tag(ctsio, ctsio->tag_num);
+		ctl_set_overlapped_tag(ctsio, ctsio->tag_num & 0xff);
 badjuju:
 		ctl_copy_sense_data_back((union ctl_io *)ctsio, &msg_info);
 		msg_info.hdr.original_sc = ctsio->io_hdr.remote_io;
@@ -2490,6 +2491,7 @@ ctl_ioctl_fill_ooa(struct ctl_lun *lun, uint32_t *cur_fill_num,
 		entry = &kern_entries[*cur_fill_num];
 
 		entry->tag_num = io->scsiio.tag_num;
+		entry->tag_type = io->scsiio.tag_type;
 		entry->lun_num = lun->lun;
 #ifdef CTL_TIME_IO
 		entry->start_bt = io->io_hdr.start_bt;
@@ -2976,6 +2978,12 @@ ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		}
 
 		if (lun_req->args != NULL) {
+			if (lun_req->args_len > CTL_MAX_ARGS_LEN) {
+				lun_req->status = CTL_LUN_ERROR;
+				snprintf(lun_req->error_str, sizeof(lun_req->error_str),
+				    "Too big args.");
+				break;
+			}
 			packed = malloc(lun_req->args_len, M_CTL, M_WAITOK);
 			if (copyin(lun_req->args, packed, lun_req->args_len) != 0) {
 				free(packed, M_CTL);
@@ -2997,6 +3005,7 @@ ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		} else
 			lun_req->args_nvl = nvlist_create(0);
 
+		lun_req->result_nvl = NULL;
 		retval = backend->ioctl(dev, cmd, addr, flag, td);
 		nvlist_destroy(lun_req->args_nvl);
 		lun_req->args_nvl = tmp_args_nvl;
@@ -3253,6 +3262,12 @@ ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		}
 
 		if (req->args != NULL) {
+			if (req->args_len > CTL_MAX_ARGS_LEN) {
+				req->status = CTL_LUN_ERROR;
+				snprintf(req->error_str, sizeof(req->error_str),
+				    "Too big args.");
+				break;
+			}
 			packed = malloc(req->args_len, M_CTL, M_WAITOK);
 			if (copyin(req->args, packed, req->args_len) != 0) {
 				free(packed, M_CTL);
@@ -3274,6 +3289,7 @@ ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		} else
 			req->args_nvl = nvlist_create(0);
 
+		req->result_nvl = NULL;
 		if (fe->ioctl)
 			retval = fe->ioctl(dev, cmd, addr, flag, td);
 		else
@@ -11658,6 +11674,8 @@ ctl_scsiio_precheck(struct ctl_scsiio *ctsio)
 		if ((isc_retval = ctl_ha_msg_send(CTL_HA_CHAN_CTL, &msg_info,
 		    sizeof(msg_info.scsi) - sizeof(msg_info.scsi.sense_data),
 		    M_WAITOK)) > CTL_HA_STATUS_SUCCESS) {
+			ctsio->io_hdr.flags &= ~CTL_FLAG_SENT_2OTHER_SC;
+			ctsio->io_hdr.flags |= CTL_FLAG_IO_ACTIVE;
 			ctl_set_busy(ctsio);
 			ctl_done((union ctl_io *)ctsio);
 			return;
@@ -12577,7 +12595,7 @@ ctl_datamove(union ctl_io *io)
 	 * the data move.
 	 */
 	if (io->io_hdr.flags & CTL_FLAG_ABORT) {
-		printf("ctl_datamove: tag 0x%04x on (%u:%u:%u) aborted\n",
+		printf("ctl_datamove: tag 0x%jx on (%u:%u:%u) aborted\n",
 		       io->scsiio.tag_num, io->io_hdr.nexus.initid,
 		       io->io_hdr.nexus.targ_port,
 		       io->io_hdr.nexus.targ_lun);
@@ -12979,7 +12997,7 @@ ctl_datamove_remote(union ctl_io *io)
 	 * have been done if need be on the other controller.
 	 */
 	if (io->io_hdr.flags & CTL_FLAG_ABORT) {
-		printf("%s: tag 0x%04x on (%u:%u:%u) aborted\n", __func__,
+		printf("%s: tag 0x%jx on (%u:%u:%u) aborted\n", __func__,
 		       io->scsiio.tag_num, io->io_hdr.nexus.initid,
 		       io->io_hdr.nexus.targ_port,
 		       io->io_hdr.nexus.targ_lun);
@@ -13025,12 +13043,12 @@ ctl_process_done(union ctl_io *io)
 			ctl_scsi_command_string(&io->scsiio, NULL, &sb);
 			sbuf_printf(&sb, "\n");
 			sbuf_cat(&sb, path_str);
-			sbuf_printf(&sb, "Tag: 0x%04x/%d, Prio: %d\n",
+			sbuf_printf(&sb, "Tag: 0x%jx/%d, Prio: %d\n",
 				    io->scsiio.tag_num, io->scsiio.tag_type,
 				    io->scsiio.priority);
 			break;
 		case CTL_IO_TASK:
-			sbuf_printf(&sb, "Task Action: %d Tag: 0x%04x/%d\n",
+			sbuf_printf(&sb, "Task Action: %d Tag: 0x%jx/%d\n",
 				    io->taskio.task_action,
 				    io->taskio.tag_num, io->taskio.tag_type);
 			break;

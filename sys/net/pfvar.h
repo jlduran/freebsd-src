@@ -286,6 +286,28 @@ pf_counter_u64_zero(struct pf_counter_u64 *pfcu64)
 }
 #endif
 
+#define pf_get_timestamp(prule)({					\
+	uint32_t _ts = 0;						\
+	uint32_t __ts;							\
+	int cpu;							\
+	CPU_FOREACH(cpu) {						\
+		__ts = *zpcpu_get_cpu(prule->timestamp, cpu);		\
+		if (__ts > _ts)						\
+			_ts = __ts;					\
+	}								\
+	_ts;								\
+})
+
+#define pf_update_timestamp(prule)					\
+	do {								\
+		critical_enter();					\
+		*zpcpu_get((prule)->timestamp) = time_second;		\
+		critical_exit();					\
+	} while (0)
+
+#define pf_timestamp_pcpu_zone	(sizeof(time_t) == 4 ? pcpu_zone_4 : pcpu_zone_8)
+_Static_assert(sizeof(time_t) == 4 || sizeof(time_t) == 8, "unexpected time_t size");
+
 SYSCTL_DECL(_net_pf);
 MALLOC_DECLARE(M_PFHASH);
 
@@ -356,6 +378,11 @@ extern struct mtx_padalign pf_unlnkdrules_mtx;
 #define	PF_UNLNKDRULES_LOCK()	mtx_lock(&pf_unlnkdrules_mtx)
 #define	PF_UNLNKDRULES_UNLOCK()	mtx_unlock(&pf_unlnkdrules_mtx)
 #define	PF_UNLNKDRULES_ASSERT()	mtx_assert(&pf_unlnkdrules_mtx, MA_OWNED)
+
+extern struct sx pf_config_lock;
+#define	PF_CONFIG_LOCK()	sx_xlock(&pf_config_lock)
+#define	PF_CONFIG_UNLOCK()	sx_xunlock(&pf_config_lock)
+#define	PF_CONFIG_ASSERT()	sx_assert(&pf_config_lock, SA_XLOCKED)
 
 extern struct rmlock pf_rules_lock;
 #define	PF_RULES_RLOCK_TRACKER	struct rm_priotracker _pf_rules_tracker
@@ -647,17 +674,24 @@ struct pf_keth_rule {
 	uint16_t		 proto;
 	struct pf_keth_rule_addr src, dst;
 	struct pf_rule_addr	 ipsrc, ipdst;
+	char			 match_tagname[PF_TAG_NAME_SIZE];
+	uint16_t		 match_tag;
+	bool			 match_tag_not;
+
 
 	/* Stats */
 	counter_u64_t		 evaluations;
 	counter_u64_t		 packets[2];
 	counter_u64_t		 bytes[2];
+	time_t			*timestamp;
 
 	/* Action */
 	char			 qname[PF_QNAME_SIZE];
 	int			 qid;
 	char			 tagname[PF_TAG_NAME_SIZE];
 	uint16_t		 tag;
+	char			 bridge_to_name[IFNAMSIZ];
+	struct pfi_kkif		*bridge_to;
 	uint8_t			 action;
 	uint16_t		 dnpipe;
 	uint32_t		 dnflags;
@@ -667,6 +701,9 @@ union pf_krule_ptr {
 	struct pf_krule		*ptr;
 	u_int32_t		 nr;
 };
+
+RB_HEAD(pf_krule_global, pf_krule);
+RB_PROTOTYPE(pf_krule_global, pf_krule, entry_global, pf_krule_compare);
 
 struct pf_krule {
 	struct pf_rule_addr	 src;
@@ -688,6 +725,7 @@ struct pf_krule {
 	struct pf_counter_u64	 evaluations;
 	struct pf_counter_u64	 packets[2];
 	struct pf_counter_u64	 bytes[2];
+	time_t			*timestamp;
 
 	struct pfi_kkif		*kif;
 	struct pf_kanchor	*anchor;
@@ -764,6 +802,8 @@ struct pf_krule {
 		struct pf_addr		addr;
 		u_int16_t		port;
 	}			divert;
+	u_int8_t		 md5sum[PF_MD5_DIGEST_LENGTH];
+	RB_ENTRY(pf_krule)	 entry_global;
 
 #ifdef PF_WANT_32_TO_64_COUNTER
 	LIST_ENTRY(pf_krule)	 allrulelist;
@@ -1031,7 +1071,7 @@ struct pfsync_state {
 
 #ifdef _KERNEL
 /* pfsync */
-typedef int		pfsync_state_import_t(struct pfsync_state *, u_int8_t);
+typedef int		pfsync_state_import_t(struct pfsync_state *, int);
 typedef	void		pfsync_insert_state_t(struct pf_kstate *);
 typedef	void		pfsync_update_state_t(struct pf_kstate *);
 typedef	void		pfsync_delete_state_t(struct pf_kstate *);
@@ -1134,6 +1174,7 @@ struct pf_kruleset {
 			u_int32_t		 rcount;
 			u_int32_t		 ticket;
 			int			 open;
+			struct pf_krule_global 	 *tree;
 		}			 active, inactive;
 	}			 rules[PF_RULESET_MAX];
 	struct pf_kanchor	*anchor;
@@ -1526,7 +1567,7 @@ struct pf_divert {
 
 /*
  * The number of entries in the fragment queue must be limited
- * to avoid DoS by linear seaching.  Instead of a global limit,
+ * to avoid DoS by linear searching.  Instead of a global limit,
  * use a limit per entry point.  For large packets these sum up.
  */
 #define PF_FRAG_ENTRY_LIMIT		64
@@ -1854,6 +1895,8 @@ struct pfioc_iface {
 #define	DIOCADDETHRULE		_IOWR('D', 97, struct pfioc_nv)
 #define	DIOCGETETHRULE		_IOWR('D', 98, struct pfioc_nv)
 #define	DIOCGETETHRULES		_IOWR('D', 99, struct pfioc_nv)
+#define	DIOCGETETHRULESETS	_IOWR('D', 100, struct pfioc_nv)
+#define	DIOCGETETHRULESET	_IOWR('D', 101, struct pfioc_nv)
 
 struct pf_ifspeed_v0 {
 	char			ifname[IFNAMSIZ];
@@ -1946,7 +1989,7 @@ VNET_DECLARE(void *, pf_swi_cookie);
 VNET_DECLARE(struct intr_event *, pf_swi_ie);
 #define	V_pf_swi_ie	VNET(pf_swi_ie)
 
-VNET_DECLARE(uint64_t, pf_stateid[MAXCPU]);
+VNET_DECLARE(struct unrhdr64, pf_stateid);
 #define	V_pf_stateid	VNET(pf_stateid)
 
 TAILQ_HEAD(pf_altqqueue, pf_altq);
@@ -2092,7 +2135,7 @@ int	pf_normalize_ip6(struct mbuf **, int, struct pfi_kkif *, u_short *,
 void	pf_poolmask(struct pf_addr *, struct pf_addr*,
 	    struct pf_addr *, struct pf_addr *, u_int8_t);
 void	pf_addr_inc(struct pf_addr *, sa_family_t);
-int	pf_refragment6(struct ifnet *, struct mbuf **, struct m_tag *);
+int	pf_refragment6(struct ifnet *, struct mbuf **, struct m_tag *, bool);
 #endif /* INET6 */
 
 u_int32_t	pf_new_isn(struct pf_kstate *);
@@ -2140,6 +2183,8 @@ int	pfr_pool_get(struct pfr_ktable *, int *, struct pf_addr *, sa_family_t);
 void	pfr_dynaddr_update(struct pfr_ktable *, struct pfi_dynaddr *);
 struct pfr_ktable *
 	pfr_attach_table(struct pf_kruleset *, char *);
+struct pfr_ktable *
+	pfr_eth_attach_table(struct pf_keth_ruleset *, char *);
 void	pfr_detach_table(struct pfr_ktable *);
 int	pfr_clr_tables(struct pfr_table *, int *, int);
 int	pfr_add_tables(struct pfr_table *, int, int *, int);
@@ -2218,6 +2263,7 @@ int			 pf_set_syncookies(struct pfioc_nv *);
 int			 pf_synflood_check(struct pf_pdesc *);
 void			 pf_syncookie_send(struct mbuf *m, int off,
 			    struct pf_pdesc *);
+bool			 pf_syncookie_check(struct pf_pdesc *);
 u_int8_t		 pf_syncookie_validate(struct pf_pdesc *);
 struct mbuf *		 pf_syncookie_recreate_syn(uint8_t, int,
 			    struct pf_pdesc *);

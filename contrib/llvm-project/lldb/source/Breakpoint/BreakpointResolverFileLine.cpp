@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -99,10 +100,10 @@ BreakpointResolverFileLine::SerializeToStructuredData() {
   options_dict_sp->AddStringItem(GetKey(OptionNames::FileName),
                                  m_location_spec.GetFileSpec().GetPath());
   options_dict_sp->AddIntegerItem(GetKey(OptionNames::LineNumber),
-                                  m_location_spec.GetLine().getValueOr(0));
+                                  m_location_spec.GetLine().value_or(0));
   options_dict_sp->AddIntegerItem(
       GetKey(OptionNames::Column),
-      m_location_spec.GetColumn().getValueOr(LLDB_INVALID_COLUMN_NUMBER));
+      m_location_spec.GetColumn().value_or(LLDB_INVALID_COLUMN_NUMBER));
   options_dict_sp->AddBooleanItem(GetKey(OptionNames::Inlines),
                                   m_location_spec.GetCheckInlines());
   options_dict_sp->AddBooleanItem(GetKey(OptionNames::ExactMatch),
@@ -127,7 +128,7 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
   if (is_relative)
     relative_path = m_location_spec.GetFileSpec().GetDirectory().GetStringRef();
 
-  Log * log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
+  Log *log = GetLog(LLDBLog::Breakpoints);
   for(uint32_t i = 0; i < sc_list.GetSize(); ++i) {
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);
@@ -188,7 +189,7 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
     // is 0, then we can't do this calculation.  That can happen if
     // GetStartLineSourceInfo gets an error, or if the first line number in
     // the function really is 0 - which happens for some languages.
-    
+
     // But only do this calculation if the line number we found in the SC
     // was different from the one requested in the source file.  If we actually
     // found an exact match it must be valid.
@@ -226,21 +227,28 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   // file.  So we go through the match list and pull out the sets that have the
   // same file spec in their line_entry and treat each set separately.
 
-  const uint32_t line = m_location_spec.GetLine().getValueOr(0);
+  const uint32_t line = m_location_spec.GetLine().value_or(0);
   const llvm::Optional<uint16_t> column = m_location_spec.GetColumn();
 
+  // We'll create a new SourceLocationSpec that can take into account the
+  // relative path case, and we'll use it to resolve the symbol context
+  // of the CUs.
   FileSpec search_file_spec = m_location_spec.GetFileSpec();
   const bool is_relative = search_file_spec.IsRelative();
   if (is_relative)
     search_file_spec.GetDirectory().Clear();
+  SourceLocationSpec search_location_spec(
+      search_file_spec, m_location_spec.GetLine().value_or(0),
+      m_location_spec.GetColumn(), m_location_spec.GetCheckInlines(),
+      m_location_spec.GetExactMatch());
 
   const size_t num_comp_units = context.module_sp->GetNumCompileUnits();
   for (size_t i = 0; i < num_comp_units; i++) {
     CompUnitSP cu_sp(context.module_sp->GetCompileUnitAtIndex(i));
     if (cu_sp) {
       if (filter.CompUnitPasses(*cu_sp))
-        cu_sp->ResolveSymbolContext(m_location_spec, eSymbolContextEverything,
-                                    sc_list);
+        cu_sp->ResolveSymbolContext(search_location_spec,
+                                    eSymbolContextEverything, sc_list);
     }
   }
 
@@ -264,7 +272,7 @@ lldb::SearchDepth BreakpointResolverFileLine::GetDepth() {
 void BreakpointResolverFileLine::GetDescription(Stream *s) {
   s->Printf("file = '%s', line = %u, ",
             m_location_spec.GetFileSpec().GetPath().c_str(),
-            m_location_spec.GetLine().getValueOr(0));
+            m_location_spec.GetLine().value_or(0));
   auto column = m_location_spec.GetColumn();
   if (column)
     s->Printf("column = %u, ", *column);

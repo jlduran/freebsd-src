@@ -32,6 +32,8 @@
 # $FreeBSD$
 #
 
+#include "opt_platform.h"
+
 #include <sys/types.h>
 #include <sys/taskqueue.h>
 #include <sys/bus.h>
@@ -41,6 +43,12 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 #include <dev/iommu/iommu.h>
+
+#ifdef FDT
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+#include <dev/ofw/ofw_bus_subr.h>
+#endif
 
 INTERFACE iommu;
 
@@ -117,9 +125,29 @@ METHOD struct iommu_ctx * ctx_alloc {
 };
 
 #
+# Initialize the new iommu context.
+#
+METHOD int ctx_init {
+	device_t		dev;
+	struct iommu_ctx	*ioctx;
+};
+
+#
 # Free the iommu context.
 #
 METHOD void ctx_free {
 	device_t		dev;
 	struct iommu_ctx	*ioctx;
 };
+
+#ifdef FDT
+#
+# Notify controller we have machine-dependent data.
+#
+METHOD int ofw_md_data {
+	device_t dev;
+	struct iommu_ctx *ioctx;
+	pcell_t *cells;
+	int ncells;
+};
+#endif

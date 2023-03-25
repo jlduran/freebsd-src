@@ -71,6 +71,7 @@
 #define	CPU_IMPL_BROADCOM	0x42
 #define	CPU_IMPL_CAVIUM		0x43
 #define	CPU_IMPL_DEC		0x44
+#define	CPU_IMPL_FUJITSU	0x46
 #define	CPU_IMPL_INFINEON	0x49
 #define	CPU_IMPL_FREESCALE	0x4D
 #define	CPU_IMPL_NVIDIA		0x4E
@@ -79,9 +80,11 @@
 #define	CPU_IMPL_MARVELL	0x56
 #define	CPU_IMPL_APPLE		0x61
 #define	CPU_IMPL_INTEL		0x69
+#define	CPU_IMPL_AMPERE		0xC0
 
 /* ARM Part numbers */
 #define	CPU_PART_FOUNDATION	0xD00
+#define	CPU_PART_CORTEX_A34	0xD02
 #define	CPU_PART_CORTEX_A53	0xD03
 #define	CPU_PART_CORTEX_A35	0xD04
 #define	CPU_PART_CORTEX_A55	0xD05
@@ -95,6 +98,20 @@
 #define	CPU_PART_CORTEX_A77	0xD0D
 #define	CPU_PART_CORTEX_A76AE	0xD0E
 #define	CPU_PART_AEM_V8		0xD0F
+#define	CPU_PART_NEOVERSE_V1	0xD40
+#define	CPU_PART_CORTEX_A78	0xD41
+#define	CPU_PART_CORTEX_A65AE	0xD43
+#define	CPU_PART_CORTEX_X1	0xD44
+#define	CPU_PART_CORTEX_A510	0xD46
+#define	CPU_PART_CORTEX_A710	0xD47
+#define	CPU_PART_CORTEX_X2	0xD48
+#define	CPU_PART_NEOVERSE_N2	0xD49
+#define	CPU_PART_NEOVERSE_E1	0xD4A
+#define	CPU_PART_CORTEX_A78C	0xD4B
+#define	CPU_PART_CORTEX_X1C	0xD4C
+#define	CPU_PART_CORTEX_A715	0xD4D
+#define	CPU_PART_CORTEX_X3	0xD4E
+#define	CPU_PART_NEOVERSE_V2	0xD4F
 
 /* Cavium Part numbers */
 #define	CPU_PART_THUNDERX	0x0A1
@@ -110,19 +127,26 @@
 /* APM / Ampere Part Number */
 #define CPU_PART_EMAG8180	0x000
 
+/* Qualcomm */
+#define	CPU_PART_KRYO400_GOLD	0x804
+#define	CPU_PART_KRYO400_SILVER	0x805
+
 #define	CPU_IMPL(midr)	(((midr) >> 24) & 0xff)
 #define	CPU_PART(midr)	(((midr) >> 4) & 0xfff)
 #define	CPU_VAR(midr)	(((midr) >> 20) & 0xf)
+#define	CPU_ARCH(midr)	(((midr) >> 16) & 0xf)
 #define	CPU_REV(midr)	(((midr) >> 0) & 0xf)
 
 #define	CPU_IMPL_TO_MIDR(val)	(((val) & 0xff) << 24)
 #define	CPU_PART_TO_MIDR(val)	(((val) & 0xfff) << 4)
 #define	CPU_VAR_TO_MIDR(val)	(((val) & 0xf) << 20)
+#define	CPU_ARCH_TO_MIDR(val)	(((val) & 0xf) << 16)
 #define	CPU_REV_TO_MIDR(val)	(((val) & 0xf) << 0)
 
 #define	CPU_IMPL_MASK	(0xff << 24)
 #define	CPU_PART_MASK	(0xfff << 4)
 #define	CPU_VAR_MASK	(0xf << 20)
+#define	CPU_ARCH_MASK	(0xf << 16)
 #define	CPU_REV_MASK	(0xf << 0)
 
 #define	CPU_ID_RAW(impl, part, var, rev)		\
@@ -222,7 +246,8 @@ arm64_address_translate_ ##stage (uint64_t addr)		\
 	uint64_t ret;						\
 								\
 	__asm __volatile(					\
-	    "at " __STRING(stage) ", %1 \n"					\
+	    "at " __STRING(stage) ", %1 \n"			\
+	    "isb \n"						\
 	    "mrs %0, par_el1" : "=r"(ret) : "r"(addr));		\
 								\
 	return (ret);						\

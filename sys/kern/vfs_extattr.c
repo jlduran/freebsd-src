@@ -108,7 +108,7 @@ sys_extattrctl(struct thread *td, struct extattrctl_args *uap)
 		if (error)
 			return (error);
 		filename_vp = nd.ni_vp;
-		NDFREE(&nd, NDF_NO_VP_RELE);
+		NDFREE_PNBUF(&nd);
 	}
 
 	/* uap->path is always defined. */
@@ -120,13 +120,15 @@ sys_extattrctl(struct thread *td, struct extattrctl_args *uap)
 	mp = nd.ni_vp->v_mount;
 	error = vfs_busy(mp, 0);
 	if (error) {
-		NDFREE(&nd, 0);
+		vput(nd.ni_vp);
+		NDFREE_PNBUF(&nd);
 		mp = NULL;
 		goto out;
 	}
 	VOP_UNLOCK(nd.ni_vp);
-	error = vn_start_write(nd.ni_vp, &mp_writable, V_WAIT | PCATCH);
-	NDFREE(&nd, NDF_NO_VP_UNLOCK);
+	error = vn_start_write(nd.ni_vp, &mp_writable, V_WAIT | V_PCATCH);
+	vrele(nd.ni_vp);
+	NDFREE_PNBUF(&nd);
 	if (error)
 		goto out;
 	if (filename_vp != NULL) {
@@ -182,7 +184,7 @@ extattr_set_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 	if (nbytes > IOSIZE_MAX)
 		return (EINVAL);
 
-	error = vn_start_write(vp, &mp, V_WAIT | PCATCH);
+	error = vn_start_write(vp, &mp, V_WAIT | V_PCATCH);
 	if (error)
 		return (error);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
@@ -306,7 +308,7 @@ kern_extattr_set_path(struct thread *td, const char *path, int attrnamespace,
 	error = namei(&nd);
 	if (error)
 		return (error);
-	NDFREE(&nd, NDF_ONLY_PNBUF);
+	NDFREE_PNBUF(&nd);
 
 	error = extattr_set_vp(nd.ni_vp, attrnamespace, attrname, data,
 	    nbytes, td);
@@ -471,7 +473,7 @@ kern_extattr_get_path(struct thread *td, const char *path, int attrnamespace,
 	error = namei(&nd);
 	if (error)
 		return (error);
-	NDFREE(&nd, NDF_ONLY_PNBUF);
+	NDFREE_PNBUF(&nd);
 
 	error = extattr_get_vp(nd.ni_vp, attrnamespace, attrname, data,
 	    nbytes, td);
@@ -497,7 +499,7 @@ extattr_delete_vp(struct vnode *vp, int attrnamespace, const char *attrname,
 	struct mount *mp;
 	int error;
 
-	error = vn_start_write(vp, &mp, V_WAIT | PCATCH);
+	error = vn_start_write(vp, &mp, V_WAIT | V_PCATCH);
 	if (error)
 		return (error);
 	vn_lock(vp, LK_EXCLUSIVE | LK_RETRY);
@@ -603,7 +605,7 @@ kern_extattr_delete_path(struct thread *td, const char *path, int attrnamespace,
 	error = namei(&nd);
 	if (error)
 		return(error);
-	NDFREE(&nd, NDF_ONLY_PNBUF);
+	NDFREE_PNBUF(&nd);
 
 	error = extattr_delete_vp(nd.ni_vp, attrnamespace, attrname, td);
 	vrele(nd.ni_vp);
@@ -746,7 +748,7 @@ kern_extattr_list_path(struct thread *td, const char *path, int attrnamespace,
 	error = namei(&nd);
 	if (error)
 		return (error);
-	NDFREE(&nd, NDF_ONLY_PNBUF);
+	NDFREE_PNBUF(&nd);
 
 	error = extattr_list_vp(nd.ni_vp, attrnamespace, data, nbytes, td);
 

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -106,8 +106,10 @@ crypto_get_ptrs(crypto_data_t *out, void **iov_or_mp, offset_t *current_offset,
 		} else {
 			/* one block spans two iovecs */
 			*out_data_1_len = iov_len - offset;
-			if (vec_idx == zfs_uio_iovcnt(uio))
+			if (vec_idx == zfs_uio_iovcnt(uio)) {
+				*out_data_2 = NULL;
 				return;
+			}
 			vec_idx++;
 			zfs_uio_iov_at_index(uio, vec_idx, &iov_base, &iov_len);
 			*out_data_2 = (uint8_t *)iov_base;
@@ -155,7 +157,7 @@ crypto_free_mode_ctx(void *ctx)
 #ifdef CAN_USE_GCM_ASM
 		if (((gcm_ctx_t *)ctx)->gcm_Htable != NULL) {
 			gcm_ctx_t *gcm_ctx = (gcm_ctx_t *)ctx;
-			bzero(gcm_ctx->gcm_Htable, gcm_ctx->gcm_htab_len);
+			memset(gcm_ctx->gcm_Htable, 0, gcm_ctx->gcm_htab_len);
 			kmem_free(gcm_ctx->gcm_Htable, gcm_ctx->gcm_htab_len);
 		}
 #endif

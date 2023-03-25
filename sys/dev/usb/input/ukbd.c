@@ -394,6 +394,8 @@ ukbd_put_key(struct ukbd_softc *sc, uint32_t key)
 	if (evdev_rcpt_mask & EVDEV_RCPT_HW_KBD && sc->sc_evdev != NULL)
 		evdev_push_event(sc->sc_evdev, EV_KEY,
 		    evdev_hid2key(KEY_INDEX(key)), !(key & KEY_RELEASE));
+	if (sc->sc_evdev != NULL && evdev_is_grabbed(sc->sc_evdev))
+		return;
 #endif
 
 	if (sc->sc_inputs < UKBD_IN_BUF_SIZE) {
@@ -562,6 +564,8 @@ ukbd_interrupt(struct ukbd_softc *sc)
 #ifdef EVDEV_SUPPORT
 	if (evdev_rcpt_mask & EVDEV_RCPT_HW_KBD && sc->sc_evdev != NULL)
 		evdev_sync(sc->sc_evdev);
+	if (sc->sc_evdev != NULL && evdev_is_grabbed(sc->sc_evdev))
+		return;
 #endif
 
 	/* wakeup keyboard system */
@@ -1853,11 +1857,15 @@ ukbd_ioctl_locked(keyboard_t *kbd, u_long cmd, caddr_t arg)
 		return (ukbd_set_typematic(kbd, *(int *)arg));
 
 	case PIO_KEYMAP:		/* set keyboard translation table */
-	case OPIO_KEYMAP:		/* set keyboard translation table
-					 * (compat) */
 	case PIO_KEYMAPENT:		/* set keyboard translation table
 					 * entry */
 	case PIO_DEADKEYMAP:		/* set accent key translation table */
+#ifdef COMPAT_FREEBSD13
+	case OPIO_KEYMAP:		/* set keyboard translation table
+					 * (compat) */
+	case OPIO_DEADKEYMAP:		/* set accent key translation table
+					 * (compat) */
+#endif /* COMPAT_FREEBSD13 */
 		sc->sc_accents = 0;
 		/* FALLTHROUGH */
 	default:
@@ -2173,8 +2181,6 @@ ukbd_driver_load(module_t mod, int what, void *arg)
 	return (0);
 }
 
-static devclass_t ukbd_devclass;
-
 static device_method_t ukbd_methods[] = {
 	DEVMETHOD(device_probe, ukbd_probe),
 	DEVMETHOD(device_attach, ukbd_attach),
@@ -2190,7 +2196,7 @@ static driver_t ukbd_driver = {
 	.size = sizeof(struct ukbd_softc),
 };
 
-DRIVER_MODULE(ukbd, uhub, ukbd_driver, ukbd_devclass, ukbd_driver_load, 0);
+DRIVER_MODULE(ukbd, uhub, ukbd_driver, ukbd_driver_load, NULL);
 MODULE_DEPEND(ukbd, usb, 1, 1, 1);
 MODULE_DEPEND(ukbd, hid, 1, 1, 1);
 #ifdef EVDEV_SUPPORT

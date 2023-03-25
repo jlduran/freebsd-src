@@ -442,7 +442,7 @@ awg_setup_rxfilter(struct awg_softc *sc)
 		val |= HASH_MULTICAST;
 
 	/* Write our unicast address */
-	eaddr = IF_LLADDR(ifp);
+	eaddr = if_getlladdr(ifp);
 	machi = (eaddr[5] << 8) | eaddr[4];
 	maclo = (eaddr[3] << 24) | (eaddr[2] << 16) | (eaddr[1] << 8) |
 	   (eaddr[0] << 0);
@@ -2015,10 +2015,8 @@ static driver_t awg_driver = {
 	sizeof(struct awg_softc),
 };
 
-static devclass_t awg_devclass;
-
-DRIVER_MODULE(awg, simplebus, awg_driver, awg_devclass, 0, 0);
-DRIVER_MODULE(miibus, awg, miibus_driver, miibus_devclass, 0, 0);
+DRIVER_MODULE(awg, simplebus, awg_driver, 0, 0);
+DRIVER_MODULE(miibus, awg, miibus_driver, 0, 0);
 MODULE_DEPEND(awg, ether, 1, 1, 1);
 MODULE_DEPEND(awg, miibus, 1, 1, 1);
 MODULE_DEPEND(awg, aw_sid, 1, 1, 1);

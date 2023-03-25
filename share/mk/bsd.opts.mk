@@ -64,6 +64,7 @@ __DEFAULT_YES_OPTIONS = \
     NIS \
     NLS \
     OPENSSH \
+    RELRO \
     SSP \
     TESTS \
     TOOLCHAIN \
@@ -102,6 +103,8 @@ __DEFAULT_NO_OPTIONS+= PIE
 .else
 __DEFAULT_YES_OPTIONS+=PIE
 .endif
+
+.-include <local.opts.mk>
 
 .include <bsd.mkopt.mk>
 

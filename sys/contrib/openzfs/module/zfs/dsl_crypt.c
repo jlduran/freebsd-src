@@ -80,13 +80,13 @@
 int zfs_disable_ivset_guid_check = 0;
 
 static void
-dsl_wrapping_key_hold(dsl_wrapping_key_t *wkey, void *tag)
+dsl_wrapping_key_hold(dsl_wrapping_key_t *wkey, const void *tag)
 {
 	(void) zfs_refcount_add(&wkey->wk_refcnt, tag);
 }
 
 static void
-dsl_wrapping_key_rele(dsl_wrapping_key_t *wkey, void *tag)
+dsl_wrapping_key_rele(dsl_wrapping_key_t *wkey, const void *tag)
 {
 	(void) zfs_refcount_remove(&wkey->wk_refcnt, tag);
 }
@@ -97,7 +97,7 @@ dsl_wrapping_key_free(dsl_wrapping_key_t *wkey)
 	ASSERT0(zfs_refcount_count(&wkey->wk_refcnt));
 
 	if (wkey->wk_key.ck_data) {
-		bzero(wkey->wk_key.ck_data,
+		memset(wkey->wk_key.ck_data, 0,
 		    CRYPTO_BITS2BYTES(wkey->wk_key.ck_length));
 		kmem_free(wkey->wk_key.ck_data,
 		    CRYPTO_BITS2BYTES(wkey->wk_key.ck_length));
@@ -120,7 +120,7 @@ dsl_wrapping_key_create(uint8_t *wkeydata, zfs_keyformat_t keyformat,
 	wkey->wk_key.ck_data = kmem_alloc(WRAPPING_KEY_LEN, KM_SLEEP);
 
 	wkey->wk_key.ck_length = CRYPTO_BYTES2BITS(WRAPPING_KEY_LEN);
-	bcopy(wkeydata, wkey->wk_key.ck_data, WRAPPING_KEY_LEN);
+	memcpy(wkey->wk_key.ck_data, wkeydata, WRAPPING_KEY_LEN);
 
 	/* initialize the rest of the struct */
 	zfs_refcount_create(&wkey->wk_refcnt);
@@ -368,7 +368,7 @@ dsl_dir_incompatible_encryption_version(dsl_dir_t *dd)
 
 static int
 spa_keystore_wkey_hold_ddobj_impl(spa_t *spa, uint64_t ddobj,
-    void *tag, dsl_wrapping_key_t **wkey_out)
+    const void *tag, dsl_wrapping_key_t **wkey_out)
 {
 	int ret;
 	dsl_wrapping_key_t search_wkey;
@@ -398,7 +398,7 @@ error:
 }
 
 static int
-spa_keystore_wkey_hold_dd(spa_t *spa, dsl_dir_t *dd, void *tag,
+spa_keystore_wkey_hold_dd(spa_t *spa, dsl_dir_t *dd, const void *tag,
     dsl_wrapping_key_t **wkey_out)
 {
 	int ret;
@@ -514,7 +514,7 @@ dsl_crypto_key_free(dsl_crypto_key_t *dck)
 }
 
 static void
-dsl_crypto_key_rele(dsl_crypto_key_t *dck, void *tag)
+dsl_crypto_key_rele(dsl_crypto_key_t *dck, const void *tag)
 {
 	if (zfs_refcount_remove(&dck->dck_holds, tag) == 0)
 		dsl_crypto_key_free(dck);
@@ -522,7 +522,7 @@ dsl_crypto_key_rele(dsl_crypto_key_t *dck, void *tag)
 
 static int
 dsl_crypto_key_open(objset_t *mos, dsl_wrapping_key_t *wkey,
-    uint64_t dckobj, void *tag, dsl_crypto_key_t **dck_out)
+    uint64_t dckobj, const void *tag, dsl_crypto_key_t **dck_out)
 {
 	int ret;
 	uint64_t crypt = 0, guid = 0, version = 0;
@@ -591,7 +591,7 @@ dsl_crypto_key_open(objset_t *mos, dsl_wrapping_key_t *wkey,
 
 error:
 	if (dck != NULL) {
-		bzero(dck, sizeof (dsl_crypto_key_t));
+		memset(dck, 0, sizeof (dsl_crypto_key_t));
 		kmem_free(dck, sizeof (dsl_crypto_key_t));
 	}
 
@@ -600,7 +600,7 @@ error:
 }
 
 static int
-spa_keystore_dsl_key_hold_impl(spa_t *spa, uint64_t dckobj, void *tag,
+spa_keystore_dsl_key_hold_impl(spa_t *spa, uint64_t dckobj, const void *tag,
     dsl_crypto_key_t **dck_out)
 {
 	int ret;
@@ -631,7 +631,7 @@ error:
 }
 
 static int
-spa_keystore_dsl_key_hold_dd(spa_t *spa, dsl_dir_t *dd, void *tag,
+spa_keystore_dsl_key_hold_dd(spa_t *spa, dsl_dir_t *dd, const void *tag,
     dsl_crypto_key_t **dck_out)
 {
 	int ret;
@@ -689,7 +689,7 @@ spa_keystore_dsl_key_hold_dd(spa_t *spa, dsl_dir_t *dd, void *tag,
 }
 
 void
-spa_keystore_dsl_key_rele(spa_t *spa, dsl_crypto_key_t *dck, void *tag)
+spa_keystore_dsl_key_rele(spa_t *spa, dsl_crypto_key_t *dck, const void *tag)
 {
 	rw_enter(&spa->spa_keystore.sk_dk_lock, RW_WRITER);
 
@@ -936,7 +936,7 @@ error:
 }
 
 void
-key_mapping_add_ref(dsl_key_mapping_t *km, void *tag)
+key_mapping_add_ref(dsl_key_mapping_t *km, const void *tag)
 {
 	ASSERT3U(zfs_refcount_count(&km->km_refcnt), >=, 1);
 	zfs_refcount_add(&km->km_refcnt, tag);
@@ -953,7 +953,7 @@ key_mapping_add_ref(dsl_key_mapping_t *km, void *tag)
  * mapping after unmounting a dataset.
  */
 void
-key_mapping_rele(spa_t *spa, dsl_key_mapping_t *km, void *tag)
+key_mapping_rele(spa_t *spa, dsl_key_mapping_t *km, const void *tag)
 {
 	ASSERT3U(zfs_refcount_count(&km->km_refcnt), >=, 1);
 
@@ -984,7 +984,7 @@ key_mapping_rele(spa_t *spa, dsl_key_mapping_t *km, void *tag)
 }
 
 int
-spa_keystore_create_mapping(spa_t *spa, dsl_dataset_t *ds, void *tag,
+spa_keystore_create_mapping(spa_t *spa, dsl_dataset_t *ds, const void *tag,
     dsl_key_mapping_t **km_out)
 {
 	int ret;
@@ -1043,7 +1043,7 @@ spa_keystore_create_mapping(spa_t *spa, dsl_dataset_t *ds, void *tag,
 }
 
 int
-spa_keystore_remove_mapping(spa_t *spa, uint64_t dsobj, void *tag)
+spa_keystore_remove_mapping(spa_t *spa, uint64_t dsobj, const void *tag)
 {
 	int ret;
 	dsl_key_mapping_t search_km;
@@ -1081,7 +1081,7 @@ error_unlock:
  * without getting a reference to it.
  */
 int
-spa_keystore_lookup_key(spa_t *spa, uint64_t dsobj, void *tag,
+spa_keystore_lookup_key(spa_t *spa, uint64_t dsobj, const void *tag,
     dsl_crypto_key_t **dck_out)
 {
 	int ret;
@@ -1137,7 +1137,7 @@ dmu_objset_check_wkey_loaded(dsl_dir_t *dd)
 	return (0);
 }
 
-static zfs_keystatus_t
+zfs_keystatus_t
 dsl_dataset_get_keystatus(dsl_dir_t *dd)
 {
 	/* check if this dd has a has a dsl key */
@@ -1506,7 +1506,7 @@ spa_keystore_change_key_sync(void *arg, dmu_tx_t *tx)
 	dsl_crypto_params_t *dcp = skcka->skcka_cp;
 	dsl_wrapping_key_t *wkey = NULL, *found_wkey;
 	dsl_wrapping_key_t wkey_search;
-	char *keylocation = dcp->cp_keylocation;
+	const char *keylocation = dcp->cp_keylocation;
 	uint64_t rddobj, new_rddobj;
 
 	/* create and initialize the wrapping key */
@@ -2095,8 +2095,8 @@ dsl_crypto_recv_raw_objset_sync(dsl_dataset_t *ds, dmu_objset_type_t ostype,
 	 * written out raw next time.
 	 */
 	arc_release(os->os_phys_buf, &os->os_phys_buf);
-	bcopy(portable_mac, os->os_phys->os_portable_mac, ZIO_OBJSET_MAC_LEN);
-	bzero(os->os_phys->os_local_mac, ZIO_OBJSET_MAC_LEN);
+	memcpy(os->os_phys->os_portable_mac, portable_mac, ZIO_OBJSET_MAC_LEN);
+	memset(os->os_phys->os_local_mac, 0, ZIO_OBJSET_MAC_LEN);
 	os->os_flags &= ~OBJSET_FLAG_USERACCOUNTING_COMPLETE;
 	os->os_next_write_raw[tx->tx_txg & TXG_MASK] = B_TRUE;
 
@@ -2229,7 +2229,7 @@ dsl_crypto_recv_raw_key_sync(dsl_dataset_t *ds, nvlist_t *nvl, dmu_tx_t *tx)
 	uint8_t *keydata, *hmac_keydata, *iv, *mac;
 	uint64_t crypt, key_guid, keyformat, iters, salt;
 	uint64_t version = ZIO_CRYPT_KEY_CURRENT_VERSION;
-	char *keylocation = "prompt";
+	const char *keylocation = "prompt";
 
 	/* lookup the values we need to create the DSL Crypto Key */
 	crypt = fnvlist_lookup_uint64(nvl, DSL_CRYPTO_KEY_CRYPTO_SUITE);
@@ -2547,7 +2547,7 @@ dsl_crypto_key_create_sync(uint64_t crypt, dsl_wrapping_key_t *wkey,
 	    DSL_CRYPTO_KEY_VERSION, sizeof (uint64_t), 1, &version, tx));
 
 	zio_crypt_key_destroy(&dck.dck_key);
-	bzero(&dck.dck_key, sizeof (zio_crypt_key_t));
+	memset(&dck.dck_key, 0, sizeof (zio_crypt_key_t));
 
 	return (dck.dck_obj);
 }
@@ -2671,6 +2671,7 @@ spa_do_crypt_objset_mac_abd(boolean_t generate, spa_t *spa, uint64_t dsobj,
 	objset_phys_t *osp = buf;
 	uint8_t portable_mac[ZIO_OBJSET_MAC_LEN];
 	uint8_t local_mac[ZIO_OBJSET_MAC_LEN];
+	const uint8_t zeroed_mac[ZIO_OBJSET_MAC_LEN] = {0};
 
 	/* look up the key from the spa's keystore */
 	ret = spa_keystore_lookup_key(spa, dsobj, FTAG, &dck);
@@ -2687,16 +2688,30 @@ spa_do_crypt_objset_mac_abd(boolean_t generate, spa_t *spa, uint64_t dsobj,
 
 	/* if we are generating encode the HMACs in the objset_phys_t */
 	if (generate) {
-		bcopy(portable_mac, osp->os_portable_mac, ZIO_OBJSET_MAC_LEN);
-		bcopy(local_mac, osp->os_local_mac, ZIO_OBJSET_MAC_LEN);
+		memcpy(osp->os_portable_mac, portable_mac, ZIO_OBJSET_MAC_LEN);
+		memcpy(osp->os_local_mac, local_mac, ZIO_OBJSET_MAC_LEN);
 		abd_return_buf_copy(abd, buf, datalen);
 		return (0);
 	}
 
-	if (bcmp(portable_mac, osp->os_portable_mac, ZIO_OBJSET_MAC_LEN) != 0 ||
-	    bcmp(local_mac, osp->os_local_mac, ZIO_OBJSET_MAC_LEN) != 0) {
-		abd_return_buf(abd, buf, datalen);
-		return (SET_ERROR(ECKSUM));
+	if (memcmp(portable_mac, osp->os_portable_mac,
+	    ZIO_OBJSET_MAC_LEN) != 0 ||
+	    memcmp(local_mac, osp->os_local_mac, ZIO_OBJSET_MAC_LEN) != 0) {
+		/*
+		 * If the MAC is zeroed out, we failed to decrypt it.
+		 * This should only arise, at least on Linux,
+		 * if we hit edge case handling for useraccounting, since we
+		 * shouldn't get here without bailing out on error earlier
+		 * otherwise.
+		 *
+		 * So if we're in that case, we can just fall through and
+		 * special-casing noticing that it's zero will handle it
+		 * elsewhere, since we can just regenerate it.
+		 */
+		if (memcmp(local_mac, zeroed_mac, ZIO_OBJSET_MAC_LEN) != 0) {
+			abd_return_buf(abd, buf, datalen);
+			return (SET_ERROR(ECKSUM));
+		}
 	}
 
 	abd_return_buf(abd, buf, datalen);
@@ -2738,11 +2753,11 @@ spa_do_crypt_mac_abd(boolean_t generate, spa_t *spa, uint64_t dsobj, abd_t *abd,
 	 * Otherwise verify that the MAC matched what we expected.
 	 */
 	if (generate) {
-		bcopy(digestbuf, mac, ZIO_DATA_MAC_LEN);
+		memcpy(mac, digestbuf, ZIO_DATA_MAC_LEN);
 		return (0);
 	}
 
-	if (bcmp(digestbuf, mac, ZIO_DATA_MAC_LEN) != 0)
+	if (memcmp(digestbuf, mac, ZIO_DATA_MAC_LEN) != 0)
 		return (SET_ERROR(ECKSUM));
 
 	return (0);
@@ -2841,9 +2856,9 @@ spa_do_crypt_abd(boolean_t encrypt, spa_t *spa, const zbookmark_phys_t *zb,
 error:
 	if (encrypt) {
 		/* zero out any state we might have changed while encrypting */
-		bzero(salt, ZIO_DATA_SALT_LEN);
-		bzero(iv, ZIO_DATA_IV_LEN);
-		bzero(mac, ZIO_DATA_MAC_LEN);
+		memset(salt, 0, ZIO_DATA_SALT_LEN);
+		memset(iv, 0, ZIO_DATA_IV_LEN);
+		memset(mac, 0, ZIO_DATA_MAC_LEN);
 		abd_return_buf(pabd, plainbuf, datalen);
 		abd_return_buf_copy(cabd, cipherbuf, datalen);
 	} else {

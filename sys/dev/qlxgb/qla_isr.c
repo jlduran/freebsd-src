@@ -58,7 +58,7 @@ qla_rx_intr(qla_host_t *ha, uint64_t data, uint32_t sds_idx,
 	uint32_t idx, length, status, ring;
 	qla_rx_buf_t *rxb;
 	struct mbuf *mp;
-	struct ifnet *ifp = ha->ifp;
+	if_t ifp = ha->ifp;
 	qla_sds_t *sdsp;
 	struct ether_vlan_header *eh;
 
@@ -139,10 +139,13 @@ qla_rx_intr(qla_host_t *ha, uint64_t data, uint32_t sds_idx,
 		mp->m_pkthdr.csum_flags = 0;
 	}
 
+#if defined(INET) || defined(INET6)
 	if (lro->lro_cnt && (tcp_lro_rx(lro, mp, 0) == 0)) {
 		/* LRO packet has been successfully queued */
-	} else {
-		(*ifp->if_input)(ifp, mp);
+	} else
+#endif
+	{
+		if_input(ifp, mp);
 	}
 
 	if (sdsp->rx_free > std_replenish)
@@ -322,7 +325,9 @@ qla_rcv_isr(qla_host_t *ha, uint32_t sds_idx, uint32_t count)
 		}
 	}
 
+#if defined(INET) || defined(INET6)
 	tcp_lro_flush_all(lro);
+#endif
 
 	if (hw->sds[sds_idx].sdsr_next != comp_idx) {
 		QL_UPDATE_SDS_CONSUMER_INDEX(ha, sds_idx, comp_idx);
@@ -378,14 +383,12 @@ qla_rcv(void *context, int pending)
 {
 	qla_ivec_t *ivec = context;
 	qla_host_t *ha;
-	device_t dev;
 	qla_hw_t *hw;
 	uint32_t sds_idx;
 	uint32_t ret;
-	struct ifnet *ifp;
+	if_t ifp;
 
 	ha = ivec->ha;
-	dev = ha->pci_dev;
 	hw = &ha->hw;
 	sds_idx = ivec->irq_rid - 1;
 	ifp = ha->ifp;
@@ -394,7 +397,7 @@ qla_rcv(void *context, int pending)
 		if (sds_idx == 0) {
 			if (qla_le32_to_host(*(hw->tx_cons)) != hw->txr_comp) {
 				taskqueue_enqueue(ha->tx_tq, &ha->tx_task);
-			} else if ((ifp->if_snd.ifq_head != NULL) &&
+			} else if (!if_sendq_empty(ifp) &&
 					QL_RUNNING(ifp)) {
 				taskqueue_enqueue(ha->tx_tq, &ha->tx_task);
 			}

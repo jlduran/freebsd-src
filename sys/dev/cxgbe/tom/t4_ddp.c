@@ -504,7 +504,7 @@ handle_ddp_data(struct toepcb *toep, __be32 ddp_report, __be32 rcv_nxt, int len)
 	db = &toep->ddp.db[db_idx];
 	job = db->job;
 
-	if (__predict_false(inp->inp_flags & (INP_DROPPED | INP_TIMEWAIT))) {
+	if (__predict_false(inp->inp_flags & INP_DROPPED)) {
 		/*
 		 * This can happen due to an administrative tcpdrop(8).
 		 * Just fail the request with ECONNRESET.
@@ -555,7 +555,7 @@ handle_ddp_data(struct toepcb *toep, __be32 ddp_report, __be32 rcv_nxt, int len)
 		unsigned int newsize = min(hiwat + sc->tt.autorcvbuf_inc,
 		    V_tcp_autorcvbuf_max);
 
-		if (!sbreserve_locked(sb, newsize, so, NULL))
+		if (!sbreserve_locked(so, SO_RCV, newsize, NULL))
 			sb->sb_flags &= ~SB_AUTOSIZE;
 	}
 	SOCKBUF_UNLOCK(sb);
@@ -2137,7 +2137,7 @@ static void
 t4_aio_cancel_active(struct kaiocb *job)
 {
 	struct socket *so = job->fd_file->f_data;
-	struct tcpcb *tp = so_sototcpcb(so);
+	struct tcpcb *tp = sototcpcb(so);
 	struct toepcb *toep = tp->t_toe;
 	struct adapter *sc = td_adapter(toep->td);
 	uint64_t valid_flag;
@@ -2178,7 +2178,7 @@ static void
 t4_aio_cancel_queued(struct kaiocb *job)
 {
 	struct socket *so = job->fd_file->f_data;
-	struct tcpcb *tp = so_sototcpcb(so);
+	struct tcpcb *tp = sototcpcb(so);
 	struct toepcb *toep = tp->t_toe;
 
 	DDP_LOCK(toep);
@@ -2197,7 +2197,7 @@ t4_aio_cancel_queued(struct kaiocb *job)
 int
 t4_aio_queue_ddp(struct socket *so, struct kaiocb *job)
 {
-	struct tcpcb *tp = so_sototcpcb(so);
+	struct tcpcb *tp = sototcpcb(so);
 	struct toepcb *toep = tp->t_toe;
 
 

@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD$");
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_private.h>
 #include <net/if_dl.h>
 #include <net/route.h>
 #include <net/route/nhop.h>
@@ -203,7 +204,7 @@ DB_SHOW_COMMAND(routetable, db_show_routetable_cmd)
 	}
 }
 
-_DB_FUNC(_show, route, db_show_route_cmd, db_show_table, CS_OWN, NULL)
+DB_SHOW_COMMAND_FLAGS(route, db_show_route_cmd, CS_OWN)
 {
 	char abuf[INET6_ADDRSTRLEN], *buf, *end;
 	struct rib_head *rh;
