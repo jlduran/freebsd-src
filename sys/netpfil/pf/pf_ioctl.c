@@ -72,6 +72,7 @@ __FBSDID("$FreeBSD$");
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_private.h>
 #include <net/vnet.h>
 #include <net/route.h>
 #include <net/pfil.h>
@@ -311,6 +312,8 @@ pfattach_vnet(void)
 {
 	u_int32_t *my_timeout = V_pf_default_rule.timeout;
 
+	bzero(&V_pf_status, sizeof(V_pf_status));
+
 	pf_initialize();
 	pfr_initialize();
 	pfi_initialize_vnet();
@@ -380,7 +383,6 @@ pfattach_vnet(void)
 	my_timeout[PFTM_ADAPTIVE_START] = PFSTATE_ADAPT_START;
 	my_timeout[PFTM_ADAPTIVE_END] = PFSTATE_ADAPT_END;
 
-	bzero(&V_pf_status, sizeof(V_pf_status));
 	V_pf_status.debug = PF_DEBUG_URGENT;
 
 	V_pf_pfil_hooked = false;
@@ -6530,21 +6532,20 @@ VNET_DEFINE_STATIC(pfil_hook_t, pf_ip6_out_hook);
 static void
 hook_pf_eth(void)
 {
-	struct pfil_hook_args pha;
-	struct pfil_link_args pla;
+	struct pfil_hook_args pha = {
+		.pa_version = PFIL_VERSION,
+		.pa_modname = "pf",
+		.pa_type = PFIL_TYPE_ETHERNET,
+	};
+	struct pfil_link_args pla = {
+		.pa_version = PFIL_VERSION,
+	};
 	int ret __diagused;
 
 	if (atomic_load_bool(&V_pf_pfil_eth_hooked))
 		return;
 
-	pha.pa_version = PFIL_VERSION;
-	pha.pa_modname = "pf";
-	pha.pa_ruleset = NULL;
-
-	pla.pa_version = PFIL_VERSION;
-
-	pha.pa_type = PFIL_TYPE_ETHERNET;
-	pha.pa_func = pf_eth_check_in;
+	pha.pa_mbuf_chk = pf_eth_check_in;
 	pha.pa_flags = PFIL_IN;
 	pha.pa_rulname = "eth-in";
 	V_pf_eth_in_hook = pfil_add_hook(&pha);
@@ -6553,7 +6554,7 @@ hook_pf_eth(void)
 	pla.pa_hook = V_pf_eth_in_hook;
 	ret = pfil_link(&pla);
 	MPASS(ret == 0);
-	pha.pa_func = pf_eth_check_out;
+	pha.pa_mbuf_chk = pf_eth_check_out;
 	pha.pa_flags = PFIL_OUT;
 	pha.pa_rulname = "eth-out";
 	V_pf_eth_out_hook = pfil_add_hook(&pha);
@@ -6569,22 +6570,21 @@ hook_pf_eth(void)
 static void
 hook_pf(void)
 {
-	struct pfil_hook_args pha;
-	struct pfil_link_args pla;
+	struct pfil_hook_args pha = {
+		.pa_version = PFIL_VERSION,
+		.pa_modname = "pf",
+	};
+	struct pfil_link_args pla = {
+		.pa_version = PFIL_VERSION,
+	};
 	int ret __diagused;
 
 	if (atomic_load_bool(&V_pf_pfil_hooked))
 		return;
 
-	pha.pa_version = PFIL_VERSION;
-	pha.pa_modname = "pf";
-	pha.pa_ruleset = NULL;
-
-	pla.pa_version = PFIL_VERSION;
-
 #ifdef INET
 	pha.pa_type = PFIL_TYPE_IP4;
-	pha.pa_func = pf_check_in;
+	pha.pa_mbuf_chk = pf_check_in;
 	pha.pa_flags = PFIL_IN;
 	pha.pa_rulname = "default-in";
 	V_pf_ip4_in_hook = pfil_add_hook(&pha);
@@ -6593,7 +6593,7 @@ hook_pf(void)
 	pla.pa_hook = V_pf_ip4_in_hook;
 	ret = pfil_link(&pla);
 	MPASS(ret == 0);
-	pha.pa_func = pf_check_out;
+	pha.pa_mbuf_chk = pf_check_out;
 	pha.pa_flags = PFIL_OUT;
 	pha.pa_rulname = "default-out";
 	V_pf_ip4_out_hook = pfil_add_hook(&pha);
@@ -6605,7 +6605,7 @@ hook_pf(void)
 #endif
 #ifdef INET6
 	pha.pa_type = PFIL_TYPE_IP6;
-	pha.pa_func = pf_check6_in;
+	pha.pa_mbuf_chk = pf_check6_in;
 	pha.pa_flags = PFIL_IN;
 	pha.pa_rulname = "default-in6";
 	V_pf_ip6_in_hook = pfil_add_hook(&pha);
@@ -6614,7 +6614,7 @@ hook_pf(void)
 	pla.pa_hook = V_pf_ip6_in_hook;
 	ret = pfil_link(&pla);
 	MPASS(ret == 0);
-	pha.pa_func = pf_check6_out;
+	pha.pa_mbuf_chk = pf_check6_out;
 	pha.pa_rulname = "default-out6";
 	pha.pa_flags = PFIL_OUT;
 	V_pf_ip6_out_hook = pfil_add_hook(&pha);

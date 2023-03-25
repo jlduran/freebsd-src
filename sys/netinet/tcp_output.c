@@ -81,9 +81,9 @@ __FBSDID("$FreeBSD$");
 #include <netinet/tcp.h>
 #define	TCPOUTFLAGS
 #include <netinet/tcp_fsm.h>
-#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_var.h>
+#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_syncache.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcpip.h>
@@ -222,12 +222,10 @@ tcp_default_output(struct tcpcb *tp)
 #endif
 #ifdef INET6
 	struct ip6_hdr *ip6 = NULL;
-	int isipv6;
-
-	isipv6 = (inp->inp_vflag & INP_IPV6) != 0;
+	const bool isipv6 = (inp->inp_vflag & INP_IPV6) != 0;
 #endif
 #ifdef KERN_TLS
-	const bool hw_tls = (so->so_snd.sb_flags & SB_TLS_IFNET) != 0;
+	const bool hw_tls = tp->t_nic_ktls_xmit != 0;
 #else
 	const bool hw_tls = false;
 #endif
@@ -1413,8 +1411,9 @@ send:
 
 	/* We're getting ready to send; log now. */
 	/* XXXMT: We are not honoring verbose logging. */
-	if (tp->t_logstate != TCP_LOG_STATE_OFF)
-		lgb = tcp_log_event_(tp, th, &so->so_rcv, &so->so_snd,
+
+	if (tcp_bblogging_on(tp))
+		lgb = tcp_log_event(tp, th, &so->so_rcv, &so->so_snd,
 		    TCP_LOG_OUT, ERRNO_UNK, len, NULL, false, NULL, NULL, 0,
 		    NULL);
 	else

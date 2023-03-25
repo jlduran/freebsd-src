@@ -143,6 +143,7 @@ MAN=	aac.4 \
 	em.4 \
 	ena.4 \
 	enc.4 \
+	enic.4 \
 	epair.4 \
 	est.4 \
 	et.4 \
@@ -158,6 +159,7 @@ MAN=	aac.4 \
 	ffclock.4 \
 	filemon.4 \
 	firewire.4 \
+	${_ftgpio.4} \
 	${_ftwd.4} \
 	full.4 \
 	fwe.4 \
@@ -271,6 +273,7 @@ MAN=	aac.4 \
 	ktls.4 \
 	ktr.4 \
 	kue.4 \
+	${_kvmclock.4} \
 	lagg.4 \
 	le.4 \
 	led.4 \
@@ -341,13 +344,10 @@ MAN=	aac.4 \
 	${_nfe.4} \
 	${_nfsmb.4} \
 	ng_async.4 \
-	ngatmbase.4 \
-	ng_atmllc.4 \
 	ng_bpf.4 \
 	ng_bridge.4 \
 	ng_btsocket.4 \
 	ng_car.4 \
-	ng_ccatm.4 \
 	ng_checksum.4 \
 	ng_cisco.4 \
 	ng_deflate.4 \
@@ -386,15 +386,12 @@ MAN=	aac.4 \
 	ng_socket.4 \
 	ng_source.4 \
 	ng_split.4 \
-	ng_sscfu.4 \
-	ng_sscop.4 \
 	ng_tag.4 \
 	ng_tcpmss.4 \
 	ng_tee.4 \
 	ng_tty.4 \
 	ng_ubt.4 \
 	ng_UI.4 \
-	ng_uni.4 \
 	ng_vjc.4 \
 	ng_vlan.4 \
 	ng_vlan_rotate.4 \
@@ -412,7 +409,6 @@ MAN=	aac.4 \
 	${_nvdimm.4} \
 	${_nvme.4} \
 	${_nvram.4} \
-	${_nvram2env.4} \
 	oce.4 \
 	ocs_fc.4\
 	ohci.4 \
@@ -456,6 +452,7 @@ MAN=	aac.4 \
 	pty.4 \
 	puc.4 \
 	pwmc.4 \
+	${_qat.4} \
 	${_qat_c2xxx.4} \
 	${_qlxge.4} \
 	${_qlxgb.4} \
@@ -588,6 +585,7 @@ MAN=	aac.4 \
 	vtnet.4 \
 	watchdog.4 \
 	${_wbwd.4} \
+	${_wdatwd.4} \
 	wg.4 \
 	witness.4 \
 	wlan.4 \
@@ -799,6 +797,7 @@ _chvgpio.4=	chvgpio.4
 _coretemp.4=	coretemp.4
 _cpuctl.4=	cpuctl.4
 _dpms.4=	dpms.4
+_ftgpio.4=	ftgpio.4
 _ftwd.4=	ftwd.4
 _hpt27xx.4=	hpt27xx.4
 _hptiop.4=	hptiop.4
@@ -823,6 +822,7 @@ _igc.4=		igc.4
 _imcsmb.4=	imcsmb.4
 _io.4=		io.4
 _itwd.4=	itwd.4
+_kvmclock.4=	kvmclock.4
 _mgb.4=		mgb.4
 _nda.4=		nda.4
 _nfe.4=		nfe.4
@@ -838,6 +838,7 @@ _nvme.4=	nvme.4
 _nvram.4=	nvram.4
 _padlock.4=	padlock.4
 _pchtherm.4=	pchtherm.4
+_qat.4=		qat.4
 _qat_c2xxx.4=	qat_c2xxx.4
 _rr232x.4=	rr232x.4
 _speaker.4=	speaker.4
@@ -850,6 +851,7 @@ _vmci.4=	vmci.4
 _vmd.4=		vmd.4
 _vmx.4=		vmx.4
 _wbwd.4=	wbwd.4
+_wdatwd.4=	wdatwd.4
 _wpi.4=		wpi.4
 _xen.4=		xen.4
 _xnb.4=		xnb.4
@@ -878,10 +880,6 @@ MLINKS+=sume.4 if_sume.4
 _bhyve.4=	bhyve.4
 _vmm.4=		vmm.4
 .endif
-.endif
-
-.if ${MACHINE_CPUARCH} == "mips"
-_nvram2env.4=	nvram2env.4
 .endif
 
 .if ${MACHINE_CPUARCH} == "powerpc"

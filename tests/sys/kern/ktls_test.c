@@ -285,6 +285,14 @@ close_sockets(int sv[2])
 }
 
 static void
+close_sockets_ignore_errors(int sv[2])
+{
+	if (sv[0] != sv[1])
+		close(sv[1]);
+	close(sv[0]);
+}
+
+static void
 fd_set_blocking(int fd)
 {
 	int flags;
@@ -1643,7 +1651,7 @@ test_ktls_receive_corrupted_record(const atf_tc_t *tc, struct tls_enable *en,
 	free(outbuf);
 	free(plaintext);
 
-	close_sockets(sockets);
+	close_sockets_ignore_errors(sockets);
 }
 
 static void
@@ -1729,7 +1737,7 @@ test_ktls_receive_truncated_record(const atf_tc_t *tc, struct tls_enable *en,
 	free(outbuf);
 	free(plaintext);
 
-	close_sockets(sockets);
+	close_sockets_ignore_errors(sockets);
 }
 
 static void
@@ -1771,7 +1779,7 @@ test_ktls_receive_bad_major(const atf_tc_t *tc, struct tls_enable *en,
 	free(outbuf);
 	free(plaintext);
 
-	close_sockets(sockets);
+	close_sockets_ignore_errors(sockets);
 }
 
 static void
@@ -1813,7 +1821,7 @@ test_ktls_receive_bad_minor(const atf_tc_t *tc, struct tls_enable *en,
 	free(outbuf);
 	free(plaintext);
 
-	close_sockets(sockets);
+	close_sockets_ignore_errors(sockets);
 }
 
 static void
@@ -1856,7 +1864,7 @@ test_ktls_receive_bad_type(const atf_tc_t *tc, struct tls_enable *en,
 	free(outbuf);
 	free(plaintext);
 
-	close_sockets(sockets);
+	close_sockets_ignore_errors(sockets);
 }
 
 static void
@@ -1893,13 +1901,19 @@ test_ktls_receive_bad_size(const atf_tc_t *tc, struct tls_enable *en,
 	rv = write(sockets[1], outbuf, outbuf_len);
 	ATF_REQUIRE_INTEQ((ssize_t)outbuf_len, rv);
 
-	ATF_REQUIRE(shutdown(sockets[1], SHUT_WR) == 0);
+	/*
+	 * The other end may notice the error and drop the connection
+	 * before this executes resulting in shutdown() failing with
+	 * ENOTCONN.  Ignore this error if it occurs.
+	 */
+	if (shutdown(sockets[1], SHUT_WR) != 0)
+		ATF_REQUIRE_ERRNO(ENOTCONN, true);
 
 	ktls_receive_tls_error(sockets[0], EMSGSIZE);
 
 	free(outbuf);
 
-	close_sockets(sockets);
+	close_sockets_ignore_errors(sockets);
 }
 
 #define	TLS_10_TESTS(M)							\
@@ -2753,6 +2767,51 @@ ATF_TC_BODY(ktls_sendto_baddst, tc)
 	ATF_REQUIRE(close(s) == 0);
 }
 
+/*
+ * Make sure that listen(2) returns an error for KTLS-enabled sockets, and
+ * verify that an attempt to enable KTLS on a listening socket fails.
+ */
+ATF_TC_WITHOUT_HEAD(ktls_listening_socket);
+ATF_TC_BODY(ktls_listening_socket, tc)
+{
+	struct tls_enable en;
+	struct sockaddr_in sin;
+	int s;
+
+	ATF_REQUIRE_KTLS();
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	ATF_REQUIRE(s >= 0);
+	build_tls_enable(tc, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,
+	    TLS_MINOR_VER_THREE, (uint64_t)random(), &en);
+	ATF_REQUIRE(setsockopt(s, IPPROTO_TCP, TCP_TXTLS_ENABLE, &en,
+	    sizeof(en)) == 0);
+	ATF_REQUIRE_ERRNO(EINVAL, listen(s, 1) == -1);
+	ATF_REQUIRE(close(s) == 0);
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	ATF_REQUIRE(s >= 0);
+	build_tls_enable(tc, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,
+	    TLS_MINOR_VER_THREE, (uint64_t)random(), &en);
+	ATF_REQUIRE(setsockopt(s, IPPROTO_TCP, TCP_RXTLS_ENABLE, &en,
+	    sizeof(en)) == 0);
+	ATF_REQUIRE_ERRNO(EINVAL, listen(s, 1) == -1);
+	ATF_REQUIRE(close(s) == 0);
+
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	ATF_REQUIRE(s >= 0);
+	memset(&sin, 0, sizeof(sin));
+	ATF_REQUIRE(bind(s, (struct sockaddr *)&sin, sizeof(sin)) == 0);
+	ATF_REQUIRE(listen(s, 1) == 0);
+	build_tls_enable(tc, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,
+	    TLS_MINOR_VER_THREE, (uint64_t)random(), &en);
+	ATF_REQUIRE_ERRNO(ENOTCONN,
+	    setsockopt(s, IPPROTO_TCP, TCP_TXTLS_ENABLE, &en, sizeof(en)) != 0);
+	ATF_REQUIRE_ERRNO(EINVAL,
+	    setsockopt(s, IPPROTO_TCP, TCP_RXTLS_ENABLE, &en, sizeof(en)) != 0);
+	ATF_REQUIRE(close(s) == 0);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	/* Transmit tests */
@@ -2778,6 +2837,7 @@ ATF_TP_ADD_TCS(tp)
 
 	/* Miscellaneous */
 	ATF_TP_ADD_TC(tp, ktls_sendto_baddst);
+	ATF_TP_ADD_TC(tp, ktls_listening_socket);
 
 	return (atf_no_error());
 }

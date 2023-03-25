@@ -77,6 +77,11 @@ SYSCTL_ULONG(_net_netlink, OID_AUTO, recvspace, CTLFLAG_RW, &nl_recvspace, 0,
 
 extern u_long sb_max_adj;
 static u_long nl_maxsockbuf = 512 * 1024 * 1024; /* 512M, XXX: init based on physmem */
+static int sysctl_handle_nl_maxsockbuf(SYSCTL_HANDLER_ARGS);
+SYSCTL_OID(_net_netlink, OID_AUTO, nl_maxsockbuf,
+    CTLTYPE_ULONG | CTLFLAG_RW | CTLFLAG_MPSAFE, &nl_maxsockbuf, 0,
+    sysctl_handle_nl_maxsockbuf, "LU",
+    "Maximum Netlink socket buffer size");
 
 uint32_t
 nlp_get_pid(const struct nlpcb *nlp)
@@ -205,6 +210,12 @@ bool
 nlp_has_priv(struct nlpcb *nlp, int priv)
 {
 	return (priv_check_cred(nlp->nl_cred, priv) == 0);
+}
+
+struct ucred *
+nlp_get_cred(struct nlpcb *nlp)
+{
+	return (nlp->nl_cred);
 }
 
 static uint32_t
@@ -384,7 +395,7 @@ nl_autobind_port(struct nlpcb *nlp, uint32_t candidate_id)
 	uint32_t port_id = candidate_id;
 	NLCTL_TRACKER;
 	bool exist;
-	int error;
+	int error = EADDRINUSE;
 
 	for (int i = 0; i < 10; i++) {
 		NL_LOG(LOG_DEBUG3, "socket %p, trying to assign port %d", nlp->nl_socket, port_id);
@@ -486,7 +497,7 @@ nl_pru_detach(struct socket *so)
 	NL_LOG(LOG_DEBUG3, "socket %p, detached", so);
 
 	/* XXX: is delayed free needed? */
-	epoch_call(net_epoch_preempt, destroy_nlpcb_epoch, &nlp->nl_epoch_ctx);
+	NET_EPOCH_CALL(destroy_nlpcb_epoch, &nlp->nl_epoch_ctx);
 }
 
 static int
@@ -612,7 +623,9 @@ nl_ctloutput(struct socket *so, struct sockopt *sopt)
 		switch (sopt->sopt_name) {
 		case NETLINK_ADD_MEMBERSHIP:
 		case NETLINK_DROP_MEMBERSHIP:
-			sooptcopyin(sopt, &optval, sizeof(optval), sizeof(optval));
+			error = sooptcopyin(sopt, &optval, sizeof(optval), sizeof(optval));
+			if (error != 0)
+				break;
 			if (optval <= 0 || optval >= NLP_MAX_GROUPS) {
 				error = ERANGE;
 				break;
@@ -629,7 +642,9 @@ nl_ctloutput(struct socket *so, struct sockopt *sopt)
 		case NETLINK_CAP_ACK:
 		case NETLINK_EXT_ACK:
 		case NETLINK_GET_STRICT_CHK:
-			sooptcopyin(sopt, &optval, sizeof(optval), sizeof(optval));
+			error = sooptcopyin(sopt, &optval, sizeof(optval), sizeof(optval));
+			if (error != 0)
+				break;
 
 			flag = nl_getoptflag(sopt->sopt_name);
 
@@ -672,6 +687,22 @@ nl_ctloutput(struct socket *so, struct sockopt *sopt)
 }
 
 static int
+sysctl_handle_nl_maxsockbuf(SYSCTL_HANDLER_ARGS)
+{
+	int error = 0;
+	u_long tmp_maxsockbuf = nl_maxsockbuf;
+
+	error = sysctl_handle_long(oidp, &tmp_maxsockbuf, arg2, req);
+	if (error || !req->newptr)
+		return (error);
+	if (tmp_maxsockbuf < MSIZE + MCLBYTES)
+		return (EINVAL);
+	nl_maxsockbuf = tmp_maxsockbuf;
+
+	return (0);
+}
+
+static int
 nl_setsbopt(struct socket *so, struct sockopt *sopt)
 {
 	int error, optval;
@@ -698,31 +729,39 @@ nl_setsbopt(struct socket *so, struct sockopt *sopt)
 	return (result ? 0 : ENOBUFS);
 }
 
-static struct protosw netlinksw = {
-	.pr_type = SOCK_RAW,
-	.pr_flags = PR_ATOMIC | PR_ADDR | PR_WANTRCVD,
-	.pr_ctloutput = nl_ctloutput,
-	.pr_setsbopt = nl_setsbopt,
-	.pr_abort = nl_pru_abort,
-	.pr_attach = nl_pru_attach,
-	.pr_bind = nl_pru_bind,
-	.pr_connect = nl_pru_connect,
-	.pr_detach = nl_pru_detach,
-	.pr_disconnect = nl_pru_disconnect,
-	.pr_peeraddr = nl_pru_peeraddr,
-	.pr_send = nl_pru_send,
-	.pr_rcvd = nl_pru_rcvd,
-	.pr_shutdown = nl_pru_shutdown,
-	.pr_sockaddr = nl_pru_sockaddr,
+#define	NETLINK_PROTOSW						\
+	.pr_flags = PR_ATOMIC | PR_ADDR | PR_WANTRCVD,		\
+	.pr_ctloutput = nl_ctloutput,				\
+	.pr_setsbopt = nl_setsbopt,				\
+	.pr_abort = nl_pru_abort,				\
+	.pr_attach = nl_pru_attach,				\
+	.pr_bind = nl_pru_bind,					\
+	.pr_connect = nl_pru_connect,				\
+	.pr_detach = nl_pru_detach,				\
+	.pr_disconnect = nl_pru_disconnect,			\
+	.pr_peeraddr = nl_pru_peeraddr,				\
+	.pr_send = nl_pru_send,					\
+	.pr_rcvd = nl_pru_rcvd,					\
+	.pr_shutdown = nl_pru_shutdown,				\
+	.pr_sockaddr = nl_pru_sockaddr,				\
 	.pr_close = nl_pru_close
+
+static struct protosw netlink_raw_sw = {
+	.pr_type = SOCK_RAW,
+	NETLINK_PROTOSW
+};
+
+static struct protosw netlink_dgram_sw = {
+	.pr_type = SOCK_DGRAM,
+	NETLINK_PROTOSW
 };
 
 static struct domain netlinkdomain = {
 	.dom_family = PF_NETLINK,
 	.dom_name = "netlink",
 	.dom_flags = DOMF_UNLOADABLE,
-	.dom_nprotosw =		1,
-	.dom_protosw =		{ &netlinksw },
+	.dom_nprotosw =		2,
+	.dom_protosw =		{ &netlink_raw_sw, &netlink_dgram_sw },
 };
 
 DOMAIN_SET(netlink);

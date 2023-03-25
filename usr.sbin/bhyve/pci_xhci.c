@@ -48,8 +48,6 @@ __FBSDID("$FreeBSD$");
 #include <pthread.h>
 #include <unistd.h>
 
-#include <machine/vmm_snapshot.h>
-
 #include <dev/usb/usbdi.h>
 #include <dev/usb/usb.h>
 #include <dev/usb/usb_freebsd.h>
@@ -60,6 +58,9 @@ __FBSDID("$FreeBSD$");
 #include "debug.h"
 #include "pci_emul.h"
 #include "pci_xhci.h"
+#ifdef BHYVE_SNAPSHOT
+#include "snapshot.h"
+#endif
 #include "usb_emul.h"
 
 
@@ -290,10 +291,10 @@ struct pci_xhci_softc {
 };
 
 
-/* portregs and devices arrays are set up to start from idx=1 */
-#define	XHCI_PORTREG_PTR(x,n)	&(x)->portregs[(n)]
-#define	XHCI_DEVINST_PTR(x,n)	(x)->devices[(n)]
-#define	XHCI_SLOTDEV_PTR(x,n)	(x)->slots[(n)]
+/* port and slot numbering start from 1 */
+#define	XHCI_PORTREG_PTR(x,n)	&((x)->portregs[(n) - 1])
+#define	XHCI_DEVINST_PTR(x,n)	((x)->devices[(n) - 1])
+#define	XHCI_SLOTDEV_PTR(x,n)	((x)->slots[(n) - 1])
 
 #define	XHCI_HALTED(sc)		((sc)->opregs.usbsts & XHCI_STS_HCH)
 
@@ -2267,9 +2268,8 @@ pci_xhci_hostop_write(struct pci_xhci_softc *sc, uint64_t offset,
 
 
 static void
-pci_xhci_write(struct vmctx *ctx __unused,
-    struct pci_devinst *pi, int baridx, uint64_t offset, int size __unused,
-    uint64_t value)
+pci_xhci_write(struct pci_devinst *pi, int baridx, uint64_t offset,
+    int size __unused, uint64_t value)
 {
 	struct pci_xhci_softc *sc;
 
@@ -2489,8 +2489,7 @@ pci_xhci_xecp_read(struct pci_xhci_softc *sc, uint64_t offset)
 
 
 static uint64_t
-pci_xhci_read(struct vmctx *ctx __unused,
-    struct pci_devinst *pi, int baridx, uint64_t offset, int size)
+pci_xhci_read(struct pci_devinst *pi, int baridx, uint64_t offset, int size)
 {
 	struct pci_xhci_softc *sc;
 	uint32_t	value;
@@ -2738,10 +2737,6 @@ pci_xhci_parse_devices(struct pci_xhci_softc *sc, nvlist_t *nvl)
 	sc->devices = calloc(XHCI_MAX_DEVS, sizeof(struct pci_xhci_dev_emu *));
 	sc->slots = calloc(XHCI_MAX_SLOTS, sizeof(struct pci_xhci_dev_emu *));
 
-	/* port and slot numbering start from 1 */
-	sc->devices--;
-	sc->slots--;
-
 	ndevices = 0;
 
 	slots_nvl = find_relative_config_node(nvl, "slot");
@@ -2835,7 +2830,6 @@ pci_xhci_parse_devices(struct pci_xhci_softc *sc, nvlist_t *nvl)
 
 portsfinal:
 	sc->portregs = calloc(XHCI_MAX_DEVS, sizeof(struct pci_xhci_portregs));
-	sc->portregs--;
 
 	if (ndevices > 0) {
 		for (i = 1; i <= XHCI_MAX_DEVS; i++) {
@@ -2851,14 +2845,14 @@ bad:
 		free(XHCI_DEVINST_PTR(sc, i));
 	}
 
-	free(sc->devices + 1);
-	free(sc->slots + 1);
+	free(sc->devices);
+	free(sc->slots);
 
 	return (-1);
 }
 
 static int
-pci_xhci_init(struct vmctx *ctx __unused, struct pci_devinst *pi, nvlist_t *nvl)
+pci_xhci_init(struct pci_devinst *pi, nvlist_t *nvl)
 {
 	struct pci_xhci_softc *sc;
 	int	error;
@@ -2972,8 +2966,8 @@ pci_xhci_map_devs_slots(struct pci_xhci_softc *sc, int maps[])
 }
 
 static int
-pci_xhci_snapshot_ep(struct pci_xhci_softc *sc __unused,
-    struct pci_xhci_dev_emu *dev, int idx, struct vm_snapshot_meta *meta)
+pci_xhci_snapshot_ep(struct pci_xhci_softc *sc, struct pci_xhci_dev_emu *dev,
+    int idx, struct vm_snapshot_meta *meta)
 {
 	int k;
 	int ret;
@@ -2999,9 +2993,9 @@ pci_xhci_snapshot_ep(struct pci_xhci_softc *sc __unused,
 	for (k = 0; k < USB_MAX_XFER_BLOCKS; k++) {
 		xfer_block = &xfer->data[k];
 
-		SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(xfer_block->buf,
-			XHCI_GADDR_SIZE(xfer_block->buf), true, meta, ret,
-			done);
+		SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->xsc_pi->pi_vmctx,
+		    xfer_block->buf, XHCI_GADDR_SIZE(xfer_block->buf), true,
+		    meta, ret, done);
 		SNAPSHOT_VAR_OR_LEAVE(xfer_block->blen, meta, ret, done);
 		SNAPSHOT_VAR_OR_LEAVE(xfer_block->bdone, meta, ret, done);
 		SNAPSHOT_VAR_OR_LEAVE(xfer_block->processed, meta, ret, done);
@@ -3066,11 +3060,11 @@ pci_xhci_snapshot(struct vm_snapshot_meta *meta)
 	SNAPSHOT_VAR_OR_LEAVE(sc->opregs.config, meta, ret, done);
 
 	/* opregs.cr_p */
-	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->opregs.cr_p,
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, sc->opregs.cr_p,
 		XHCI_GADDR_SIZE(sc->opregs.cr_p), true, meta, ret, done);
 
 	/* opregs.dcbaa_p */
-	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->opregs.dcbaa_p,
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, sc->opregs.dcbaa_p,
 		XHCI_GADDR_SIZE(sc->opregs.dcbaa_p), true, meta, ret, done);
 
 	/* rtsregs */
@@ -3085,11 +3079,11 @@ pci_xhci_snapshot(struct vm_snapshot_meta *meta)
 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.intrreg.erdp, meta, ret, done);
 
 	/* rtsregs.erstba_p */
-	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->rtsregs.erstba_p,
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, sc->rtsregs.erstba_p,
 		XHCI_GADDR_SIZE(sc->rtsregs.erstba_p), true, meta, ret, done);
 
 	/* rtsregs.erst_p */
-	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->rtsregs.erst_p,
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, sc->rtsregs.erst_p,
 		XHCI_GADDR_SIZE(sc->rtsregs.erst_p), true, meta, ret, done);
 
 	SNAPSHOT_VAR_OR_LEAVE(sc->rtsregs.er_deq_seg, meta, ret, done);
@@ -3175,7 +3169,7 @@ pci_xhci_snapshot(struct vm_snapshot_meta *meta)
 		if (dev == NULL)
 			continue;
 
-		SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(dev->dev_ctx,
+		SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, dev->dev_ctx,
 			XHCI_GADDR_SIZE(dev->dev_ctx), true, meta, ret, done);
 
 		if (dev->dev_ctx != NULL) {

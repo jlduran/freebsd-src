@@ -75,6 +75,7 @@ __FBSDID("$FreeBSD$");
 #include <net/route/nhop.h>
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_private.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -111,6 +112,7 @@ __FBSDID("$FreeBSD$");
 #include <netinet/cc/cc.h>
 #include <netinet/tcpip.h>
 #include <netinet/tcp_fastopen.h>
+#include <netinet/tcp_accounting.h>
 #ifdef TCPPCAP
 #include <netinet/tcp_pcap.h>
 #endif
@@ -175,11 +177,6 @@ SYSCTL_INT(_net_inet_tcp_sack_attack, OID_AUTO, nummaps,
     CTLFLAG_RW,
     &tcp_map_minimum, 500,
     "Number of Map enteries before we start detection");
-int32_t tcp_attack_on_turns_on_logging = 0;
-SYSCTL_INT(_net_inet_tcp_sack_attack, OID_AUTO, attacks_logged,
-    CTLFLAG_RW,
-    &tcp_attack_on_turns_on_logging, 0,
-   "When we have a positive hit on attack, do we turn on logging?");
 int32_t tcp_sad_pacing_interval = 2000;
 SYSCTL_INT(_net_inet_tcp_sack_attack, OID_AUTO, sad_pacing_int,
     CTLFLAG_RW,
@@ -773,13 +770,14 @@ VNET_DEFINE(struct socket *, udp6_tun_socket) = NULL;
 #define	V_udp6_tun_socket	VNET(udp6_tun_socket)
 #endif
 
+static struct sx tcpoudp_lock;
+
 static void
 tcp_over_udp_stop(void)
 {
-	/*
-	 * This function assumes sysctl caller holds inp_rinfo_lock()
-	 * for writing!
-	 */
+
+	sx_assert(&tcpoudp_lock, SA_XLOCKED);
+
 #ifdef INET
 	if (V_udp4_tun_socket != NULL) {
 		soclose(V_udp4_tun_socket);
@@ -805,10 +803,9 @@ tcp_over_udp_start(void)
 #ifdef INET6
 	struct sockaddr_in6 sin6;
 #endif
-	/*
-	 * This function assumes sysctl caller holds inp_info_rlock()
-	 * for writing!
-	 */
+
+	sx_assert(&tcpoudp_lock, SA_XLOCKED);
+
 	port = V_tcp_udp_tunneling_port;
 	if (ntohs(port) == 0) {
 		/* Must have a port set */
@@ -896,13 +893,18 @@ sysctl_net_inet_tcp_udp_tunneling_port_check(SYSCTL_HANDLER_ARGS)
 		    (new > TCP_TUNNELING_PORT_MAX)) {
 			error = EINVAL;
 		} else {
+			sx_xlock(&tcpoudp_lock);
 			V_tcp_udp_tunneling_port = new;
 			if (old != 0) {
 				tcp_over_udp_stop();
 			}
 			if (new != 0) {
 				error = tcp_over_udp_start();
+				if (error != 0) {
+					V_tcp_udp_tunneling_port = 0;
+				}
 			}
+			sx_xunlock(&tcpoudp_lock);
 		}
 	}
 	return (error);
@@ -1479,6 +1481,7 @@ tcp_init(void *arg __unused)
 	TAILQ_INIT(&t_functions);
 	rw_init(&tcp_function_lock, "tcp_func_lock");
 	register_tcp_functions(&tcp_def_funcblk, M_WAITOK);
+	sx_init(&tcpoudp_lock, "TCP over UDP configuration");
 #ifdef TCP_BLACKBOX
 	/* Initialize the TCP logging data. */
 	tcp_log_init();
@@ -2077,7 +2080,7 @@ tcp_respond(struct tcpcb *tp, void *ipgen, struct tcphdr *th, struct mbuf *m,
 	if (flags & TH_RST)
 		TCP_PROBE5(accept__refused, NULL, NULL, m, tp, nth);
 	lgb = NULL;
-	if ((tp != NULL) && (tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if ((tp != NULL) && tcp_bblogging_on(tp)) {
 		if (INP_WLOCKED(inp)) {
 			union tcp_log_stackspecific log;
 			struct timeval tv;
@@ -2088,7 +2091,7 @@ tcp_respond(struct tcpcb *tp, void *ipgen, struct tcphdr *th, struct mbuf *m,
 			log.u_bbr.pkts_out = tp->t_maxseg;
 			log.u_bbr.timeStamp = tcp_get_usecs(&tv);
 			log.u_bbr.delivered = 0;
-			lgb = tcp_log_event_(tp, nth, NULL, NULL, TCP_LOG_OUT,
+			lgb = tcp_log_event(tp, nth, NULL, NULL, TCP_LOG_OUT,
 			    ERRNO_UNK, 0, &log, false, NULL, NULL, 0, &tv);
 		} else {
 			/*
@@ -3854,7 +3857,7 @@ tcp_inptoxtp(const struct inpcb *inp, struct xtcpcb *xt)
 
 	bzero(xt, sizeof(*xt));
 	xt->t_state = tp->t_state;
-	xt->t_logstate = tp->t_logstate;
+	xt->t_logstate = tcp_get_bblog_state(tp);
 	xt->t_flags = tp->t_flags;
 	xt->t_sndzerowin = tp->t_sndzerowin;
 	xt->t_sndrexmitpack = tp->t_sndrexmitpack;
@@ -3960,3 +3963,59 @@ tcp_decrement_paced_conn(void)
 		}
 	}
 }
+
+#ifdef TCP_ACCOUNTING
+int
+tcp_do_ack_accounting(struct tcpcb *tp, struct tcphdr *th, struct tcpopt *to, uint32_t tiwin, int mss)
+{
+	if (SEQ_LT(th->th_ack, tp->snd_una)) {
+		/* Do we have a SACK? */
+		if (to->to_flags & TOF_SACK) {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_SACK]++;
+			}
+			return (ACK_SACK);
+		} else {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_BEHIND]++;
+			}
+			return (ACK_BEHIND);
+		}
+	} else if (th->th_ack == tp->snd_una) {
+		/* Do we have a SACK? */
+		if (to->to_flags & TOF_SACK) {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_SACK]++;
+			}
+			return (ACK_SACK);
+		} else if (tiwin != tp->snd_wnd) {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_RWND]++;
+			}
+			return (ACK_RWND);
+		} else {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_DUPACK]++;
+			}
+			return (ACK_DUPACK);
+		}
+	} else {
+		if (!SEQ_GT(th->th_ack, tp->snd_max)) {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[CNT_OF_ACKS_IN] += (((th->th_ack - tp->snd_una) + mss - 1)/mss);
+			}
+		}
+		if (to->to_flags & TOF_SACK) {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_CUMACK_SACK]++;
+			}
+			return (ACK_CUMACK_SACK);
+		} else {
+			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
+				tp->tcp_cnt_counters[ACK_CUMACK]++;
+			}
+			return (ACK_CUMACK);
+		}
+	}
+}
+#endif

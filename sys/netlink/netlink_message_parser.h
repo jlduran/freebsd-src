@@ -29,6 +29,9 @@
 #define _NETLINK_NETLINK_MESSAGE_PARSER_H_
 
 #ifdef _KERNEL
+
+#include <sys/bitset.h>
+
 /*
  * It is not meant to be included directly
  */
@@ -68,6 +71,7 @@ struct nl_pstate {
 	uint32_t		err_off;	/* error offset from hdr start */
         int			error;		/* last operation error */
 	char			*err_msg;	/* Description of last error */
+	struct nlattr		*cookie;	/* NLA to return to the userspace */
 	bool			strict;		/* Strict parsing required */
 };
 
@@ -152,18 +156,11 @@ static const struct nlhdr_parser _name = {		\
 	.np_size = NL_ARRAY_LEN(_np),			\
 }
 
-struct nlattr_bmask {
-	uint64_t			mask[2];
-};
+#define	NL_ATTR_BMASK_SIZE	128
+BITSET_DEFINE(nlattr_bmask, NL_ATTR_BMASK_SIZE);
 
-static inline bool
-nl_has_attr(const struct nlattr_bmask *bm, unsigned int attr_type)
-{
-	MPASS(attr_type < sizeof(bm->mask) * 8);
-
-	return ((bm->mask[attr_type / 8] & (1 << (attr_type % 8))));
-}
 void nl_get_attrs_bmask_raw(struct nlattr *nla_head, int len, struct nlattr_bmask *bm);
+bool nl_has_attr(const struct nlattr_bmask *bm, unsigned int nla_type);
 
 int nl_parse_attrs_raw(struct nlattr *nla_head, int len, const struct nlattr_parser *ps,
     int pslen, struct nl_pstate *npt, void *target);
@@ -177,6 +174,10 @@ int nlattr_get_uint16(struct nlattr *nla, struct nl_pstate *npt,
 int nlattr_get_uint32(struct nlattr *nla, struct nl_pstate *npt,
     const void *arg, void *target);
 int nlattr_get_uint64(struct nlattr *nla, struct nl_pstate *npt,
+    const void *arg, void *target);
+int nlattr_get_in_addr(struct nlattr *nla, struct nl_pstate *npt,
+    const void *arg, void *target);
+int nlattr_get_in6_addr(struct nlattr *nla, struct nl_pstate *npt,
     const void *arg, void *target);
 int nlattr_get_ifp(struct nlattr *nla, struct nl_pstate *npt,
     const void *arg, void *target);
@@ -202,6 +203,9 @@ bool nlmsg_report_err_msg(struct nl_pstate *npt, const char *fmt, ...);
 
 bool nlmsg_report_err_offset(struct nl_pstate *npt, uint32_t off);
 
+void nlmsg_report_cookie(struct nl_pstate *npt, struct nlattr *nla);
+void nlmsg_report_cookie_u32(struct nl_pstate *npt, uint32_t val);
+
 /*
  * Have it inline so compiler can optimize field accesses into
  * the list of direct function calls without iteration.
@@ -213,9 +217,19 @@ nl_parse_header(void *hdr, int len, const struct nlhdr_parser *parser,
 	int error;
 
 	if (__predict_false(len < parser->nl_hdr_off)) {
-		nlmsg_report_err_msg(npt, "header too short: expected %d, got %d",
-		    parser->nl_hdr_off, len);
-		return (EINVAL);
+		if (npt->strict) {
+			nlmsg_report_err_msg(npt, "header too short: expected %d, got %d",
+			    parser->nl_hdr_off, len);
+			return (EINVAL);
+		}
+
+		/* Compat with older applications: pretend there's a full header */
+		void *tmp_hdr = npt_alloc(npt, parser->nl_hdr_off);
+		if (tmp_hdr == NULL)
+			return (EINVAL);
+		memcpy(tmp_hdr, hdr, len);
+		hdr = tmp_hdr;
+		len = parser->nl_hdr_off;
 	}
 
 	if (npt->strict && parser->sp != NULL && !parser->sp(hdr, npt))

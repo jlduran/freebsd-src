@@ -34,6 +34,7 @@ SUBDIR=	alias \
 	cut \
 	diff \
 	dirname \
+	dtc \
 	du \
 	elfctl \
 	elfdump \
@@ -125,6 +126,7 @@ SUBDIR=	alias \
 	rev \
 	revoke \
 	rpcinfo \
+	rs \
 	rup \
 	ruptime \
 	rusers \
@@ -150,7 +152,6 @@ SUBDIR=	alias \
 	tcopy \
 	tee \
 	time \
-	timeout \
 	tip \
 	top \
 	touch \
@@ -188,7 +189,6 @@ SUBDIR=	alias \
 
 SUBDIR.${MK_ACCT}+=	lastcomm
 SUBDIR.${MK_AT}+=	at
-SUBDIR.${MK_ATM}+=	atm
 SUBDIR.${MK_BLUETOOTH}+=	bluetooth
 SUBDIR.${MK_BSD_CPIO}+=	cpio
 SUBDIR.${MK_CALENDAR}+=	calendar
@@ -210,8 +210,6 @@ SUBDIR.${MK_GAMES}+=	number
 SUBDIR.${MK_GAMES}+=	pom
 SUBDIR.${MK_GAMES}+=	primes
 SUBDIR.${MK_GAMES}+=	random
-SUBDIR.${MK_CXX}+=	dtc
-SUBDIR.${MK_CXX}+=	rs
 .if ${MK_GH_BC} == "yes"
 SUBDIR+=		gh-bc
 .else
@@ -248,7 +246,7 @@ SUBDIR.${MK_QUOTAS}+=	quota
 SUBDIR.${MK_SENDMAIL}+=	vacation
 SUBDIR.${MK_TALK}+=	talk
 SUBDIR.${MK_TELNET}+=	telnet
-SUBDIR.${MK_TESTS_SUPPORT}.${MK_CXX}+=	kyua
+SUBDIR.${MK_TESTS_SUPPORT}+=	kyua
 SUBDIR.${MK_TESTS}+=	tests
 SUBDIR.${MK_TEXTPROC}+=	ul
 SUBDIR.${MK_TFTP}+=	tftp
@@ -281,9 +279,7 @@ SUBDIR.${MK_VT}+=	vtfontcvt
 SUBDIR.${MK_USB}+=	usbhidaction
 SUBDIR.${MK_USB}+=	usbhidctl
 SUBDIR.${MK_UTMPX}+=	last
-.if ${MK_CXX} != "no"
 SUBDIR.${MK_UTMPX}+=	users
-.endif
 SUBDIR.${MK_UTMPX}+=	who
 SUBDIR.${MK_OFED}+=	ofed
 

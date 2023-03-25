@@ -91,6 +91,7 @@ __FBSDID("$FreeBSD$");
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_llatbl.h>
+#include <net/if_private.h>
 #include <net/if_types.h>
 #include <net/route.h>
 #include <net/route/route_ctl.h>
@@ -1068,6 +1069,14 @@ icmp6_notify_error(struct mbuf **mp, int off, int icmp6len)
 		 * way to determine the zone.
 		 */
 		eip6 = (struct ip6_hdr *)(icmp6 + 1);
+
+		/*
+		 * Protocol layers can't do anything useful with unspecified
+		 * addresses.
+		 */
+		if (IN6_IS_ADDR_UNSPECIFIED(&eip6->ip6_src) ||
+		    IN6_IS_ADDR_UNSPECIFIED(&eip6->ip6_dst))
+			goto freeit;
 
 		icmp6dst.sin6_len = sizeof(struct sockaddr_in6);
 		icmp6dst.sin6_family = AF_INET6;

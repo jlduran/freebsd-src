@@ -88,9 +88,6 @@ __FBSDID("$FreeBSD$");
 
 static MALLOC_DEFINE(M_CPUS, "cpus", "CPU items");
 
-/* lock region used by kernel profiling */
-int	mcount_lock;
-
 int	mp_naps;		/* # of Applications processors */
 int	boot_cpu_id = -1;	/* designated BSP */
 
@@ -980,10 +977,9 @@ void
 cpu_add(u_int apic_id, char boot_cpu)
 {
 
-	if (apic_id > max_apic_id) {
+	if (apic_id > max_apic_id)
 		panic("SMP: APIC ID %d too high", apic_id);
-		return;
-	}
+
 	KASSERT(cpu_info[apic_id].cpu_present == 0, ("CPU %u added twice",
 	    apic_id));
 	cpu_info[apic_id].cpu_present = 1;
@@ -1714,7 +1710,7 @@ mp_ipi_intrcnt(void *dummy)
 		intrcnt_add(buf, &ipi_rendezvous_counts[i]);
 		snprintf(buf, sizeof(buf), "cpu%d:hardclock", i);
 		intrcnt_add(buf, &ipi_hardclock_counts[i]);
-	}		
+	}
 }
 SYSINIT(mp_ipi_intrcnt, SI_SUB_INTR, SI_ORDER_MIDDLE, mp_ipi_intrcnt, NULL);
 #endif

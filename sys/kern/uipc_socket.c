@@ -987,13 +987,24 @@ solisten_proto_check(struct socket *so)
 	mtx_lock(&so->so_snd_mtx);
 	mtx_lock(&so->so_rcv_mtx);
 
-	/* Interlock with soo_aio_queue(). */
-	if (!SOLISTENING(so) &&
-	   ((so->so_snd.sb_flags & (SB_AIO | SB_AIO_RUNNING)) != 0 ||
-	   (so->so_rcv.sb_flags & (SB_AIO | SB_AIO_RUNNING)) != 0)) {
-		solisten_proto_abort(so);
-		return (EINVAL);
+	/* Interlock with soo_aio_queue() and KTLS. */
+	if (!SOLISTENING(so)) {
+		bool ktls;
+
+#ifdef KERN_TLS
+		ktls = so->so_snd.sb_tls_info != NULL ||
+		    so->so_rcv.sb_tls_info != NULL;
+#else
+		ktls = false;
+#endif
+		if (ktls ||
+		    (so->so_snd.sb_flags & (SB_AIO | SB_AIO_RUNNING)) != 0 ||
+		    (so->so_rcv.sb_flags & (SB_AIO | SB_AIO_RUNNING)) != 0) {
+			solisten_proto_abort(so);
+			return (EINVAL);
+		}
 	}
+
 	return (0);
 }
 
@@ -1345,10 +1356,14 @@ soconnectat(int fd, struct socket *so, struct sockaddr *nam, struct thread *td)
 	int error;
 
 	CURVNET_SET(so->so_vnet);
+
 	/*
 	 * If protocol is connection-based, can only connect once.
 	 * Otherwise, if connected, try to disconnect first.  This allows
 	 * user to disconnect by connecting to, e.g., a null address.
+	 *
+	 * Note, this check is racy and may need to be re-evaluated at the
+	 * protocol layer.
 	 */
 	if (so->so_state & (SS_ISCONNECTED|SS_ISCONNECTING) &&
 	    ((so->so_proto->pr_flags & PR_CONNREQUIRED) ||
@@ -1861,8 +1876,15 @@ sousrsend(struct socket *so, struct sockaddr *addr, struct uio *uio,
 	    td);
 	CURVNET_RESTORE();
 	if (error != 0) {
+		/*
+		 * Clear transient errors for stream protocols if they made
+		 * some progress.  Make exclusion for aio(4) that would
+		 * schedule a new write in case of EWOULDBLOCK and clear
+		 * error itself.  See soaio_process_job().
+		 */
 		if (uio->uio_resid != len &&
 		    (so->so_proto->pr_flags & PR_ATOMIC) == 0 &&
+		    userproc == NULL &&
 		    (error == ERESTART || error == EINTR ||
 		    error == EWOULDBLOCK))
 			error = 0;

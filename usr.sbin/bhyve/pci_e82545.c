@@ -46,7 +46,6 @@ __FBSDID("$FreeBSD$");
 #ifndef WITHOUT_CAPSICUM
 #include <capsicum_helpers.h>
 #endif
-#include <machine/vmm_snapshot.h>
 
 #include <err.h>
 #include <errno.h>
@@ -68,6 +67,9 @@ __FBSDID("$FreeBSD$");
 #include "config.h"
 #include "debug.h"
 #include "pci_emul.h"
+#ifdef BHYVE_SNAPSHOT
+#include "snapshot.h"
+#endif
 #include "mevent.h"
 #include "net_utils.h"
 #include "net_backends.h"
@@ -2112,8 +2114,7 @@ e82545_read_register(struct e82545_softc *sc, uint32_t offset)
 }
 
 static void
-e82545_write(struct vmctx *ctx __unused,
-    struct pci_devinst *pi, int baridx, uint64_t offset, int size,
+e82545_write(struct pci_devinst *pi, int baridx, uint64_t offset, int size,
     uint64_t value)
 {
 	struct e82545_softc *sc;
@@ -2163,8 +2164,7 @@ e82545_write(struct vmctx *ctx __unused,
 }
 
 static uint64_t
-e82545_read(struct vmctx *ctx __unused,
-    struct pci_devinst *pi, int baridx, uint64_t offset, int size)
+e82545_read(struct pci_devinst *pi, int baridx, uint64_t offset, int size)
 {
 	struct e82545_softc *sc;
 	uint64_t retval;
@@ -2307,7 +2307,7 @@ e82545_reset(struct e82545_softc *sc, int drvr)
 }
 
 static int
-e82545_init(struct vmctx *ctx, struct pci_devinst *pi, nvlist_t *nvl)
+e82545_init(struct pci_devinst *pi, nvlist_t *nvl)
 {
 	char nstr[80];
 	struct e82545_softc *sc;
@@ -2319,7 +2319,7 @@ e82545_init(struct vmctx *ctx, struct pci_devinst *pi, nvlist_t *nvl)
 
 	pi->pi_arg = sc;
 	sc->esc_pi = pi;
-	sc->esc_ctx = ctx;
+	sc->esc_ctx = pi->pi_vmctx;
 
 	pthread_mutex_init(&sc->esc_mtx, NULL);
 	pthread_cond_init(&sc->esc_rx_cond, NULL);
@@ -2438,8 +2438,8 @@ e82545_snapshot(struct vm_snapshot_meta *meta)
 	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TADV, meta, ret, done);
 
 	/* Has dependency on esc_TDLEN; reoreder of fields from struct. */
-	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->esc_txdesc, sc->esc_TDLEN,
-		true, meta, ret, done);
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, sc->esc_txdesc,
+	    sc->esc_TDLEN, true, meta, ret, done);
 
 	/* L2 frame acceptance */
 	for (i = 0; i < (int)nitems(sc->esc_uni); i++) {
@@ -2473,8 +2473,8 @@ e82545_snapshot(struct vm_snapshot_meta *meta)
 	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RXCSUM, meta, ret, done);
 
 	/* Has dependency on esc_RDLEN; reoreder of fields from struct. */
-	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->esc_rxdesc, sc->esc_TDLEN,
-		true, meta, ret, done);
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(pi->pi_vmctx, sc->esc_rxdesc,
+	    sc->esc_TDLEN, true, meta, ret, done);
 
 	/* IO Port register access */
 	SNAPSHOT_VAR_OR_LEAVE(sc->io_addr, meta, ret, done);

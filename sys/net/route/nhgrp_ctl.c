@@ -44,6 +44,7 @@
 
 #include <net/if.h>
 #include <net/if_var.h>
+#include <net/if_private.h>
 #include <net/route.h>
 #include <net/route/route_ctl.h>
 #include <net/route/route_var.h>
@@ -385,8 +386,7 @@ nhgrp_free(struct nhgrp_object *nhg)
 	NET_EPOCH_EXIT(et);
 
 	KASSERT((nhg_priv->nhg_idx == 0), ("gr_idx != 0"));
-	epoch_call(net_epoch_preempt, destroy_nhgrp_epoch,
-	    &nhg_priv->nhg_epoch_ctx);
+	NET_EPOCH_CALL(destroy_nhgrp_epoch, &nhg_priv->nhg_epoch_ctx);
 }
 
 /*

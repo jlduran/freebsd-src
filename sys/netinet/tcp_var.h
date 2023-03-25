@@ -127,19 +127,26 @@ struct sackhint {
 STAILQ_HEAD(tcp_log_stailq, tcp_log_mem);
 
 typedef enum {
-	TT_DELACK = 0,
-	TT_REXMT,
+	TT_REXMT = 0,
 	TT_PERSIST,
 	TT_KEEP,
 	TT_2MSL,
+	TT_DELACK,
 	TT_N,
 } tt_which;
+
+typedef enum {
+	TT_PROCESSING = 0,
+	TT_PROCESSED,
+	TT_STARTING,
+	TT_STOPPING,
+} tt_what;
 
 /*
  * Tcp control block, one per tcp connection.
  */
 struct tcpcb {
-	struct inpcb t_inpcb;		/* embedded protocol indepenent cb */
+	struct inpcb t_inpcb;		/* embedded protocol independent cb */
 #define	t_start_zero	t_fb
 #define	t_zero_size	(sizeof(struct tcpcb) - \
 			    offsetof(struct tcpcb, t_start_zero))
@@ -151,7 +158,7 @@ struct tcpcb {
 	sbintime_t t_precisions[TT_N];
 
 	uint32_t t_maxseg:24,		/* maximum segment size */
-		t_logstate:8;		/* State of "black box" logging */
+		_t_logstate:8;		/* State of "black box" logging */
 	uint32_t t_port:16,		/* Tunneling (over udp) port */
 		t_state:4,		/* state of this connection */
 		t_idle_reduce : 1,
@@ -209,6 +216,9 @@ struct tcpcb {
 	tcp_seq	snd_recover;		/* for use in NewReno Fast Recovery */
 	char	t_oobflags;		/* have some */
 	char	t_iobc;			/* input character */
+	uint8_t t_nic_ktls_xmit:1,	/* active nic ktls xmit sessions */
+		t_nic_ktls_xmit_dis:1,	/* disabled nic xmit ktls? */
+		t_nic_ktls_spare:6;	/* spare nic ktls */
 	int	t_rxtcur;		/* current retransmit value (ticks) */
 
 	int	t_rxtshift;		/* log(2) of rexmt exp. backoff */
@@ -230,7 +240,6 @@ struct tcpcb {
 	uint32_t snd_ssthresh_prev;	/* ssthresh prior to retransmit */
 	tcp_seq	snd_recover_prev;	/* snd_recover prior to retransmit */
 	int	t_sndzerowin;		/* zero-window updates sent */
-	u_long	t_rttupdated;		/* number of times rtt sampled */
 	int	snd_numholes;		/* number of holes seen by sender */
 	u_int	t_badrxtwin;		/* window for retransmit recovery */
 	TAILQ_HEAD(sackhole_head, sackhole) snd_holes;
@@ -263,6 +272,11 @@ struct tcpcb {
 	struct tcp_log_id_bucket *t_lib;
 	const char *t_output_caller;	/* Function that called tcp_output */
 	struct statsblob *t_stats;	/* Per-connection stats */
+	/* Should these be a pointer to the arrays or an array? */
+#ifdef TCP_ACCOUNTING
+	uint64_t tcp_cnt_counters[TCP_NUM_CNT_COUNTERS];
+	uint64_t tcp_proc_time[TCP_NUM_CNT_COUNTERS];
+#endif
 	uint32_t t_logsn;		/* Log "serial number" */
 	uint32_t gput_ts;		/* Time goodput measurement started */
 	tcp_seq gput_seq;		/* Outbound measurement seq */
@@ -276,6 +290,7 @@ struct tcpcb {
 	uint32_t t_dsack_bytes;		/* dsack bytes received */
 	uint32_t t_dsack_tlp_bytes;	/* dsack bytes received for TLPs sent */
 	uint32_t t_dsack_pack;		/* dsack packets we have eceived */
+	uint8_t t_rttupdated;		/* number of times rtt sampled */
 	/* TCP Fast Open */
 	uint8_t t_tfo_client_cookie_len; /* TFO client cookie length */
 	uint32_t t_end_info_status;	/* Status flag of end info */
@@ -295,6 +310,7 @@ struct tcpcb {
 #ifdef TCP_HHOOK
 	struct osd	t_osd;		/* storage for Khelp module data */
 #endif
+	uint8_t _t_logpoint;	/* Used when a BB log points is enabled */
 };
 #endif	/* _KERNEL || _WANT_TCPCB */
 
@@ -592,6 +608,7 @@ tcp_packets_this_ack(struct tcpcb *tp, tcp_seq ack)
 #define	TF2_ACE_PERMIT		0x00000100 /* Accurate ECN mode */
 #define	TF2_FBYTES_COMPLETE	0x00000400 /* We have first bytes in and out */
 #define	TF2_ECN_USE_ECT1	0x00000800 /* Use ECT(1) marking on session */
+#define TF2_TCP_ACCOUNTING	0x00010000 /* Do TCP accounting */
 
 /*
  * Structure to hold TCP options that are only used during segment
@@ -1159,7 +1176,6 @@ extern int32_t tcp_sad_decay_val;
 extern int32_t tcp_sad_pacing_interval;
 extern int32_t tcp_sad_low_pps;
 extern int32_t tcp_map_minimum;
-extern int32_t tcp_attack_on_turns_on_logging;
 #endif
 extern uint32_t tcp_ack_war_time_window;
 extern uint32_t tcp_ack_war_cnt;
@@ -1189,7 +1205,6 @@ void	 tcpip_fillheaders(struct inpcb *, uint16_t, void *, void *);
 void	 tcp_timer_activate(struct tcpcb *, tt_which, u_int);
 bool	 tcp_timer_active(struct tcpcb *, tt_which);
 void	 tcp_timer_stop(struct tcpcb *);
-void	 tcp_trace(short, short, struct tcpcb *, void *, struct tcphdr *, int);
 int	 inp_to_cpuid(struct inpcb *inp);
 /*
  * All tcp_hc_* functions are IPv4 and IPv6 (via in_conninfo)
@@ -1238,6 +1253,10 @@ struct mbuf *
 
 int	tcp_stats_init(void);
 void tcp_log_end_status(struct tcpcb *tp, uint8_t status);
+#ifdef TCP_ACCOUNTING
+int tcp_do_ack_accounting(struct tcpcb *tp, struct tcphdr *th, struct tcpopt *to, uint32_t tiwin, int mss);
+#endif
+
 
 static inline void
 tcp_fields_to_host(struct tcphdr *th)
@@ -1274,7 +1293,7 @@ tcp_set_flags(struct tcphdr *th, uint16_t flags)
 
 static inline void
 tcp_account_for_send(struct tcpcb *tp, uint32_t len, uint8_t is_rxt,
-    uint8_t is_tlp, int hw_tls)
+    uint8_t is_tlp, bool hw_tls)
 {
 	if (is_tlp) {
 		tp->t_sndtlppack++;

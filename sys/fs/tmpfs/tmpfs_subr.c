@@ -434,7 +434,7 @@ tmpfs_pages_used(struct tmpfs_mount *tmp)
 	return (meta_pages + tmp->tm_pages_used);
 }
 
-static bool
+bool
 tmpfs_pages_check_avail(struct tmpfs_mount *tmp, size_t req_pages)
 {
 	if (tmpfs_mem_avail() < req_pages)
@@ -547,8 +547,8 @@ tmpfs_alloc_node(struct mount *mp, struct tmpfs_mount *tmp, enum vtype type,
 	 * allocated, this must be the request to do it. */
 	MPASS(IMPLIES(tmp->tm_root == NULL, parent == NULL && type == VDIR));
 
-	MPASS(IFF(type == VLNK, target != NULL));
-	MPASS(IFF(type == VBLK || type == VCHR, rdev != VNOVAL));
+	MPASS((type == VLNK) ^ (target == NULL));
+	MPASS((type == VBLK || type == VCHR) ^ (rdev == VNOVAL));
 
 	if (tmp->tm_nodes_inuse >= tmp->tm_nodes_max)
 		return (ENOSPC);
@@ -587,6 +587,7 @@ tmpfs_alloc_node(struct mount *mp, struct tmpfs_mount *tmp, enum vtype type,
 	nnode->tn_mode = mode;
 	nnode->tn_id = alloc_unr64(&tmp->tm_ino_unr);
 	nnode->tn_refcount = 1;
+	LIST_INIT(&nnode->tn_extattrs);
 
 	/* Type-specific initialization. */
 	switch (nnode->tn_type) {
@@ -702,6 +703,7 @@ bool
 tmpfs_free_node_locked(struct tmpfs_mount *tmp, struct tmpfs_node *node,
     bool detach)
 {
+	struct tmpfs_extattr *ea;
 	vm_object_t uobj;
 	char *symlink;
 	bool last;
@@ -747,6 +749,11 @@ tmpfs_free_node_locked(struct tmpfs_mount *tmp, struct tmpfs_node *node,
 		    (int)node->tn_type, node);
 	}
 #endif
+
+	while ((ea = LIST_FIRST(&node->tn_extattrs)) != NULL) {
+		LIST_REMOVE(ea, ea_extattrs);
+		tmpfs_extattr_free(ea);
+	}
 
 	switch (node->tn_type) {
 	case VREG:
@@ -1080,6 +1087,8 @@ loop:
 		vgone(vp);
 		vput(vp);
 		vp = NULL;
+	} else {
+		vn_set_state(vp, VSTATE_CONSTRUCTED);
 	}
 
 unlock:
@@ -1101,7 +1110,8 @@ out:
 		*vpp = vp;
 
 #ifdef INVARIANTS
-		MPASS(*vpp != NULL && VOP_ISLOCKED(*vpp));
+		MPASS(*vpp != NULL);
+		ASSERT_VOP_LOCKED(*vpp, __func__);
 		TMPFS_NODE_LOCK(node);
 		MPASS(*vpp == node->tn_vnode);
 		TMPFS_NODE_UNLOCK(node);
@@ -2325,29 +2335,19 @@ tmpfs_itimes(struct vnode *vp, const struct timespec *acc,
 int
 tmpfs_truncate(struct vnode *vp, off_t length)
 {
-	int error;
 	struct tmpfs_node *node;
+	int error;
 
-	node = VP_TO_TMPFS_NODE(vp);
-
-	if (length < 0) {
-		error = EINVAL;
-		goto out;
-	}
-
-	if (node->tn_size == length) {
-		error = 0;
-		goto out;
-	}
-
+	if (length < 0)
+		return (EINVAL);
 	if (length > VFS_TO_TMPFS(vp->v_mount)->tm_maxfilesize)
 		return (EFBIG);
 
-	error = tmpfs_reg_resize(vp, length, FALSE);
+	node = VP_TO_TMPFS_NODE(vp);
+	error = node->tn_size == length ? 0 : tmpfs_reg_resize(vp, length,
+	    FALSE);
 	if (error == 0)
 		node->tn_status |= TMPFS_NODE_CHANGED | TMPFS_NODE_MODIFIED;
-
-out:
 	tmpfs_update(vp);
 
 	return (error);

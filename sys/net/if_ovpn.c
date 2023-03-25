@@ -57,6 +57,7 @@
 #include <net/if_clone.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
+#include <net/if_private.h>
 #include <net/netisr.h>
 #include <net/route/nhop.h>
 
@@ -177,8 +178,6 @@ struct ovpn_counters {
 #define OVPN_COUNTER_SIZE (sizeof(struct ovpn_counters)/sizeof(uint64_t))
 
 RB_HEAD(ovpn_kpeers, ovpn_kpeer);
-RB_HEAD(ovpn_kpeers_by_ip, ovpn_kpeer);
-RB_HEAD(ovpn_kpeers_by_ip6, ovpn_kpeer);
 
 struct ovpn_softc {
 	int			 refcount;
@@ -187,8 +186,6 @@ struct ovpn_softc {
 	struct socket		*so;
 	int			 peercount;
 	struct ovpn_kpeers	 peers;
-	struct ovpn_kpeers_by_ip	peers_by_ip;
-	struct ovpn_kpeers_by_ip6	peers_by_ip6;
 
 	/* Pending notification */
 	struct buf_ring		*notifring;
@@ -199,10 +196,6 @@ struct ovpn_softc {
 };
 
 static struct ovpn_kpeer *ovpn_find_peer(struct ovpn_softc *, uint32_t);
-static struct ovpn_kpeer *ovpn_find_peer_by_ip(struct ovpn_softc *,
-    const struct in_addr);
-static struct ovpn_kpeer *ovpn_find_peer_by_ip6(struct ovpn_softc *,
-    const struct in6_addr *);
 static bool ovpn_udp_input(struct mbuf *, int, struct inpcb *,
     const struct sockaddr *, void *);
 static int ovpn_transmit_to_peer(struct ifnet *, struct mbuf *,
@@ -211,23 +204,10 @@ static int ovpn_encap(struct ovpn_softc *, uint32_t, struct mbuf *);
 static int ovpn_get_af(struct mbuf *);
 static void ovpn_free_kkey_dir(struct ovpn_kkey_dir *);
 static bool ovpn_check_replay(struct ovpn_kkey_dir *, uint32_t);
-static int ovpn_peer_compare(const struct ovpn_kpeer *,
-    const struct ovpn_kpeer *);
-static int ovpn_peer_compare_by_ip(const struct ovpn_kpeer *,
-    const struct ovpn_kpeer *);
-static int ovpn_peer_compare_by_ip6(const struct ovpn_kpeer *,
-    const struct ovpn_kpeer *);
+static int ovpn_peer_compare(struct ovpn_kpeer *, struct ovpn_kpeer *);
 
 static RB_PROTOTYPE(ovpn_kpeers, ovpn_kpeer, tree, ovpn_peer_compare);
 static RB_GENERATE(ovpn_kpeers, ovpn_kpeer, tree, ovpn_peer_compare);
-static RB_PROTOTYPE(ovpn_kpeers_by_ip, ovpn_kpeer, tree,
-    ovpn_peer_compare_by_ip);
-static RB_GENERATE(ovpn_kpeers_by_ip, ovpn_kpeer, tree,
-    ovpn_peer_compare_by_ip);
-static RB_PROTOTYPE(ovpn_kpeers_by_ip6, ovpn_kpeer, tree,
-    ovpn_peer_compare_by_ip6);
-static RB_GENERATE(ovpn_kpeers_by_ip6, ovpn_kpeer, tree,
-    ovpn_peer_compare_by_ip6);
 
 #define OVPN_MTU_MIN		576
 #define OVPN_MTU_MAX		(IP_MAXPACKET - sizeof(struct ip) - \
@@ -295,22 +275,9 @@ SYSCTL_INT(_net_link_openvpn, OID_AUTO, netisr_queue,
 	"Use netisr_queue() rather than netisr_dispatch().");
 
 static int
-ovpn_peer_compare(const struct ovpn_kpeer *a, const struct ovpn_kpeer *b)
+ovpn_peer_compare(struct ovpn_kpeer *a, struct ovpn_kpeer *b)
 {
 	return (a->peerid - b->peerid);
-}
-
-static int
-ovpn_peer_compare_by_ip(const struct ovpn_kpeer *a, const struct ovpn_kpeer *b)
-{
-	return (memcmp(&a->vpn4, &b->vpn4, sizeof(a->vpn4)));
-}
-
-static int
-ovpn_peer_compare_by_ip6(const struct ovpn_kpeer *a,
-    const struct ovpn_kpeer *b)
-{
-	return (memcmp(&a->vpn6, &b->vpn6, sizeof(a->vpn6)));
 }
 
 static struct ovpn_kpeer *
@@ -643,14 +610,8 @@ ovpn_new_peer(struct ifnet *ifp, const nvlist_t *nvl)
 	if (sc->so == NULL)
 		sc->so = so;
 
-	/* Insert the peer into the lists. */
+	/* Insert the peer into the list. */
 	RB_INSERT(ovpn_kpeers, &sc->peers, peer);
-	if (nvlist_exists_binary(nvl, "vpn_ipv4")) {
-		RB_INSERT(ovpn_kpeers_by_ip, &sc->peers_by_ip, peer);
-	}
-	if (nvlist_exists_binary(nvl, "vpn_ipv6")) {
-		RB_INSERT(ovpn_kpeers_by_ip6, &sc->peers_by_ip6, peer);
-	}
 	sc->peercount++;
 	soref(sc->so);
 
@@ -661,12 +622,6 @@ ovpn_new_peer(struct ifnet *ifp, const nvlist_t *nvl)
 	}
 	if (ret != 0) {
 		RB_REMOVE(ovpn_kpeers, &sc->peers, peer);
-		if (nvlist_exists_binary(nvl, "vpn_ipv4")) {
-			RB_REMOVE(ovpn_kpeers_by_ip, &sc->peers_by_ip, peer);
-		}
-		if (nvlist_exists_binary(nvl, "vpn_ipv6")) {
-			RB_REMOVE(ovpn_kpeers_by_ip6, &sc->peers_by_ip6, peer);
-		}
 		sc->peercount--;
 		goto error_locked;
 	}
@@ -692,7 +647,7 @@ done:
 static int
 _ovpn_del_peer(struct ovpn_softc *sc, struct ovpn_kpeer *peer)
 {
-	struct ovpn_kpeer *tmp;
+	struct ovpn_kpeer *tmp __diagused;
 
 	OVPN_WASSERT(sc);
 	CURVNET_ASSERT_SET();
@@ -701,13 +656,6 @@ _ovpn_del_peer(struct ovpn_softc *sc, struct ovpn_kpeer *peer)
 
 	tmp = RB_REMOVE(ovpn_kpeers, &sc->peers, peer);
 	MPASS(tmp != NULL);
-
-	tmp = ovpn_find_peer_by_ip(sc, peer->vpn4);
-	if (tmp)
-		RB_REMOVE(ovpn_kpeers_by_ip, &sc->peers_by_ip, tmp);
-	tmp = ovpn_find_peer_by_ip6(sc, &peer->vpn6);
-	if (tmp)
-		RB_REMOVE(ovpn_kpeers_by_ip6, &sc->peers_by_ip6, tmp);
 
 	sc->peercount--;
 
@@ -1715,29 +1663,41 @@ ovpn_get_af(struct mbuf *m)
 	return (0);
 }
 
+#ifdef INET
 static struct ovpn_kpeer *
 ovpn_find_peer_by_ip(struct ovpn_softc *sc, const struct in_addr addr)
 {
-	struct ovpn_kpeer peer;
+	struct ovpn_kpeer *peer = NULL;
 
 	OVPN_ASSERT(sc);
 
-	peer.vpn4 = addr;
+	/* TODO: Add a second RB so we can look up by IP. */
+	RB_FOREACH(peer, ovpn_kpeers, &sc->peers) {
+		if (addr.s_addr == peer->vpn4.s_addr)
+			return (peer);
+	}
 
-	return (RB_FIND(ovpn_kpeers_by_ip, &sc->peers_by_ip, &peer));
+	return (peer);
 }
+#endif
 
+#ifdef INET6
 static struct ovpn_kpeer *
 ovpn_find_peer_by_ip6(struct ovpn_softc *sc, const struct in6_addr *addr)
 {
-	struct ovpn_kpeer peer;
+	struct ovpn_kpeer *peer = NULL;
 
 	OVPN_ASSERT(sc);
 
-	peer.vpn6 = *addr;
+	/* TODO: Add a third RB so we can look up by IPv6 address. */
+	RB_FOREACH(peer, ovpn_kpeers, &sc->peers) {
+		if (memcmp(addr, &peer->vpn6, sizeof(*addr)) == 0)
+			return (peer);
+	}
 
-	return (RB_FIND(ovpn_kpeers_by_ip6, &sc->peers_by_ip6, &peer));
+	return (peer);
 }
+#endif
 
 static struct ovpn_kpeer *
 ovpn_route_peer(struct ovpn_softc *sc, struct mbuf **m0,

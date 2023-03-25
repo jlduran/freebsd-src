@@ -100,7 +100,6 @@ COMPAT_FREEBSD11	opt_global.h
 COMPAT_FREEBSD12	opt_global.h
 COMPAT_FREEBSD13	opt_global.h
 COMPAT_LINUXKPI	opt_dontuse.h
-_COMPAT_LINUX32	opt_compat.h	# XXX: make sure opt_compat.h exists
 COMPILING_LINT	opt_global.h
 CY_PCI_FASTINTR
 DEADLKRES	opt_watchdog.h
@@ -228,6 +227,7 @@ SYSVSEM		opt_sysvipc.h
 SYSVSHM		opt_sysvipc.h
 SW_WATCHDOG	opt_watchdog.h
 TCPHPTS         opt_inet.h
+TCP_ACCOUNTING	opt_inet.h
 TURNSTILE_PROFILING
 UMTX_PROFILING
 UMTX_CHAINS	opt_global.h
@@ -265,6 +265,7 @@ NULLFS		opt_dontuse.h
 PROCFS		opt_dontuse.h
 PSEUDOFS	opt_dontuse.h
 SMBFS		opt_dontuse.h
+TARFS		opt_dontuse.h
 TMPFS		opt_dontuse.h
 UDF		opt_dontuse.h
 UNIONFS		opt_dontuse.h
@@ -272,6 +273,9 @@ ZFS		opt_dontuse.h
 
 # Pseudofs debugging
 PSEUDOFS_TRACE	opt_pseudofs.h
+
+# Tarfs debugging
+TARFS_DEBUG	opt_tarfs.h
 
 # In-kernel GSS-API
 KGSSAPI		opt_kgssapi.h
@@ -459,6 +463,7 @@ MBUF_PROFILING
 MBUF_STRESS_TEST
 MROUTING		opt_mrouting.h
 NFSLOCKD
+NETLINK
 PF_DEFAULT_TO_DROP	opt_pf.h
 ROUTE_MPATH		opt_route.h
 ROUTETABLES		opt_route.h
@@ -505,8 +510,6 @@ SCTP_DETAILED_STR_STATS	opt_sctp.h # Use per PR-SCTP policy stream stats
 NETGRAPH
 NETGRAPH_DEBUG		opt_netgraph.h
 NETGRAPH_ASYNC		opt_netgraph.h
-NETGRAPH_ATMLLC		opt_netgraph.h
-NETGRAPH_ATM_ATMPIF	opt_netgraph.h
 NETGRAPH_BLUETOOTH	opt_netgraph.h
 NETGRAPH_BLUETOOTH_BT3C	opt_netgraph.h
 NETGRAPH_BLUETOOTH_H4	opt_netgraph.h
@@ -559,14 +562,6 @@ NETGRAPH_TTY		opt_netgraph.h
 NETGRAPH_UI		opt_netgraph.h
 NETGRAPH_VJC		opt_netgraph.h
 NETGRAPH_VLAN		opt_netgraph.h
-
-# NgATM options
-NGATM_ATM		opt_netgraph.h
-NGATM_ATMBASE		opt_netgraph.h
-NGATM_SSCOP		opt_netgraph.h
-NGATM_SSCFU		opt_netgraph.h
-NGATM_UNI		opt_netgraph.h
-NGATM_CCATM		opt_netgraph.h
 
 # DRM options
 DRM_DEBUG		opt_drm.h
@@ -799,8 +794,9 @@ KBD_INSTALL_CDEV	opt_kbd.h
 KBD_MAXRETRY		opt_kbd.h
 KBD_MAXWAIT		opt_kbd.h
 KBD_RESETDELAY		opt_kbd.h
+KBD_DELAY1		opt_kbd.h
+KBD_DELAY2		opt_kbd.h
 KBDIO_DEBUG		opt_kbd.h
-
 KBDMUX_DFLT_KEYMAP	opt_kbdmux.h
 
 # options for the Atheros driver

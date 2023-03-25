@@ -32,6 +32,7 @@ __FBSDID("$FreeBSD$");
 #include "opt_ipsec.h"
 #include "opt_ratelimit.h"
 #include "opt_kern_tls.h"
+#if defined(INET) || defined(INET6)
 #include <sys/param.h>
 #include <sys/arb.h>
 #include <sys/module.h>
@@ -88,10 +89,10 @@ __FBSDID("$FreeBSD$");
 #include <netinet/tcp.h>
 #define	TCPOUTFLAGS
 #include <netinet/tcp_fsm.h>
-#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
+#include <netinet/tcp_log_buf.h>
 #include <netinet/tcp_syncache.h>
 #include <netinet/tcp_hpts.h>
 #include <netinet/tcp_ratelimit.h>
@@ -323,9 +324,6 @@ static int32_t rack_timely_no_stopping = 0;
 static int32_t rack_down_raise_thresh = 100;
 static int32_t rack_req_segs = 1;
 static uint64_t rack_bw_rate_cap = 0;
-static uint32_t rack_trace_point_config = 0;
-static uint32_t rack_trace_point_bb_mode = 4;
-static int32_t rack_trace_point_count = 0;
 
 
 /* Weird delayed ack mode */
@@ -546,25 +544,6 @@ rack_apply_deferred_options(struct tcp_rack *rack);
 
 int32_t rack_clear_counter=0;
 
-static inline void
-rack_trace_point(struct tcp_rack *rack, int num)
-{
-	if (((rack_trace_point_config == num)  ||
-	     (rack_trace_point_config = 0xffffffff)) &&
-	    (rack_trace_point_bb_mode != 0) &&
-	    (rack_trace_point_count > 0) &&
-	    (rack->rc_tp->t_logstate == 0)) {
-		int res;
-		res = atomic_fetchadd_int(&rack_trace_point_count, -1);
-		if (res > 0) {
-			rack->rc_tp->t_logstate = rack_trace_point_bb_mode;
-		} else {
-			/* Loss a race assure its zero now */
-			rack_trace_point_count = 0;
-		}
-	}
-}
-
 static void
 rack_swap_beta_values(struct tcp_rack *rack, uint8_t flex8)
 {
@@ -628,7 +607,7 @@ rack_swap_beta_values(struct tcp_rack *rack, uint8_t flex8)
 	/* Save off the values for restoral */
 	memcpy(&rack->r_ctl.rc_saved_beta, &old, sizeof(struct newreno));
 out:
-	if (rack_verbose_logging && (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 		struct newreno *ptr;
@@ -649,7 +628,7 @@ out:
 		log.u_bbr.flex7 |= rack->rc_pacing_cc_set;
 		log.u_bbr.pkts_out = rack->r_ctl.rc_prr_sndcnt;
 		log.u_bbr.flex8 = flex8;
-		tcp_log_event_(tp, NULL, NULL, NULL, BBR_LOG_CWND, error,
+		tcp_log_event(tp, NULL, NULL, NULL, BBR_LOG_CWND, error,
 			       0, &log, false, NULL, NULL, 0, &tv);
 	}
 }
@@ -777,7 +756,6 @@ rack_init_sysctls(void)
 	struct sysctl_oid *rack_measure;
 	struct sysctl_oid *rack_probertt;
 	struct sysctl_oid *rack_hw_pacing;
-	struct sysctl_oid *rack_tracepoint;
 
 	rack_attack = SYSCTL_ADD_NODE(&rack_sysctl_ctx,
 	    SYSCTL_CHILDREN(rack_sysctl_root),
@@ -908,28 +886,6 @@ rack_init_sysctls(void)
 	    OID_AUTO, "hbp_threshold", CTLFLAG_RW,
 	    &rack_hbp_thresh, 3,
 	    "We are highly buffered if min_rtt_seen / max_rtt_seen > this-threshold");
-
-	rack_tracepoint = SYSCTL_ADD_NODE(&rack_sysctl_ctx,
-	    SYSCTL_CHILDREN(rack_sysctl_root),
-	    OID_AUTO,
-	    "tp",
-	    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
-	    "Rack tracepoint facility");
-	SYSCTL_ADD_U32(&rack_sysctl_ctx,
-	    SYSCTL_CHILDREN(rack_tracepoint),
-	    OID_AUTO, "number", CTLFLAG_RW,
-	    &rack_trace_point_config, 0,
-	    "What is the trace point number to activate (0=none, 0xffffffff = all)?");
-	SYSCTL_ADD_U32(&rack_sysctl_ctx,
-	    SYSCTL_CHILDREN(rack_tracepoint),
-	    OID_AUTO, "bbmode", CTLFLAG_RW,
-	    &rack_trace_point_bb_mode, 4,
-	    "What is BB logging mode that is activated?");
-	SYSCTL_ADD_S32(&rack_sysctl_ctx,
-	    SYSCTL_CHILDREN(rack_tracepoint),
-	    OID_AUTO, "count", CTLFLAG_RW,
-	    &rack_trace_point_count, 0,
-	    "How many connections will have BB logging turned on that hit the tracepoint?");
 	/* Pacing related sysctls */
 	rack_pacing = SYSCTL_ADD_NODE(&rack_sysctl_ctx,
 	    SYSCTL_CHILDREN(rack_sysctl_root),
@@ -1957,7 +1913,7 @@ rack_log_dsack_event(struct tcp_rack *rack, uint8_t mod, uint32_t flex4, uint32_
 	 * 5 = Socket option set changing the control flags rc_rack_tmr_std_based, rc_rack_use_dsack
 	 * 6 = Final rack rtt, flex4 is srtt and flex6 is final limited thresh.
 	 */
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -1988,7 +1944,7 @@ rack_log_hdwr_pacing(struct tcp_rack *rack,
 		     uint64_t rate, uint64_t hw_rate, int line,
 		     int error, uint16_t mod)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 		const struct ifnet *ifp;
@@ -2089,7 +2045,7 @@ rack_get_output_bw(struct tcp_rack *rack, uint64_t bw, struct rack_sendmap *rsm,
 static void
 rack_log_retran_reason(struct tcp_rack *rack, struct rack_sendmap *rsm, uint32_t tsused, uint32_t thresh, int mod)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2130,7 +2086,7 @@ rack_log_retran_reason(struct tcp_rack *rack, struct rack_sendmap *rsm, uint32_t
 static void
 rack_log_to_start(struct tcp_rack *rack, uint32_t cts, uint32_t to, int32_t slot, uint8_t which)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2167,7 +2123,7 @@ rack_log_to_start(struct tcp_rack *rack, uint32_t cts, uint32_t to, int32_t slot
 static void
 rack_log_to_event(struct tcp_rack *rack, int32_t to_num, struct rack_sendmap *rsm)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2204,7 +2160,7 @@ rack_log_map_chg(struct tcpcb *tp, struct tcp_rack *rack,
 		 struct rack_sendmap *next,
 		 int flag, uint32_t th_ack, int line)
 {
-	if (rack_verbose_logging && (tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2250,7 +2206,7 @@ static void
 rack_log_rtt_upd(struct tcpcb *tp, struct tcp_rack *rack, uint32_t t, uint32_t len,
 		 struct rack_sendmap *rsm, int conf)
 {
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 		memset(&log.u_bbr, 0, sizeof(log.u_bbr));
@@ -2324,7 +2280,7 @@ rack_log_rtt_sample(struct tcp_rack *rack, uint32_t rtt)
 	 * applying to the srtt algorithm in
 	 * useconds.
 	 */
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2373,7 +2329,7 @@ rack_log_rtt_sample(struct tcp_rack *rack, uint32_t rtt)
 static void
 rack_log_rtt_sample_calc(struct tcp_rack *rack, uint32_t rtt, uint32_t send_time, uint32_t ack_time, int where)
 {
-	if (rack_verbose_logging && (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2398,7 +2354,7 @@ rack_log_rtt_sample_calc(struct tcp_rack *rack, uint32_t rtt, uint32_t send_time
 static inline void
 rack_log_progress_event(struct tcp_rack *rack, struct tcpcb *tp, uint32_t tick,  int event, int line)
 {
-	if (rack_verbose_logging && (tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2425,7 +2381,7 @@ rack_log_progress_event(struct tcp_rack *rack, struct tcpcb *tp, uint32_t tick, 
 static void
 rack_log_type_bbrsnd(struct tcp_rack *rack, uint32_t len, uint32_t slot, uint32_t cts, struct timeval *tv)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 
 		memset(&log.u_bbr, 0, sizeof(log.u_bbr));
@@ -2453,7 +2409,7 @@ rack_log_type_bbrsnd(struct tcp_rack *rack, uint32_t len, uint32_t slot, uint32_
 static void
 rack_log_doseg_done(struct tcp_rack *rack, uint32_t cts, int32_t nxt_pkt, int32_t did_out, int way_out, int nsegs)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2494,7 +2450,7 @@ rack_log_doseg_done(struct tcp_rack *rack, uint32_t cts, int32_t nxt_pkt, int32_
 static void
 rack_log_type_pacing_sizes(struct tcpcb *tp, struct tcp_rack *rack, uint32_t arg1, uint32_t arg2, uint32_t arg3, uint8_t frm)
 {
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2521,7 +2477,7 @@ static void
 rack_log_type_just_return(struct tcp_rack *rack, uint32_t cts, uint32_t tlen, uint32_t slot,
 			  uint8_t hpts_calling, int reason, uint32_t cwnd_to_use)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2555,7 +2511,7 @@ static void
 rack_log_to_cancel(struct tcp_rack *rack, int32_t hpts_removed, int line, uint32_t us_cts,
 		   struct timeval *tv, uint32_t flags_on_entry)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 
 		memset(&log.u_bbr, 0, sizeof(log.u_bbr));
@@ -2592,7 +2548,7 @@ rack_log_alt_to_to_cancel(struct tcp_rack *rack,
 			  uint32_t flex5, uint32_t flex6,
 			  uint16_t flex7, uint8_t mod)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2621,7 +2577,7 @@ rack_log_alt_to_to_cancel(struct tcp_rack *rack,
 static void
 rack_log_to_processing(struct tcp_rack *rack, uint32_t cts, int32_t ret, int32_t timers)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2651,7 +2607,7 @@ rack_log_to_processing(struct tcp_rack *rack, uint32_t cts, int32_t ret, int32_t
 static void
 rack_log_to_prr(struct tcp_rack *rack, int frm, int orig_cwnd, int line)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -2685,7 +2641,7 @@ rack_log_to_prr(struct tcp_rack *rack, int frm, int orig_cwnd, int line)
 static void
 rack_log_sad(struct tcp_rack *rack, int event)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -3041,7 +2997,7 @@ rack_log_timely(struct tcp_rack *rack,
 		uint32_t logged, uint64_t cur_bw, uint64_t low_bnd,
 		uint64_t up_bnd, int line, uint8_t method)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -3456,7 +3412,7 @@ static void
 rack_log_rtt_shrinks(struct tcp_rack *rack, uint32_t us_cts,
 		     uint32_t rtt, uint32_t line, uint8_t reas)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -4594,7 +4550,7 @@ rack_ack_received(struct tcpcb *tp, struct tcp_rack *rack, uint32_t th_ack, uint
 		labc_to_use = rack->rc_labc;
 	else
 		labc_to_use = rack_max_abc_post_recovery;
-	if (rack_verbose_logging && (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -4608,7 +4564,7 @@ rack_ack_received(struct tcpcb *tp, struct tcp_rack *rack, uint32_t th_ack, uint
 		log.u_bbr.flex6 = prior_cwnd;
 		log.u_bbr.flex7 = V_tcp_do_newsack;
 		log.u_bbr.flex8 = 1;
-		lgb = tcp_log_event_(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
+		lgb = tcp_log_event(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
 				     0, &log, false, NULL, NULL, 0, &tv);
 	}
 	if (CC_ALGO(tp)->ack_received != NULL) {
@@ -4700,7 +4656,7 @@ rack_post_recovery(struct tcpcb *tp, uint32_t th_ack)
 			tp->snd_cwnd = tp->snd_ssthresh;
 		}
 	}
-	if (rack_verbose_logging && (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF)) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -4715,7 +4671,7 @@ rack_post_recovery(struct tcpcb *tp, uint32_t th_ack)
 		log.u_bbr.flex7 = V_tcp_do_newsack;
 		log.u_bbr.pkts_out = rack->r_ctl.rc_prr_sndcnt;
 		log.u_bbr.flex8 = 2;
-		tcp_log_event_(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
+		tcp_log_event(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
 			       0, &log, false, NULL, NULL, 0, &tv);
 	}
 	if ((rack->rack_no_prr == 0) &&
@@ -5508,7 +5464,7 @@ static void
 rack_log_hpts_diag(struct tcp_rack *rack, uint32_t cts,
 		   struct hpts_diag *diag, struct timeval *tv)
 {
-	if (rack_verbose_logging && rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 
 		memset(&log.u_bbr, 0, sizeof(log.u_bbr));
@@ -5546,7 +5502,7 @@ rack_log_hpts_diag(struct tcp_rack *rack, uint32_t cts,
 static void
 rack_log_wakeup(struct tcpcb *tp, struct tcp_rack *rack, struct sockbuf *sb, uint32_t len, int type)
 {
-	if (rack_verbose_logging && rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -5658,7 +5614,7 @@ rack_start_hpts_timer(struct tcp_rack *rack, struct tcpcb *tp, uint32_t cts,
 		 * (or now) pacing time set. We want to
 		 * slow down the processing of sacks by some
 		 * amount (if it is an attacker). Set the default
-		 * slot for attackers in place (unless the orginal
+		 * slot for attackers in place (unless the original
 		 * interval is longer). Its stored in
 		 * micro-seconds, so lets convert to msecs.
 		 */
@@ -7645,7 +7601,8 @@ tcp_rack_xmit_timer_commit(struct tcp_rack *rack, struct tcpcb *tp)
 	}
 	rack->rc_srtt_measure_made = 1;
 	KMOD_TCPSTAT_INC(tcps_rttupdated);
-	tp->t_rttupdated++;
+	if (tp->t_rttupdated < UCHAR_MAX)
+		tp->t_rttupdated++;
 #ifdef STATS
 	if (rack_stats_gets_ms_rtt == 0) {
 		/* Send in the microsecond rtt used for rxt timeout purposes */
@@ -7973,7 +7930,7 @@ rack_log_sack_passed(struct tcpcb *tp,
 	TAILQ_FOREACH_REVERSE_FROM(nrsm, &rack->r_ctl.rc_tmap,
 	    rack_head, r_tnext) {
 		if (nrsm == rsm) {
-			/* Skip orginal segment he is acked */
+			/* Skip original segment he is acked */
 			continue;
 		}
 		if (nrsm->r_flags & RACK_ACKED) {
@@ -9206,13 +9163,7 @@ rack_do_detection(struct tcpcb *tp, struct tcp_rack *rack,  uint32_t bytes_this_
 					rack->r_rep_attack = 1;
 					counter_u64_add(rack_sack_attacks_detected, 1);
 				}
-				if (tcp_attack_on_turns_on_logging) {
-					/*
-					 * Turn on logging, used for debugging
-					 * false positives.
-					 */
-					rack->rc_tp->t_logstate = tcp_attack_on_turns_on_logging;
-				}
+				tcp_trace_point(rack->rc_tp, TCP_TP_SAD_TRIGGERED);
 				/* Clamp the cwnd at flight size */
 				rack->r_ctl.rc_saved_cwnd = rack->rc_tp->snd_cwnd;
 				rack->rc_tp->snd_cwnd = ctf_flight_size(rack->rc_tp, rack->r_ctl.rc_sacked);
@@ -9974,7 +9925,7 @@ rack_adjust_sendmap(struct tcp_rack *rack, struct sockbuf *sb, tcp_seq snd_una)
 	 * beginning mbuf must be adjusted to the correct
 	 * offset. This must be called with:
 	 * 1) The socket buffer locked
-	 * 2) snd_una adjusted to its new postion.
+	 * 2) snd_una adjusted to its new position.
 	 *
 	 * Note that (2) implies rack_ack_received has also
 	 * been called.
@@ -10279,7 +10230,7 @@ static void
 rack_log_collapse(struct tcp_rack *rack, uint32_t cnt, uint32_t split, uint32_t out, int line,
 		  int dir, uint32_t flags, struct rack_sendmap *rsm)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -10318,7 +10269,7 @@ rack_collapsed_window(struct tcp_rack *rack, uint32_t out, int line)
 	 * sense splitting our map until we know where the
 	 * peer finally lands in the collapse.
 	 */
-	rack_trace_point(rack, RACK_TP_COLLAPSED_WND);
+	tcp_trace_point(rack->rc_tp, TCP_TP_COLLAPSED_WND);
 	if ((rack->rc_has_collapsed == 0) ||
 	    (rack->r_ctl.last_collapse_point != (rack->rc_tp->snd_una + rack->rc_tp->snd_wnd)))
 		counter_u64_add(rack_collapsed_win_seen, 1);
@@ -12347,6 +12298,7 @@ rack_init_fsb_block(struct tcpcb *tp, struct tcp_rack *rack)
 				  ip6, rack->r_ctl.fsb.th);
 	} else
 #endif				/* INET6 */
+#ifdef INET
 	{
 		rack->r_ctl.fsb.tcp_ip_hdr_len = sizeof(struct tcpiphdr);
 		ip = (struct ip *)rack->r_ctl.fsb.tcp_ip_hdr;
@@ -12366,6 +12318,7 @@ rack_init_fsb_block(struct tcpcb *tp, struct tcp_rack *rack)
 				  tp->t_port,
 				  ip, rack->r_ctl.fsb.th);
 	}
+#endif
 	rack->r_fsb_inited = 1;
 }
 
@@ -13054,7 +13007,7 @@ static void
 rack_log_input_packet(struct tcpcb *tp, struct tcp_rack *rack, struct tcp_ackent *ae, int ackval, uint32_t high_seq)
 {
 
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		struct inpcb *inp = tptoinpcb(tp);
 		union tcp_log_stackspecific log;
 		struct timeval ltv;
@@ -13388,8 +13341,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 					rdstc = get_cyclecount();
 					if (rdstc > ts_val) {
-						counter_u64_add(tcp_proc_time[ae->ack_val_set] ,
-								(rdstc - ts_val));
 						if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 							tp->tcp_proc_time[ae->ack_val_set] += (rdstc - ts_val);
 						}
@@ -13422,7 +13373,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 			rack_cong_signal(tp, CC_ECN, ae->ack, __LINE__);
 #ifdef TCP_ACCOUNTING
 		/* Count for the specific type of ack in */
-		counter_u64_add(tcp_cnt_counters[ae->ack_val_set], 1);
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[ae->ack_val_set]++;
 		}
@@ -13496,11 +13446,9 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 				if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 					tp->tcp_cnt_counters[CNT_OF_ACKS_IN] += (((ae->ack - high_seq) + segsiz - 1) / segsiz);
 				}
-				counter_u64_add(tcp_cnt_counters[CNT_OF_ACKS_IN],
-						(((ae->ack - high_seq) + segsiz - 1) / segsiz));
 #endif
 				high_seq = ae->ack;
-				if (rack_verbose_logging && (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF)) {
+				if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 					union tcp_log_stackspecific log;
 					struct timeval tv;
 
@@ -13511,7 +13459,7 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 					log.u_bbr.flex3 = rack->r_ctl.current_round;
 					log.u_bbr.rttProp = (uint64_t)CC_ALGO(tp)->newround;
 					log.u_bbr.flex8 = 8;
-					tcp_log_event_(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
+					tcp_log_event(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
 						       0, &log, false, NULL, NULL, 0, &tv);
 				}
 				/*
@@ -13554,7 +13502,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 		rdstc = get_cyclecount();
 		if (rdstc > ts_val) {
-			counter_u64_add(tcp_proc_time[ae->ack_val_set] , (rdstc - ts_val));
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[ae->ack_val_set] += (rdstc - ts_val);
 				if (ae->ack_val_set == ACK_CUMACK)
@@ -13745,7 +13692,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 				rdstc = get_cyclecount();
 				if (rdstc > ts_val) {
-					counter_u64_add(tcp_proc_time[ACK_CUMACK] , (rdstc - ts_val));
 					if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 						tp->tcp_proc_time[ACK_CUMACK] += (rdstc - ts_val);
 						tp->tcp_proc_time[CYC_HANDLE_ACK] += (rdstc - ts_val);
@@ -13811,7 +13757,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 				rdstc = get_cyclecount();
 				if (rdstc > ts_val) {
-					counter_u64_add(tcp_proc_time[ACK_CUMACK] , (rdstc - ts_val));
 					if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 						tp->tcp_proc_time[ACK_CUMACK] += (rdstc - ts_val);
 						tp->tcp_proc_time[CYC_HANDLE_ACK] += (rdstc - ts_val);
@@ -13830,8 +13775,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 				rdstc = get_cyclecount();
 				if (rdstc > ts_val) {
-					counter_u64_add(tcp_proc_time[ACK_CUMACK] ,
-							(rdstc - ts_val));
 					if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 						tp->tcp_proc_time[ACK_CUMACK] += (rdstc - ts_val);
 						tp->tcp_proc_time[CYC_HANDLE_ACK] += (rdstc - ts_val);
@@ -13847,8 +13790,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 				rdstc = get_cyclecount();
 				if (rdstc > ts_val) {
-					counter_u64_add(tcp_proc_time[ACK_CUMACK] ,
-							(rdstc - ts_val));
 					if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 						tp->tcp_proc_time[ACK_CUMACK] += (rdstc - ts_val);
 						tp->tcp_proc_time[CYC_HANDLE_ACK] += (rdstc - ts_val);
@@ -13864,8 +13805,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 				rdstc = get_cyclecount();
 				if (rdstc > ts_val) {
-					counter_u64_add(tcp_proc_time[ACK_CUMACK] ,
-							(rdstc - ts_val));
 					if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 						tp->tcp_proc_time[ACK_CUMACK] += (rdstc - ts_val);
 						tp->tcp_proc_time[CYC_HANDLE_ACK] += (rdstc - ts_val);
@@ -13894,7 +13833,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 #ifdef TCP_ACCOUNTING
 		rdstc = get_cyclecount();
 		if (rdstc > ts_val) {
-			counter_u64_add(tcp_proc_time[ACK_CUMACK] , (rdstc - ts_val));
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[ACK_CUMACK] += (rdstc - ts_val);
 				tp->tcp_proc_time[CYC_HANDLE_ACK] += (rdstc - ts_val);
@@ -13904,7 +13842,6 @@ rack_do_compressed_ack_processing(struct tcpcb *tp, struct socket *so, struct mb
 	} else if (win_up_req) {
 		rdstc = get_cyclecount();
 		if (rdstc > ts_val) {
-			counter_u64_add(tcp_proc_time[ACK_RWND] , (rdstc - ts_val));
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[ACK_RWND] += (rdstc - ts_val);
 			}
@@ -14076,7 +14013,7 @@ rack_do_segment_nounlock(struct mbuf *m, struct tcphdr *th, struct socket *so,
 		}
 	}
 	high_seq = th->th_ack;
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval ltv;
 #ifdef NETFLIX_HTTP_LOGGING
@@ -14383,7 +14320,6 @@ rack_do_segment_nounlock(struct mbuf *m, struct tcphdr *th, struct socket *so,
 			uint64_t crtsc;
 
 			crtsc = get_cyclecount();
-			counter_u64_add(tcp_proc_time[ack_val_set] , (crtsc - ts_val));
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[ack_val_set] += (crtsc - ts_val);
 			}
@@ -14400,7 +14336,7 @@ do_output_now:
 			rack_free_trim(rack);
 		}
 		/* Update any rounds needed */
-		if (rack_verbose_logging &&  (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF)) {
+		if (rack_verbose_logging && tcp_bblogging_on(rack->rc_tp)) {
 			union tcp_log_stackspecific log;
 			struct timeval tv;
 
@@ -14411,7 +14347,7 @@ do_output_now:
 			log.u_bbr.flex3 = rack->r_ctl.current_round;
 			log.u_bbr.rttProp = (uint64_t)CC_ALGO(tp)->newround;
 			log.u_bbr.flex8 = 9;
-			tcp_log_event_(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
+			tcp_log_event(tp, NULL, NULL, NULL, BBR_LOG_CWND, 0,
 				       0, &log, false, NULL, NULL, 0, &tv);
 		}
 		/*
@@ -14475,22 +14411,6 @@ do_output_now:
 		rack_log_doseg_done(rack, cts, nxt_pkt, did_out, way_out, max(1, nsegs));
 		if (did_out)
 			rack->r_wanted_output = 0;
-#ifdef TCP_ACCOUNTING
-	} else {
-		/*
-		 * Track the time (see above).
-		 */
-		if (ack_val_set != 0xf) {
-			uint64_t crtsc;
-
-			crtsc = get_cyclecount();
-			counter_u64_add(tcp_proc_time[ack_val_set] , (crtsc - ts_val));
-			/*
-			 * Note we *DO NOT* increment the per-tcb counters since
-			 * in the else the TP may be gone!!
-			 */
-		}
-#endif
 	}
 #ifdef TCP_ACCOUNTING
 	sched_unpin();
@@ -14604,7 +14524,7 @@ rack_log_pacing_delay_calc(struct tcp_rack *rack, uint32_t len, uint32_t slot,
 			   uint64_t bw_est, uint64_t bw, uint64_t len_time, int method,
 			   int line, struct rack_sendmap *rsm, uint8_t quality)
 {
-	if (rack->rc_tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -15355,7 +15275,7 @@ rack_log_fsb(struct tcp_rack *rack, struct tcpcb *tp, struct socket *so, uint32_
 	     unsigned ipoptlen, int32_t orig_len, int32_t len, int error,
 	     int rsm_is_null, int optlen, int line, uint16_t mode)
 {
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 		struct timeval tv;
 
@@ -15378,7 +15298,7 @@ rack_log_fsb(struct tcp_rack *rack, struct tcpcb *tp, struct socket *so, uint32_
 		log.u_bbr.delivered = line;
 		log.u_bbr.timeStamp = tcp_get_usecs(&tv);
 		log.u_bbr.inflight = ctf_flight_size(rack->rc_tp, rack->r_ctl.rc_sacked);
-		tcp_log_event_(tp, NULL, &so->so_rcv, &so->so_snd, TCP_LOG_FSB, 0,
+		tcp_log_event(tp, NULL, &so->so_rcv, &so->so_snd, TCP_LOG_FSB, 0,
 			       len, &log, false, NULL, NULL, 0, &tv);
 	}
 }
@@ -15611,7 +15531,7 @@ rack_fast_rsm_output(struct tcpcb *tp, struct tcp_rack *rack, struct rack_sendma
 	struct tcpopt to;
 	u_char opt[TCP_MAXOLEN];
 	uint32_t hdrlen, optlen;
-	int32_t slot, segsiz, max_val, tso = 0, error, ulen = 0;
+	int32_t slot, segsiz, max_val, tso = 0, error = 0, ulen = 0;
 	uint16_t flags;
 	uint32_t if_hw_tsomaxsegcount = 0, startseq;
 	uint32_t if_hw_tsomaxsegsize;
@@ -15892,7 +15812,7 @@ rack_fast_rsm_output(struct tcpcb *tp, struct tcp_rack *rack, struct rack_sendma
 	} else {
 		th->th_off = sizeof(struct tcphdr) >> 2;
 	}
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 
 		if (rsm->r_flags & RACK_RWND_COLLAPSED) {
@@ -15925,7 +15845,7 @@ rack_fast_rsm_output(struct tcpcb *tp, struct tcp_rack *rack, struct rack_sendma
 		log.u_bbr.inflight = ctf_flight_size(rack->rc_tp, rack->r_ctl.rc_sacked);
 		log.u_bbr.lt_epoch = rack->r_ctl.cwnd_to_use;
 		log.u_bbr.delivered = 0;
-		lgb = tcp_log_event_(tp, th, NULL, NULL, TCP_LOG_OUT, ERRNO_UNK,
+		lgb = tcp_log_event(tp, th, NULL, NULL, TCP_LOG_OUT, ERRNO_UNK,
 				     len, &log, false, NULL, NULL, 0, tv);
 	} else
 		lgb = NULL;
@@ -15935,8 +15855,6 @@ rack_fast_rsm_output(struct tcpcb *tp, struct tcp_rack *rack, struct rack_sendma
 				   &inp->inp_route6,
 				   0, NULL, NULL, inp);
 	}
-#endif
-#if defined(INET) && defined(INET6)
 	else
 #endif
 #ifdef INET
@@ -15990,9 +15908,9 @@ rack_fast_rsm_output(struct tcpcb *tp, struct tcp_rack *rack, struct rack_sendma
 	counter_u64_add(rack_fto_rsm_send, 1);
 	if (error && (error == ENOBUFS)) {
 		if (rack->r_ctl.crte != NULL) {
-			rack_trace_point(rack, RACK_TP_HWENOBUF);
+			tcp_trace_point(rack->rc_tp, TCP_TP_HWENOBUF);
 		} else
-			rack_trace_point(rack, RACK_TP_ENOBUF);
+			tcp_trace_point(rack->rc_tp, TCP_TP_ENOBUF);
 		slot = ((1 + rack->rc_enobuf) * HPTS_USEC_IN_MSEC);
 		if (rack->rc_enobuf < 0x7f)
 			rack->rc_enobuf++;
@@ -16016,15 +15934,12 @@ rack_fast_rsm_output(struct tcpcb *tp, struct tcp_rack *rack, struct rack_sendma
 	if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 		tp->tcp_cnt_counters[SND_OUT_DATA] += cnt_thru;
 	}
-	counter_u64_add(tcp_cnt_counters[SND_OUT_DATA], cnt_thru);
 	if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 		tp->tcp_proc_time[SND_OUT_DATA] += (crtsc - ts_val);
 	}
-	counter_u64_add(tcp_proc_time[SND_OUT_DATA], (crtsc - ts_val));
 	if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 		tp->tcp_cnt_counters[CNT_OF_MSS_OUT] += ((len + segsiz - 1) / segsiz);
 	}
-	counter_u64_add(tcp_cnt_counters[CNT_OF_MSS_OUT], ((len + segsiz - 1) / segsiz));
 	sched_unpin();
 #endif
 	return (0);
@@ -16102,7 +16017,9 @@ rack_fast_output(struct tcpcb *tp, struct tcp_rack *rack, uint64_t ts_val,
 	 * the max-burst). We have how much to send and all the info we
 	 * need to just send.
 	 */
+#ifdef INET
 	struct ip *ip = NULL;
+#endif
 	struct udphdr *udp = NULL;
 	struct tcphdr *th = NULL;
 	struct mbuf *m, *s_mb;
@@ -16133,8 +16050,10 @@ rack_fast_output(struct tcpcb *tp, struct tcp_rack *rack, uint64_t ts_val,
 	} else
 #endif				/* INET6 */
 	{
+#ifdef INET
 		ip = (struct ip *)rack->r_ctl.fsb.tcp_ip_hdr;
 		hdrlen = sizeof(struct tcpiphdr);
+#endif
 	}
 	if (tp->t_port && (V_tcp_udp_tunneling_port == 0)) {
 		m = NULL;
@@ -16281,8 +16200,10 @@ again:
 		else
 #endif
 		{
+#ifdef INET
 			ip->ip_tos &= ~IPTOS_ECN_MASK;
 			ip->ip_tos |= ect;
+#endif
 		}
 	}
 	tcp_set_flags(th, flags);
@@ -16371,7 +16292,7 @@ again:
 	} else {
 		th->th_off = sizeof(struct tcphdr) >> 2;
 	}
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 
 		memset(&log.u_bbr, 0, sizeof(log.u_bbr));
@@ -16396,7 +16317,7 @@ again:
 		log.u_bbr.inflight = ctf_flight_size(rack->rc_tp, rack->r_ctl.rc_sacked);
 		log.u_bbr.lt_epoch = rack->r_ctl.cwnd_to_use;
 		log.u_bbr.delivered = 0;
-		lgb = tcp_log_event_(tp, th, NULL, NULL, TCP_LOG_OUT, ERRNO_UNK,
+		lgb = tcp_log_event(tp, th, NULL, NULL, TCP_LOG_OUT, ERRNO_UNK,
 				     len, &log, false, NULL, NULL, 0, tv);
 	} else
 		lgb = NULL;
@@ -16489,15 +16410,12 @@ again:
 	if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 		tp->tcp_cnt_counters[SND_OUT_DATA] += cnt_thru;
 	}
-	counter_u64_add(tcp_cnt_counters[SND_OUT_DATA], cnt_thru);
 	if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 		tp->tcp_proc_time[SND_OUT_DATA] += (crtsc - ts_val);
 	}
-	counter_u64_add(tcp_proc_time[SND_OUT_DATA], (crtsc - ts_val));
 	if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 		tp->tcp_cnt_counters[CNT_OF_MSS_OUT] += ((tot_len + segsiz - 1) / segsiz);
 	}
-	counter_u64_add(tcp_cnt_counters[CNT_OF_MSS_OUT], ((tot_len + segsiz - 1) / segsiz));
 	sched_unpin();
 #endif
 	return (0);
@@ -16737,11 +16655,9 @@ rack_output(struct tcpcb *tp)
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_proc_time[SND_BLOCKED] += (crtsc - ts_val);
 		}
-		counter_u64_add(tcp_proc_time[SND_BLOCKED], (crtsc - ts_val));
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[SND_BLOCKED]++;
 		}
-		counter_u64_add(tcp_cnt_counters[SND_BLOCKED], 1);
 		sched_unpin();
 #endif
 		counter_u64_add(rack_out_size[TCP_MSS_ACCT_INPACE], 1);
@@ -16904,7 +16820,7 @@ again:
 		 * for us to retransmit it. Move up the collapse point,
 		 * since this rsm has its chance to retransmit now.
 		 */
-		rack_trace_point(rack, RACK_TP_COLLAPSED_RXT);
+		tcp_trace_point(rack->rc_tp, TCP_TP_COLLAPSED_RXT);
 		rack->r_ctl.last_collapse_point = rsm->r_end;
 		/* Are we done? */
 		if (SEQ_GEQ(rack->r_ctl.last_collapse_point,
@@ -17886,25 +17802,20 @@ just_return_nolock:
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[SND_OUT_DATA]++;
 		}
-		counter_u64_add(tcp_cnt_counters[SND_OUT_DATA], 1);
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_proc_time[SND_OUT_DATA] += (crtsc - ts_val);
 		}
-		counter_u64_add(tcp_proc_time[SND_OUT_DATA], (crtsc - ts_val));
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[CNT_OF_MSS_OUT] += ((tot_len_this_send + segsiz - 1) / segsiz);
 		}
-		counter_u64_add(tcp_cnt_counters[CNT_OF_MSS_OUT], ((tot_len_this_send + segsiz - 1) / segsiz));
 	} else {
 		crtsc = get_cyclecount();
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[SND_LIMITED]++;
 		}
-		counter_u64_add(tcp_cnt_counters[SND_LIMITED], 1);
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_proc_time[SND_LIMITED] += (crtsc - ts_val);
 		}
-		counter_u64_add(tcp_proc_time[SND_LIMITED], (crtsc - ts_val));
 	}
 	sched_unpin();
 #endif
@@ -18053,11 +17964,9 @@ send:
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_cnt_counters[SND_OUT_FAIL]++;
 			}
-			counter_u64_add(tcp_cnt_counters[SND_OUT_FAIL], 1);
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[SND_OUT_FAIL] += (crtsc - ts_val);
 			}
-			counter_u64_add(tcp_proc_time[SND_OUT_FAIL], (crtsc - ts_val));
 			sched_unpin();
 #endif
 			return (EHOSTUNREACH);
@@ -18194,7 +18103,7 @@ send:
 	 * and initialize the header from the template for sends on this
 	 * connection.
 	 */
-	hw_tls = (sb->sb_flags & SB_TLS_IFNET) != 0;
+	hw_tls = tp->t_nic_ktls_xmit != 0;
 	if (len) {
 		uint32_t max_val;
 		uint32_t moff;
@@ -18346,7 +18255,9 @@ send:
 			ip6 = (struct ip6_hdr *)rack->r_ctl.fsb.tcp_ip_hdr;
 		else
 #endif				/* INET6 */
+#ifdef INET
 			ip = (struct ip *)rack->r_ctl.fsb.tcp_ip_hdr;
+#endif
 		th = rack->r_ctl.fsb.th;
 		udp = rack->r_ctl.fsb.udp;
 		if (udp) {
@@ -18375,6 +18286,7 @@ send:
 		} else
 #endif				/* INET6 */
 		{
+#ifdef INET
 			ip = mtod(m, struct ip *);
 			if (tp->t_port) {
 				udp = (struct udphdr *)((caddr_t)ip + sizeof(struct ip));
@@ -18386,6 +18298,7 @@ send:
 			} else
 				th = (struct tcphdr *)(ip + 1);
 			tcpip_fillheaders(inp, tp->t_port, ip, th);
+#endif
 		}
 	}
 	/*
@@ -18419,8 +18332,10 @@ send:
 		else
 #endif
 		{
+#ifdef INET
 			ip->ip_tos &= ~IPTOS_ECN_MASK;
 			ip->ip_tos |= ect;
+#endif
 		}
 	}
 	/*
@@ -18514,7 +18429,9 @@ send:
 			ip6 = mtod(m, struct ip6_hdr *);
 		else
 #endif				/* INET6 */
+#ifdef INET
 			ip = mtod(m, struct ip *);
+#endif
 		th = (struct tcphdr *)(cpto + ((uint8_t *)rack->r_ctl.fsb.th - rack->r_ctl.fsb.tcp_ip_hdr));
 		/* If we have a udp header lets set it into the mbuf as well */
 		if (udp)
@@ -18612,7 +18529,7 @@ send:
 	hhook_run_tcp_est_out(tp, th, &to, len, tso);
 #endif
 	/* We're getting ready to send; log now. */
-	if (tp->t_logstate != TCP_LOG_STATE_OFF) {
+	if (tcp_bblogging_on(rack->rc_tp)) {
 		union tcp_log_stackspecific log;
 
 		memset(&log.u_bbr, 0, sizeof(log.u_bbr));
@@ -18654,7 +18571,7 @@ send:
 		log.u_bbr.inflight = ctf_flight_size(rack->rc_tp, rack->r_ctl.rc_sacked);
 		log.u_bbr.lt_epoch = cwnd_to_use;
 		log.u_bbr.delivered = sendalot;
-		lgb = tcp_log_event_(tp, th, &so->so_rcv, &so->so_snd, TCP_LOG_OUT, ERRNO_UNK,
+		lgb = tcp_log_event(tp, th, &so->so_rcv, &so->so_snd, TCP_LOG_OUT, ERRNO_UNK,
 				     len, &log, false, NULL, NULL, 0, &tv);
 	} else
 		lgb = NULL;
@@ -18948,11 +18865,9 @@ nomore:
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_cnt_counters[SND_OUT_FAIL]++;
 			}
-			counter_u64_add(tcp_cnt_counters[SND_OUT_FAIL], 1);
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[SND_OUT_FAIL] += (crtsc - ts_val);
 			}
-			counter_u64_add(tcp_proc_time[SND_OUT_FAIL], (crtsc - ts_val));
 			sched_unpin();
 #endif
 			return (error);
@@ -18962,9 +18877,9 @@ nomore:
 			 * time
 			 */
 			if (rack->r_ctl.crte != NULL) {
-				rack_trace_point(rack, RACK_TP_HWENOBUF);
+				tcp_trace_point(rack->rc_tp, TCP_TP_HWENOBUF);
 			} else
-				rack_trace_point(rack, RACK_TP_ENOBUF);
+				tcp_trace_point(rack->rc_tp, TCP_TP_ENOBUF);
 			slot = ((1 + rack->rc_enobuf) * HPTS_USEC_IN_MSEC);
 			if (rack->rc_enobuf < 0x7f)
 				rack->rc_enobuf++;
@@ -18998,11 +18913,9 @@ nomore:
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_cnt_counters[SND_OUT_FAIL]++;
 			}
-			counter_u64_add(tcp_cnt_counters[SND_OUT_FAIL], 1);
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[SND_OUT_FAIL] += (crtsc - ts_val);
 			}
-			counter_u64_add(tcp_proc_time[SND_OUT_FAIL], (crtsc - ts_val));
 			sched_unpin();
 #endif
 			return (error);
@@ -19023,11 +18936,9 @@ nomore:
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_cnt_counters[SND_OUT_FAIL]++;
 			}
-			counter_u64_add(tcp_cnt_counters[SND_OUT_FAIL], 1);
 			if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 				tp->tcp_proc_time[SND_OUT_FAIL] += (crtsc - ts_val);
 			}
-			counter_u64_add(tcp_proc_time[SND_OUT_FAIL], (crtsc - ts_val));
 			sched_unpin();
 #endif
 			return (error);
@@ -19239,24 +19150,19 @@ enobufs:
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[SND_OUT_DATA]++;
 		}
-		counter_u64_add(tcp_cnt_counters[SND_OUT_DATA], 1);
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_proc_time[SND_OUT_DATA] += crtsc;
 		}
-		counter_u64_add(tcp_proc_time[SND_OUT_DATA], crtsc);
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[CNT_OF_MSS_OUT] += ((tot_len_this_send + segsiz - 1) /segsiz);
 		}
-		counter_u64_add(tcp_cnt_counters[CNT_OF_MSS_OUT], ((tot_len_this_send + segsiz - 1) /segsiz));
 	} else {
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_cnt_counters[SND_OUT_ACK]++;
 		}
-		counter_u64_add(tcp_cnt_counters[SND_OUT_ACK], 1);
 		if (tp->t_flags2 & TF2_TCP_ACCOUNTING) {
 			tp->tcp_proc_time[SND_OUT_ACK] += crtsc;
 		}
-		counter_u64_add(tcp_proc_time[SND_OUT_ACK], crtsc);
 	}
 	sched_unpin();
 #endif
@@ -20167,20 +20073,10 @@ rack_apply_deferred_options(struct tcp_rack *rack)
 static void
 rack_hw_tls_change(struct tcpcb *tp, int chg)
 {
-	/*
-	 * HW tls state has changed.. fix all
-	 * rsm's in flight.
-	 */
+	/* Update HW tls state */
 	struct tcp_rack *rack;
-	struct rack_sendmap *rsm;
 
 	rack = (struct tcp_rack *)tp->t_fb_ptr;
-	RB_FOREACH(rsm, rack_rb_tree_head, &rack->r_ctl.rc_mtree) {
-		if (chg)
-			rsm->r_hw_tls = 1;
-		else
-			rsm->r_hw_tls = 0;
-	}
 	if (chg)
 		rack->r_ctl.fsb.hw_tls = 1;
 	else
@@ -20834,3 +20730,5 @@ static moduledata_t tcp_rack = {
 MODULE_VERSION(MODNAME, 1);
 DECLARE_MODULE(MODNAME, tcp_rack, SI_SUB_PROTO_DOMAIN, SI_ORDER_ANY);
 MODULE_DEPEND(MODNAME, tcphpts, 1, 1, 1);
+
+#endif /* #if !defined(INET) && !defined(INET6) */
