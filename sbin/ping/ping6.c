@@ -939,6 +939,8 @@ ping6(int argc, char *argv[])
 		/* pktinfo must have already been allocated */
 		if ((pktinfo.ipi6_ifindex = if_nametoindex(ifname)) == 0)
 			errx(1, "%s: invalid interface name", ifname);
+		if (dst.sin6_scope_id == 0)
+			dst.sin6_scope_id = pktinfo.ipi6_ifindex;
 	}
 	if (hoplimit != -1) {
 		scmsgp->cmsg_len = CMSG_LEN(sizeof(int));
