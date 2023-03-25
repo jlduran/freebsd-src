@@ -268,6 +268,8 @@ def redact(output):
         ("hlim=[0-9]*", "hlim="),
         ("ttl=[0-9]*", "ttl="),
         ("time=[0-9.-]*", "time="),
+        ("ff02::2:00[0-9a-f:]+", "ff02::2:00xx:xxxx"),
+        ("ff02::2:ff[0-9a-f:]+", "ff02::2:ffxx:xxxx"),
         ("\(-[0-9\.]+[0-9]+ ms\)", "(- ms)"),
         ("[0-9\.]+/[0-9.]+", "/"),
     ]
@@ -301,6 +303,22 @@ round-trip min/avg/max/stddev = /// ms
         ),
         pytest.param(
             {
+                "args": "ping -6 -c1 -Ilo0 fe80::1",
+                "returncode": 0,
+                "stdout": """\
+PING6(56=40+8+8 bytes) fe80::1%lo0 --> fe80::1%lo0
+16 bytes from fe80::1%lo0, icmp_seq=0 hlim= time= ms
+
+--- fe80::1 ping6 statistics ---
+1 packets transmitted, 1 packets received, 0.0% packet loss
+round-trip min/avg/max/std-dev = /// ms
+""",
+                "stderr": "",
+            },
+            id="_6_c1_Ilo0_fe80__1",
+        ),
+        pytest.param(
+            {
                 "args": "ping -6 -c1 -s8 -t1 localhost",
                 "returncode": 0,
                 "stdout": """\
@@ -314,6 +332,20 @@ round-trip min/avg/max/std-dev = /// ms
                 "stderr": "",
             },
             id="_6_c1_s8_t1_localhost",
+        ),
+        pytest.param(
+            {
+                "args": "ping -6N -c1 -Ilo0 localhost",
+                "returncode": 2,
+                "stdout": """\
+PING6(56=40+8+8 bytes) fe80::1%lo0 --> ff02::2:ffxx:xxxx%lo0
+
+--- ff02::2:ffxx:xxxx ping6 statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+            },
+            id="_6N_c1_Ilo0_localhost",
         ),
         pytest.param(
             {
