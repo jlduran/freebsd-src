@@ -29,16 +29,16 @@
 
 #
 # Run the tests:
-# make WITH_TESTS=yes -j 4 all install && kyua test -k /usr/tests/Kyuafile  sbin/dhclient/pcp
+# make WITH_TESTS=yes -j 4 all install
+# kyua test -k /usr/tests/Kyuafile sbin/dhclient/pcp
 #
 # Output last run:
-# kyua report --verbose -r $(ls -tr ~/.kyua/store/results.*.db | tail -n 1)
+# kyua report --results-file /usr/tests --verbose
 
 . $(atf_get_srcdir)/../../sys/common/vnet.subr
 
 generic_dhcp_cleanup()
 {
-
 	# clean up programs
 	kill $(cat dhclient.test.pid) $(cat dhcpd.pid)
 
@@ -86,19 +86,25 @@ EOF
 
 	# Start dhcp server
 	touch dhcpd.leases.conf
-	atf_check -e ignore ${dhcpd} -cf ./dhclient.dhcpd.conf -lf ./dhcpd.leases.conf -pf ./dhcpd.pid ${epair}a
+	atf_check -e ignore ${dhcpd} \
+	    -cf ./dhclient.dhcpd.conf \
+	    -lf ./dhcpd.leases.conf \
+	    -pf ./dhcpd.pid ${epair}a
 
 	# Expect that we get an IP assigned
-	atf_check -e match:'DHCPACK from 192.0.2.2' jexec dhclient_normal_test dhclient -c /dev/null -l ./lease.dhclient.test -p ./dhclient.test.pid ${epair}b
+	atf_check -e match:'DHCPACK from 192.0.2.2' \
+	    jexec dhclient_normal_test dhclient \
+	    -c /dev/null \
+	    -l ./lease.dhclient.test \
+	    -p ./dhclient.test.pid ${epair}b
 
 	# And it's the correct one
-	atf_check -o match:'inet 192.0.2.10' jexec dhclient_normal_test ifconfig ${epair}b
-
+	atf_check -o match:'inet 192.0.2.10' \
+	    jexec dhclient_normal_test ifconfig ${epair}b
 }
 
 normal_cleanup()
 {
-
 	generic_dhcp_cleanup
 }
 
@@ -167,18 +173,25 @@ EOF
 
 	# Start dhcp server
 	touch dhcpd.leases.conf
-	atf_check -e ignore ${dhcpd} -cf ./dhclient.dhcpd.conf -lf ./dhcpd.leases.conf -pf ./dhcpd.pid ${ngiface}
+	atf_check -e ignore ${dhcpd} \
+	    -cf ./dhclient.dhcpd.conf \
+	    -lf ./dhcpd.leases.conf \
+	    -pf ./dhcpd.pid ${ngiface}
 
 	# Expect that we get an IP assigned
-	atf_check -e match:'DHCPACK from 192.0.2.2' jexec dhclient_pcp_test dhclient -c /dev/null -l ./lease.dhclient.test -p ./dhclient.test.pid ${epair}b
+	atf_check -e match:'DHCPACK from 192.0.2.2' \
+	    jexec dhclient_pcp_test dhclient \
+	    -c /dev/null \
+	    -l ./lease.dhclient.test \
+	    -p ./dhclient.test.pid ${epair}b
 
 	# And it's the correct one
-	atf_check -o match:'inet 192.0.2.10' jexec dhclient_pcp_test ifconfig ${epair}b
+	atf_check -o match:'inet 192.0.2.10' \
+	    jexec dhclient_pcp_test ifconfig ${epair}b
 }
 
 pcp_cleanup()
 {
-
 	generic_dhcp_cleanup
 
 	# Clean up netgraph nodes
@@ -193,4 +206,3 @@ atf_init_test_cases()
 	atf_add_test_case normal
 	atf_add_test_case pcp
 }
-
