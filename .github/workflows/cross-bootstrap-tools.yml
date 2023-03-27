@@ -2,7 +2,7 @@ name: Cross-build Kernel
 
 on:
   push:
-    branches: [ main, 'stable/13', github-cross-build-full-matrix ]
+    branches: [ main, 'stable/13' ]
   pull_request:
     branches: [ main ]
 
@@ -16,14 +16,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, ubuntu-latest]
         clang_version: [12, 13, 14, 15]
-        os: [ macos-latest, ubuntu-latest ]
-        target_arch: [ amd64, aarch64 ]
+        target_arch: [amd64, aarch64]
         include:
           - target_arch: amd64
             target: amd64
           - target_arch: aarch64
             target: arm64
+        exclude:
+          - os: macos-latest
+            target_arch: amd64
     steps:
       - uses: actions/checkout@v3
       - name: Install packages (macOS)
