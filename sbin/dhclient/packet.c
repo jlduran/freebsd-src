@@ -150,6 +150,7 @@ ssize_t
 decode_hw_header(unsigned char *buf, int bufix, struct hardware *from)
 {
 	struct ether_header eh;
+	ssize_t extended = 0;
 
 	memcpy(&eh, buf + bufix, ETHER_HEADER_SIZE);
 
@@ -157,8 +158,17 @@ decode_hw_header(unsigned char *buf, int bufix, struct hardware *from)
 	from->htype = ARPHRD_ETHER;
 	from->hlen = sizeof(eh.ether_shost);
 
-	return (sizeof(eh) + (ntohs(eh.ether_type) == ETHERTYPE_VLAN ?
-	    ETHER_VLAN_ENCAP_LEN : 0));
+	switch (ntohs(eh.ether_type)) {
+	case ETHERTYPE_QINQ:
+		extended = ETHER_VLAN_ENCAP_LEN * 2;
+		break;
+	case ETHERTYPE_VLAN:
+		extended = ETHER_VLAN_ENCAP_LEN;
+		break;
+	default:
+		break;
+	}
+	return (sizeof(eh) + extended);
 }
 
 ssize_t
