@@ -57,7 +57,7 @@ normal_head()
 
 normal_body()
 {
-	dhcpd=$(which dhcpd)
+	dhcpd="/usr/local/sbin/dhcpd"
 
 	if ! [ -x "$dhcpd" ]; then
 		atf_skip "ISC dhcp server (isc-dhcp44-server) not installed"
@@ -117,7 +117,7 @@ pcp_head()
 
 pcp_body()
 {
-	dhcpd=$(which dhcpd)
+	dhcpd="/usr/local/sbin/dhcpd"
 
 	if ! [ -x "$dhcpd" ]; then
 		atf_skip "ISC dhcp server (isc-dhcp44-server) not installed"
