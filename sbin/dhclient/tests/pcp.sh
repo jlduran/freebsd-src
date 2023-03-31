@@ -201,8 +201,116 @@ pcp_cleanup()
 	rm -f ngctl.shutdown
 }
 
+atf_test_case ignore cleanup
+ignore_head()
+{
+	atf_set descr "test dhclient's ability to ignore options"
+	atf_set require.user root
+}
+ignore_body()
+{
+	#dhcpd=$(which dhcpd)
+	dhcpd="/usr/local/sbin/dhcpd"
+
+	if ! [ -x "$dhcpd" ]; then
+		atf_skip "ISC dhcp server (isc-dhcp44-server) not installed"
+	fi
+
+	vnet_init
+
+	# Setup topology
+	# server0 ---- client ---- server1
+	#         lan0        lan1
+	lan0=$(vnet_mkepair)
+	lan1=$(vnet_mkepair)
+
+	vnet_mkjail server0 ${lan0}a
+	vnet_mkjail server1 ${lan1}a
+	vnet_mkjail client ${lan0}b ${lan1}b
+
+	# Configure server0
+	jexec server0 ifconfig ${lan0}a 192.0.2.1/24
+	cat > ${TMPDIR}/server0.dhcpd.conf <<EOF
+default-lease-time 36000;
+max-lease-time 86400;
+authoritative;
+subnet 192.0.2.0 netmask 255.255.255.0 {
+	range 192.0.2.10 192.0.2.10;
+	option routers 192.0.2.1;
+	option domain-name-servers 192.0.2.1;
+}
+EOF
+	touch ${TMPDIR}/dhcpd.leases.lan0
+
+	# Configure server1
+	jexec server1 ifconfig ${lan1}a 198.51.100.1/24
+	cat > ${TMPDIR}/server1.dhcpd.conf <<EOF
+default-lease-time 36000;
+max-lease-time 86400;
+authoritative;
+subnet 198.51.100.0 netmask 255.255.255.0 {
+	range 198.51.100.10 198.51.100.10;
+	option routers 198.51.100.1;
+	option domain-name-servers 198.51.100.1;
+}
+EOF
+	touch ${TMPDIR}/dhcpd.leases.lan1
+
+	# Configure client
+	cat > ${TMPDIR}/dhclient.conf <<EOF
+interface "${lan0}b" {
+	ignore routers;
+}
+interface "${lan1}b" {
+	request routers;
+	require routers;
+}
+EOF
+
+	# Start DHCP servers
+	atf_check -e ignore \
+		jexec server0 ${dhcpd} \
+			-cf ${TMPDIR}/server0.dhcpd.conf \
+			-lf ${TMPDIR}/dhcpd.leases.lan0 \
+			-pf ./server0.dhcpd.pid ${lan0}a
+	atf_check -e ignore \
+		jexec server1 ${dhcpd} \
+			-cf ${TMPDIR}/server1.dhcpd.conf \
+			-lf ${TMPDIR}/dhcpd.leases.lan1 \
+			-pf ./server1.dhcpd.pid ${lan1}a
+
+	# Expect that we get an IP assigned
+	atf_check -e match:"DHCPACK from 192.0.2.1" \
+		jexec client dhclient \
+			-c ${TMPDIR}/dhclient.conf \
+			-l ${TMPDIR}/dhclient.leases.lan0 \
+			-p ./dhclient.lan0.pid ${lan0}b
+	atf_check -e match:"DHCPACK from 198.51.100.1" \
+		jexec client dhclient \
+			-c ${TMPDIR}/dhclient.conf \
+			-l ${TMPDIR}/dhclient.leases.lan1 \
+			-p ./dhclient.lan1.pid ${lan1}b
+
+	# And it's the correct one
+	atf_check -o match:'inet 192.0.2.10' \
+		jexec client ifconfig ${lan0}b
+	atf_check -o match:'inet 198.51.100.10' \
+		jexec client ifconfig ${lan1}b
+
+	# And the options are ignored or not
+	atf_check -o not-match:"^default.*192\.0\.2\.1.*${lan0}b$" \
+		jexec client netstat -rn -f inet
+	atf_check -o match:"^default.*198\.51\.100\.1.*${lan1}b$" \
+		jexec client netstat -rn -f inet
+}
+ignore_cleanup()
+{
+	generic_dhcp_cleanup
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case normal
 	atf_add_test_case pcp
+	atf_add_test_case ignore
 }
