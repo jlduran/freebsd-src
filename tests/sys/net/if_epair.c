@@ -45,7 +45,7 @@
 ATF_TC(params);
 ATF_TC_HEAD(params, tc)
 {
-        atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "require.user", "root");
 }
 
 ATF_TC_BODY(params, tc)
@@ -60,9 +60,9 @@ ATF_TC_BODY(params, tc)
 	if (s < 0)
 		atf_tc_fail("Failed to create socket");
 
-        bzero(&ifr, sizeof(ifr));
+	bzero(&ifr, sizeof(ifr));
 	ifr.ifr_data = (caddr_t)-1;
-        (void) strlcpy(ifr.ifr_name, "epair", sizeof(ifr.ifr_name));
+	(void) strlcpy(ifr.ifr_name, "epair", sizeof(ifr.ifr_name));
 
 	if (ioctl(s, SIOCIFCREATE2, &ifr) < 0)
 		atf_tc_fail("Failed to create interface");
@@ -73,7 +73,7 @@ ATF_TC_BODY(params, tc)
 
 ATF_TP_ADD_TCS(tp)
 {
-        ATF_TP_ADD_TC(tp, params);
+	ATF_TP_ADD_TC(tp, params);
 
 	return (atf_no_error());
 }
