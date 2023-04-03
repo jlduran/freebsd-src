@@ -467,6 +467,7 @@ epair_clone_match(struct if_clone *ifc, const char *name)
 	 * So accept anything of the following list:
 	 * - epair
 	 * - epair<n>
+	 * - epair<n>[ab].<vid>
 	 * but not the epair<n>[ab] versions.
 	 */
 	if (strncmp(epairname, name, sizeof(epairname)-1) != 0)
