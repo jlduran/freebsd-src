@@ -15,11 +15,14 @@ task:
     - make -C tests/atf_python -j$(sysctl -n hw.ncpu) all install
     - cp $CIRRUS_WORKING_DIR/tests/conftest.py /usr/tests
   setup_script:
-    - make -C sbin/ping -j$(sysctl -n hw.ncpu) all install
-  test_ping_script:
-    - kyua test -k /usr/tests/Kyuafile sbin/ping/ping_test
-    - kyua test -k /usr/tests/Kyuafile sbin/ping/test_ping.py
+    - cd sys/modules/if_epair
+    - make -j$(sysctl -n hw.ncpu)
+    - make -j$(sysctl -n hw.ncpu) install
+    - mv /boot/modules/if_epair.ko /boot/kernel/if_epair.ko
+    - cd $CIRRUS_WORKING_DIR
+    - make -C tests/sys/net -j$(sysctl -n hw.ncpu) all install
+  test_epair_script:
+    - kyua test -k /usr/tests/Kyuafile sys/net/if_epair
   always:
-    test_ping_report_script:
-      - cd /usr/tests
-      - kyua report --results-file=LATEST --results-filter=failed --verbose
+    test_epair_report_script:
+      - kyua report --results-file /usr/tests --results-filter failed --verbose
