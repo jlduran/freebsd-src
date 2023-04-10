@@ -95,13 +95,6 @@ __FBSDID("$FreeBSD$");
  *	More statistics could always be gathered.
  *	This program has to run SUID to ROOT to access the ICMP socket.
  */
-/*
- * NOTE:
- * USE_SIN6_SCOPE_ID assumes that sin6_scope_id has the same semantics
- * as IPV6_PKTINFO.  Some people object it (sin6_scope_id specifies *link*
- * while IPV6_PKTINFO specifies *interface*.  Link is defined as collection of
- * network attached to 1 or more interfaces)
- */
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
@@ -467,9 +460,7 @@ ping6(int argc, char *argv[])
 		case 'I':
 			ifname = optarg;
 			options |= F_INTERFACE;
-#ifndef USE_SIN6_SCOPE_ID
 			usepktinfo++;
-#endif
 			break;
 		case 'i':		/* wait between sending packets */
 			t = strtod(optarg, &e);
@@ -945,14 +936,11 @@ ping6(int argc, char *argv[])
 
 	/* set the outgoing interface */
 	if (ifname) {
-#ifndef USE_SIN6_SCOPE_ID
 		/* pktinfo must have already been allocated */
 		if ((pktinfo.ipi6_ifindex = if_nametoindex(ifname)) == 0)
 			errx(1, "%s: invalid interface name", ifname);
-#else
-		if ((dst.sin6_scope_id = if_nametoindex(ifname)) == 0)
-			errx(1, "%s: invalid interface name", ifname);
-#endif
+		if (dst.sin6_scope_id == 0)
+			dst.sin6_scope_id = pktinfo.ipi6_ifindex;
 	}
 	if (hoplimit != -1) {
 		scmsgp->cmsg_len = CMSG_LEN(sizeof(int));
@@ -1116,7 +1104,6 @@ ping6(int argc, char *argv[])
 #endif
 
 	optval = 1;
-#ifndef USE_SIN6_SCOPE_ID
 #ifdef IPV6_RECVPKTINFO
 	if (setsockopt(srecv, IPPROTO_IPV6, IPV6_RECVPKTINFO, &optval,
 	    sizeof(optval)) < 0)
@@ -1126,7 +1113,6 @@ ping6(int argc, char *argv[])
 	    sizeof(optval)) < 0)
 		warn("setsockopt(IPV6_PKTINFO)"); /* XXX err? */
 #endif
-#endif /* USE_SIN6_SCOPE_ID */
 #ifdef IPV6_RECVHOPLIMIT
 	if (setsockopt(srecv, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &optval,
 	    sizeof(optval)) < 0)
