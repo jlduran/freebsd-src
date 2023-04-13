@@ -1603,7 +1603,7 @@ pr_icmph(struct icmp *icp, struct ip *oip, const u_char *const oicmp_raw)
 			(void)printf("Redirect, Bad Code: %d", icp->icmp_code);
 			break;
 		}
-		(void)printf("(New addr: %s)\n", inet_ntoa(icp->icmp_gwaddr));
+		(void)printf(" (New addr: %s)\n", inet_ntoa(icp->icmp_gwaddr));
 		pr_iph(oip, oicmp_raw);
 		break;
 	case ICMP_ECHO:

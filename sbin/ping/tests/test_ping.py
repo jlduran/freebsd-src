@@ -1291,6 +1291,31 @@ ping: time of day goes back (- ms), clamping time to 0
             },
             id="_0_0_special_warp",
         ),
+        pytest.param(
+            {
+                "src": "192.0.2.1",
+                "dst": "192.0.2.2",
+                "icmp_type": 5,
+                "icmp_code": 0,
+                "icmp_gwaddr": "192.0.2.10",
+            },
+            {
+                "returncode": 2,
+                "stdout": """\
+PING 192.0.2.2 (192.0.2.2): 56 data bytes
+92 bytes from 192.0.2.2: Redirect Network (New addr: 192.0.2.10)
+Vr HL TOS  Len   ID Flg  off TTL Pro  cks      Src      Dst
+ 4  5  00 0054 0001   0 0000  40  01 f6a4 192.0.2.1  192.0.2.2 
+
+
+--- 192.0.2.2 ping statistics ---
+1 packets transmitted, 0 packets received, 100.0% packet loss
+""",
+                "stderr": "",
+                "redacted": False,
+            },
+            id="_5_0_icmp_gwaddr_192_0_2_10",
+        ),
     ]
 
     @pytest.mark.parametrize("pinger_kargs, expected", pinger_testdata)
