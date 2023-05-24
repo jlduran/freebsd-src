@@ -1,6 +1,6 @@
 FreeBSD Source:
 ---------------
-This is the top level of the FreeBSD source directory.
+XXX This is the top level of the FreeBSD source directory.
 
 FreeBSD is an operating system used to power modern servers, desktops, and embedded platforms.
 A large community has continually developed it for more than thirty years.
