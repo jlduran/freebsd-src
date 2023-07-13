@@ -258,8 +258,8 @@ main(int argc, char *argv[])
 	 * NULL.
 	 */
 	linelen = 1 + argc + (size_t)nargs + 1;
-	if ((av = bxp = malloc(linelen * sizeof(char *))) == NULL)
-		errx(1, "malloc failed");
+	if ((av = bxp = calloc(linelen, sizeof(char *))) == NULL)
+		errx(1, "calloc failed");
 
 	/*
 	 * Use the user's name for the utility as argv[0], just like the
@@ -499,9 +499,9 @@ prerun(int argc, char *argv[])
 	 * Allocate memory to hold the argument list, and
 	 * a NULL at the tail.
 	 */
-	tmp = malloc((argc + 1) * sizeof(char *));
+	tmp = calloc(argc + 1, sizeof(char *));
 	if (tmp == NULL) {
-		warnx("malloc failed");
+		warnx("calloc failed");
 		xexit(*argv, 1);
 	}
 	tmp2 = tmp;
