@@ -265,7 +265,7 @@ socksetup(const char *src, const char *dst, const char *svcname,
 		p0 = p = strdup(src);
 		if (p0 == NULL)
 			err(1, "strdup failed");
-		hs = p0;	/* point to search ":" */ 
+		hs = p0;	/* point to search ":" */
 #ifdef INET6
 		/* -S option supports IPv6 addr in "[2001:db8::1]:service". */
 		if (*p0 == '[') {
@@ -328,7 +328,7 @@ socksetup(const char *src, const char *dst, const char *svcname,
 	if (error == EAI_SERVICE) {
 		warnx("%s/udp: unknown service", svcname);
 		error = getaddrinfo(dst, "514", &hints, &res0);
-	}	
+	}
 	if (error)
 		errx(1, "%s: %s", gai_strerror(error), dst);
 	/* count max number of sockets we may open */
@@ -347,7 +347,7 @@ socksetup(const char *src, const char *dst, const char *svcname,
 			continue;
 		if (src && ss_src[res->ai_family] == NULL)
 			errx(1, "address family mismatch");
-			
+
 		if (ss_src[res->ai_family]) {
 			error = bind(s, sstosa(ss_src[res->ai_family]),
 				    ss_src[res->ai_family]->ss_len);
