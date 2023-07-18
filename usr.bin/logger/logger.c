@@ -104,7 +104,7 @@ main(int argc, char *argv[])
 	time_t now;
 	int ch, logflags, pri;
 	char *tag, *host, buf[1024], *timestamp, tbuf[26],
-	    *hostname, hbuf[MAXHOSTNAMELEN], *pristr;
+	    *hostname, hbuf[MAXHOSTNAMELEN + 1], *pristr;
 	const char *svcname, *src;
 
 	tag = NULL;
