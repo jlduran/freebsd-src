@@ -17,4 +17,7 @@ LIBADD+=        cap_syslog
 CFLAGS+=-DWITH_CASPER
 .endif
 
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
+
 .include <bsd.prog.mk>
