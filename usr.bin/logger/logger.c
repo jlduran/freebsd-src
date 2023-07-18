@@ -200,7 +200,8 @@ main(int argc, char *argv[])
 
 	if (hostname == NULL) {
 		hostname = hbuf;
-		(void )gethostname(hbuf, MAXHOSTNAMELEN);
+		if (gethostname(hbuf, MAXHOSTNAMELEN))
+			hostname[0] = '\0';
 		*strchrnul(hostname, '.') = '\0';
 	}
 
