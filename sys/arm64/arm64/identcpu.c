@@ -1268,7 +1268,7 @@ static const struct mrs_field id_aa64mmfr2_fields[] = {
 };
 
 
-/* ID_AA64MMFR2_EL1 */
+/* ID_AA64MMFR3_EL1 */
 static const struct mrs_field_value id_aa64mmfr3_spec_fpacc[] = {
 	MRS_FIELD_VALUE_NONE_IMPL(ID_AA64MMFR3, Spec_FPACC, NONE, IMPL),
 	MRS_FIELD_VALUE_END,
