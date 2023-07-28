@@ -2704,11 +2704,11 @@ identify_cpu(u_int cpu)
 	desc->id_aa64mmfr0 = READ_SPECIALREG(id_aa64mmfr0_el1);
 	desc->id_aa64mmfr1 = READ_SPECIALREG(id_aa64mmfr1_el1);
 	desc->id_aa64mmfr2 = READ_SPECIALREG(id_aa64mmfr2_el1);
-	desc->id_aa64mmfr3 = READ_SPECIALREG(id_aa64mmfr3_el1);
-	desc->id_aa64mmfr4 = READ_SPECIALREG(id_aa64mmfr4_el1);
+	//desc->id_aa64mmfr3 = READ_SPECIALREG(id_aa64mmfr3_el1);
+	//desc->id_aa64mmfr4 = READ_SPECIALREG(id_aa64mmfr4_el1);
 	desc->id_aa64pfr0 = READ_SPECIALREG(id_aa64pfr0_el1);
 	desc->id_aa64pfr1 = READ_SPECIALREG(id_aa64pfr1_el1);
-	desc->id_aa64pfr2 = READ_SPECIALREG(id_aa64pfr2_el1);
+	//desc->id_aa64pfr2 = READ_SPECIALREG(id_aa64pfr2_el1);
 
 	/*
 	 * ID_AA64ZFR0_EL1 is only valid when at least one of:
