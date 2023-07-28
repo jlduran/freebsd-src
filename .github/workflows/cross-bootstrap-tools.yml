@@ -2,7 +2,7 @@ name: Cross-build Kernel
 
 on:
   push:
-    branches: [ main, 'stable/13' ]
+    branches: [ main, 'stable/13', 'fix-arm64-cross-compilation' ]
   pull_request:
     branches: [ main ]
 
