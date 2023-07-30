@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD$");
 #include <timeconv.h>
 #include <unistd.h>
 #include <utmpx.h>
+#include <libxo/xo.h>
 
 static void	heading(void);
 static void	process_utmp(void);
@@ -72,6 +73,8 @@ main(int argc, char *argv[])
 	int ch;
 
 	setlocale(LC_TIME, "");
+
+	argc = xo_parse_args(argc, argv);
 
 	while ((ch = getopt(argc, argv, "HTabmqsu")) != -1) {
 		switch (ch) {
@@ -122,6 +125,8 @@ main(int argc, char *argv[])
 			err(1, "%s", *argv);
 	}
 
+	xo_open_container("who");
+
 	if (qflag)
 		quick();
 	else {
@@ -129,13 +134,17 @@ main(int argc, char *argv[])
 			Tflag = uflag = 0;
 		if (Hflag)
 			heading();
+		xo_open_list("entry");
 		if (mflag)
 			whoami();
 		else
 			process_utmp();
+		xo_close_list("entry");
 	}
 
 	endutxent();
+	xo_close_container("who");
+	xo_finish();
 
 	exit(0);
 }
@@ -144,7 +153,8 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: who [-abHmqsTu] [am I] [file]\n");
+	xo_error("usage: who [-abHmqsTu] [am I] [file]\n");
+	xo_finish();
 	exit(1);
 }
 
@@ -152,13 +162,15 @@ static void
 heading(void)
 {
 
-	printf("%-16s ", "NAME");
-	if (Tflag)
-		printf("S ");
-	printf("%-12s %-12s ", "LINE", "TIME");
-	if (uflag)
-		printf("IDLE  ");
-	printf("%-16s\n", "FROM");
+	if (xo_get_style(NULL) == XO_STYLE_TEXT) {
+		xo_emit("{:headingname/%-16s} ", "NAME");
+		if (Tflag)
+			xo_emit("{:headingstate/%s}", "S ");
+		xo_emit("{:headingline/%-12s} {:headingtime/%-12s} ", "LINE", "TIME");
+		if (uflag)
+			xo_emit("{:headingidle/%s}", "IDLE  ");
+		xo_emit("{:headingfrom/%-16s}\n", "FROM");
+	}
 }
 
 static void
@@ -171,6 +183,7 @@ row(const struct utmpx *ut)
 	struct tm *tm;
 	char state;
 
+	xo_open_instance("entry");
 	if (d_first < 0)
 		d_first = (*nl_langinfo(D_MD_ORDER) == 'd');
 
@@ -185,29 +198,59 @@ row(const struct utmpx *ut)
 		}
 	}
 
-	printf("%-16s ", ut->ut_user);
-	if (Tflag)
-		printf("%c ", state);
-	if (ut->ut_type == BOOT_TIME)
-		printf("%-12s ", "system boot");
+	if (xo_get_style(NULL) != XO_STYLE_TEXT)
+		xo_emit("{:name/%s}", ut->ut_user);
 	else
-		printf("%-12s ", ut->ut_line);
+		xo_emit("{:name/%-16s} ", ut->ut_user);
+	if (Tflag) {
+		if (xo_get_style(NULL) != XO_STYLE_TEXT)
+			xo_emit("{:state/%c}", state);
+		else
+			xo_emit("{:state/%c} ", state);
+	}
+
+	if (ut->ut_type == BOOT_TIME)
+		if (xo_get_style(NULL) != XO_STYLE_TEXT)
+			xo_emit("{:line/%s}", "system boot");
+		else
+			xo_emit("{:line/%-12s} ", "system boot");
+	else
+		if (xo_get_style(NULL) != XO_STYLE_TEXT)
+			xo_emit("{:line/%s}", ut->ut_line);
+		else
+			xo_emit("{:line/%-12s} ", ut->ut_line);
 	t = ut->ut_tv.tv_sec;
 	tm = localtime(&t);
 	strftime(buf, sizeof(buf), d_first ? "%e %b %R" : "%b %e %R", tm);
-	printf("%-*s ", 12, buf);
+	if (xo_get_style(NULL) != XO_STYLE_TEXT)
+		xo_emit("{:time/%s}", buf);
+	else
+		xo_emit("{:time/%-12s} ", buf);
 	if (uflag) {
-		if (idle < 60)
-			printf("  .   ");
-		else if (idle < 24 * 60 * 60)
-			printf("%02d:%02d ", (int)(idle / 60 / 60),
-			    (int)(idle / 60 % 60));
-		else
-			printf(" old  ");
+		if (idle < 60) {
+			if (xo_get_style(NULL) != XO_STYLE_TEXT)
+				xo_emit("{:idle/%s}", ".");
+			else
+				xo_emit("{:idle/%s}", "  .   ");
+		} else if (idle < 24 * 60 * 60) {
+			if (xo_get_style(NULL) != XO_STYLE_TEXT)
+				xo_emit("{:idle/%02d:%02d}", (int)(idle / 60 / 60), (int)(idle / 60 % 60));
+			else
+				xo_emit("{:idle/%02d:%02d} ", (int)(idle / 60 / 60), (int)(idle / 60 % 60));
+		} else {
+			if (xo_get_style(NULL) != XO_STYLE_TEXT)
+				xo_emit("{:idle/%s}", "old");
+			else
+				xo_emit("{:idle/%s}", " old  ");
+		}
 	}
 	if (*ut->ut_host != '\0')
-		printf("(%s)", ut->ut_host);
-	putchar('\n');
+		xo_emit("{:host/(%s)}", ut->ut_host);
+	else
+		xo_emit("{:host/%s}", "");
+	if (xo_get_style(NULL) == XO_STYLE_TEXT)
+		xo_emit("\n");
+	xo_close_instance("entry");
 }
 
 static int
@@ -247,22 +290,31 @@ quick(void)
 
 	ncols = ttywidth();
 	col = num = 0;
+	xo_open_list("entry");
 	while ((utx = getutxent()) != NULL) {
 		if (utx->ut_type != USER_PROCESS)
 			continue;
-		printf("%-16s", utx->ut_user);
-		if (++col < ncols / (16 + 1))
-			putchar(' ');
-		else {
-			col = 0;
-			putchar('\n');
+		xo_open_instance("entry");
+		if (xo_get_style(NULL) == XO_STYLE_TEXT)
+			xo_emit("{:name/%-16s}", utx->ut_user);
+		else
+			xo_emit("{:name/%s}", utx->ut_user);
+		if (xo_get_style(NULL) == XO_STYLE_TEXT) {
+			if (++col < ncols / (16 + 1))
+				xo_emit(" ");
+			else {
+				col = 0;
+				xo_emit("\n");
+			}
 		}
 		num++;
+		xo_close_instance("entry");
 	}
 	if (col != 0)
-		putchar('\n');
+		xo_emit("\n");
 
-	printf("# users = %d\n", num);
+	xo_close_list("entry");
+	xo_emit("# users = {:users/%d}\n", num);
 }
 
 static void
@@ -307,7 +359,7 @@ ttywidth(void)
 		width = strtol(cols, &ep, 10);
 		if (errno || width <= 0 || width > INT_MAX || ep == cols ||
 		    *ep != '\0')
-			warnx("invalid COLUMNS environment variable ignored");
+			xo_warnx("invalid COLUMNS environment variable ignored");
 		else
 			return (width);
 	}

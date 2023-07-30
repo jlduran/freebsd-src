@@ -2,6 +2,7 @@
 # $FreeBSD$
 
 PROG=	who
+LIBADD=	xo
 PACKAGE=	acct
 
 .include <bsd.prog.mk>
