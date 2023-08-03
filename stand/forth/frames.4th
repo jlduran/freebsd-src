@@ -53,6 +53,13 @@ variable fill
 0x2514 constant slb_el
 0x2510 constant srt_el
 0x2518 constant srb_el
+\ Rounded frames
+0x2500 constant rh_el
+0x2502 constant rv_el
+0x256d constant rlt_el
+0x2570 constant rlb_el
+0x256e constant rrt_el
+0x256f constant rrb_el
 \ Double frames
 0x2550 constant dh_el
 0x2551 constant dv_el
@@ -93,6 +100,16 @@ only forth definitions also frame-drawing
 	slb_el lb_el !
 	srt_el rt_el !
 	srb_el rb_el !
+;
+
+: f_rounded	( -- )	\ set frames to rounded
+	boot_serial? if f_ascii exit then
+	rh_el h_el !
+	rv_el v_el !
+	rlt_el lt_el !
+	rlb_el lb_el !
+	rrt_el rt_el !
+	rrb_el rb_el !
 ;
 
 : f_double	( -- )	\ set frames to double

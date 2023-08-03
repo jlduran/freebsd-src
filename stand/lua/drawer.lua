@@ -503,6 +503,14 @@ drawer.frame_styles = {
 		top_right	= "\xE2\x94\x90",
 		bottom_right	= "\xE2\x94\x98",
 	},
+	["rounded"] = {
+		horizontal	= "\xE2\x94\x80",
+		vertical	= "\xE2\x94\x82",
+		top_left	= "\xE2\x95\xAD",
+		bottom_left	= "\xE2\x95\xB0",
+		top_right	= "\xE2\x95\xAE",
+		bottom_right	= "\xE2\x95\xAF",
+	},
 	["double"] = {
 		horizontal	= "\xE2\x95\x90",
 		vertical	= "\xE2\x95\x91",
