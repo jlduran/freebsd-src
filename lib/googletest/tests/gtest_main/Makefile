@@ -38,6 +38,6 @@ LIBADD.gtest_unittest+=		pthread
 
 CXXFLAGS.clang+=	-Wno-error=missing-variable-declarations
 CXXFLAGS.clang+=	-Wno-error=unused-but-set-variable
-MK_WERROR.gcc=		no
+CXXFLAGS.gcc+=		-Wno-error
 
 .include <bsd.test.mk>
