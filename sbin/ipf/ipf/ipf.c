@@ -12,7 +12,6 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)ipf.c	1.23 6/5/96 (C) 1993-2000 Darren Reed";
-static const char rcsid[] = "@(#)$Id$";
 #endif
 
 #if !defined(__SVR4) && defined(__GNUC__)

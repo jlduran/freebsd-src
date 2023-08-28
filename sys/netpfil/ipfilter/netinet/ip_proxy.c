@@ -97,10 +97,6 @@
 #include "netinet/ip_ipsec_pxy.c"
 #include "netinet/ip_rpcb_pxy.c"
 
-#if !defined(lint)
-static const char rcsid[] = "@(#)$Id$";
-#endif
-
 #define	AP_SESS_SIZE	53
 
 static int ipf_proxy_fixseqack(fr_info_t *, ip_t *, ap_session_t *, int );

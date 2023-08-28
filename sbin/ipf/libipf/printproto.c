@@ -7,11 +7,6 @@
 #include "ipf.h"
 
 
-#if !defined(lint)
-static const char rcsid[] = "@(#)$Id$";
-#endif
-
-
 void
 printproto(struct protoent *pr, int p, ipnat_t *np)
 {
