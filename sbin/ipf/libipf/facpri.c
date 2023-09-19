@@ -20,11 +20,6 @@
 #include <syslog.h>
 #include "facpri.h"
 
-#if !defined(lint)
-static const char rcsid[] = "@(#)$Id$";
-#endif
-
-
 typedef	struct	table	{
 	char	*name;
 	int	value;

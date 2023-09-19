@@ -52,10 +52,6 @@
 #include "netinet/ip_dstlist.h"
 /* END OF INCLUDES */
 
-#if !defined(lint)
-static const char rcsid[] = "@(#)$Id$";
-#endif
-
 /*
  * In this file, ip_pool.c, ip_htable.c and ip_dstlist.c, you will find the
  * range for unit is [-1,IPL_LOGMAX]. The -1 is considered to be a valid number

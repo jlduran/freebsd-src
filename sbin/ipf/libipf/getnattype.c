@@ -9,11 +9,6 @@
 #include "ipf.h"
 #include "kmem.h"
 
-#if !defined(lint)
-static const char rcsid[] = "@(#)$Id$";
-#endif
-
-
 /*
  * Get a nat filter type given its kernel address.
  */

@@ -11,11 +11,6 @@
 #include "kmem.h"
 
 
-#if !defined(lint)
-static const char rcsid[] = "@(#)$Id$";
-#endif
-
-
 void
 printaps(ap_session_t *aps, int opts, int proto)
 {

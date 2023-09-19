@@ -6,7 +6,6 @@
  */
 #if !defined(lint)
 static const char sccsid[] = "@(#)arp.c	1.4 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id$";
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>

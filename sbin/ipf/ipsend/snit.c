@@ -40,7 +40,6 @@
 
 #if !defined(lint)
 static const char sccsid[] = "@(#)snit.c	1.5 1/11/96 (C)1995 Darren Reed";
-static const char rcsid[] = "@(#)$Id$";
 #endif
 
 #define	CHUNKSIZE	8192
