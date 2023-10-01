@@ -22,6 +22,11 @@
 # SUCH DAMAGE.
 #
 
-SUBDIR=	virtio pci network block balloon scsi random console gpu
+.PATH: ${SRCTOP}/sys/dev/virtio/gpu
 
-.include <bsd.subdir.mk>
+KMOD=	virtio_gpu
+SRCS=	virtio_gpu.c
+SRCS+=	virtio_bus_if.h virtio_if.h
+SRCS+=	bus_if.h device_if.h
+
+.include <bsd.kmod.mk>
