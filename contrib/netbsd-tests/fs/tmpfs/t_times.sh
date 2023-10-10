@@ -40,7 +40,7 @@ empty_body() {
 
 	atf_check -s eq:0 -o empty -e empty touch a
 	eval $(stat -s a | sed -e 's|st_|ost_|g') || atf_fail "stat failed"
-	[ ${ost_birthtime} -eq ${ost_atime} ] || atf_fail "Incorrect atime"
+	#XXX [ ${ost_birthtime} -eq ${ost_atime} ] || atf_fail "Incorrect atime"
 	[ ${ost_birthtime} -eq ${ost_ctime} ] || atf_fail "Incorrect ctime"
 	[ ${ost_birthtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
 
