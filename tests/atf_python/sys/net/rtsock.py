@@ -95,7 +95,7 @@ class RtConst:
         for prop in props:
             if getattr(RtConst, prop) == value:
                 return prop
-        return "U:{}:{}".format(prefix, value)
+        return f"U:{prefix}:{value}"
 
     @staticmethod
     def get_bitmask_map(prefix: str, value: int) -> Dict[int, str]:
@@ -219,7 +219,9 @@ class SaHelper(object):
 
     @staticmethod
     def link_sa(ifindex: int = 0, iftype: int = 0) -> bytes:
-        sa = SockaddrDl(sizeof(SockaddrDl), socket.AF_LINK, c_ushort(ifindex), iftype)
+        sa = SockaddrDl(
+            sizeof(SockaddrDl), socket.AF_LINK, c_ushort(ifindex), iftype
+        )
         return bytes(sa)
 
     @staticmethod
@@ -253,48 +255,46 @@ class SaHelper(object):
     @staticmethod
     def print_sa_inet(sa: bytes):
         if len(sa) < 8:
-            raise RtSockException("IPv4 sa size too small: {}".format(len(sa)))
+            raise RtSockException(f"IPv4 sa size too small: {len(sa)}")
         addr = socket.inet_ntop(socket.AF_INET, sa[4:8])
-        return "{}".format(addr)
+        return f"{addr}"
 
     @staticmethod
     def print_sa_inet6(sa: bytes):
         if len(sa) < sizeof(SockaddrIn6):
-            raise RtSockException("IPv6 sa size too small: {}".format(len(sa)))
+            raise RtSockException(f"IPv6 sa size too small: {len(sa)}")
         addr = socket.inet_ntop(socket.AF_INET6, sa[8:24])
         scopeid = struct.unpack(">I", sa[24:28])[0]
-        return "{} scopeid {}".format(addr, scopeid)
+        return f"{addr} scopeid {scopeid}"
 
     @staticmethod
     def print_sa_link(sa: bytes, hd: Optional[bool] = True):
         if len(sa) < sizeof(SockaddrDl):
-            raise RtSockException("LINK sa size too small: {}".format(len(sa)))
+            raise RtSockException(f"LINK sa size too small: {len(sa)}")
         sdl = SockaddrDl.from_buffer_copy(sa)
         if sdl.sdl_index:
-            ifindex = "link#{} ".format(sdl.sdl_index)
+            ifindex = f"link#{sdl.sdl_index} "
         else:
             ifindex = ""
         if sdl.sdl_nlen:
             iface_offset = 8
             if sdl.sdl_nlen + iface_offset > len(sa):
                 raise RtSockException(
-                    "LINK sa sdl_nlen {} > total len {}".format(sdl.sdl_nlen, len(sa))
+                    f"LINK sa sdl_nlen {sdl.sdl_nlen} > total len {len(sa)}"
                 )
-            ifname = "ifname:{} ".format(
-                bytes.decode(sa[iface_offset : iface_offset + sdl.sdl_nlen])
-            )
+            ifname = f"ifname:{bytes.decode(sa[iface_offset : iface_offset + sdl.sdl_nlen])} "
         else:
             ifname = ""
-        return "{}{}".format(ifindex, ifname)
+        return f"{ifindex}{ifname}"
 
     @staticmethod
     def print_sa_unknown(sa: bytes):
-        return "unknown_type:{}".format(sa[1])
+        return f"unknown_type:{sa[1]}"
 
     @classmethod
     def print_sa(cls, sa: bytes, hd: Optional[bool] = False):
         if sa[0] != len(sa):
-            raise Exception("sa size {} != buffer size {}".format(sa[0], len(sa)))
+            raise Exception(f"sa size {sa[0]} != buffer size {len(sa)}")
 
         if len(sa) < 2:
             raise Exception(
@@ -315,7 +315,7 @@ class SaHelper(object):
             dump = " [{!r}]".format(sa)
         else:
             dump = ""
-        return "{}{}".format(text, dump)
+        return f"{text}{dump}"
 
 
 class BaseRtsockMessage(object):
@@ -405,12 +405,10 @@ class RtsockRtMessage(BaseRtsockMessage):
 
     def verify_sa_inet(self, sa_data):
         if len(sa_data) < 8:
-            raise Exception("IPv4 sa size too small: {}".format(sa_data))
+            raise Exception(f"IPv4 sa size too small: {sa_data}")
         if sa_data[0] > len(sa_data):
             raise Exception(
-                "IPv4 sin_len too big: {} vs sa size {}: {}".format(
-                    sa_data[0], len(sa_data), sa_data
-                )
+                f"IPv4 sin_len too big: {sa_data[0]} vs sa size {len(sa_data)}: {sa_data}"
             )
         sin = SockaddrIn.from_buffer_copy(sa_data)
         assert sin.sin_port == 0
@@ -420,7 +418,7 @@ class RtsockRtMessage(BaseRtsockMessage):
         if len(sa_data) < 4:
             sa_type_name = RtConst.get_name("RTA_", sa_type)
             raise Exception(
-                "sa_len for type {} too short: {}".format(sa_type_name, len(sa_data))
+                f"sa_len for type {sa_type_name} too short: {len(sa_data)}"
             )
         our_sa = self._attrs[sa_type]
         assert SaHelper.print_sa(sa_data) == SaHelper.print_sa(our_sa)
@@ -435,16 +433,14 @@ class RtsockRtMessage(BaseRtsockMessage):
         for sa_type, sa_data in rtm_sa.items():
             if sa_type not in self._attrs:
                 sa_type_name = RtConst.get_name("RTA_", sa_type)
-                raise Exception("SA type {} not present".format(sa_type_name))
+                raise Exception(f"SA type {sa_type_name} not present")
             self.compare_sa(sa_type, sa_data)
 
     @classmethod
     def from_bytes(cls, data: bytes):
         if len(data) < sizeof(RtMsgHdr):
             raise Exception(
-                "messages size {} is less than expected {}".format(
-                    len(data), sizeof(RtMsgHdr)
-                )
+                f"messages size {len(data)} is less than expected {sizeof(RtMsgHdr)}"
             )
         hdr = RtMsgHdr.from_buffer_copy(data)
 
@@ -467,7 +463,10 @@ class RtsockRtMessage(BaseRtsockMessage):
                 if off + data[off] > len(data):
                     raise Exception(
                         "SA sizeof for {} > total message length: {}+{} > {}".format(
-                            RtConst.get_name("RTA_", v), off, data[off], len(data)
+                            RtConst.get_name("RTA_", v),
+                            off,
+                            data[off],
+                            len(data),
                         )
                     )
                 self._attrs[v] = data[off : off + data[off]]
@@ -580,7 +579,7 @@ class Rtsock:
 
     def parse_message(self, data: bytes):
         if len(data) < 4:
-            raise OSError("Short read from rtsock: {} bytes".format(len(data)))
+            raise OSError(f"Short read from rtsock: {len(data)} bytes")
         rtm_type = data[4]
         if rtm_type not in self.msgmap:
             return None

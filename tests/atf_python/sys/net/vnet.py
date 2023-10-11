@@ -20,7 +20,7 @@ from atf_python.utils import libc
 
 def run_cmd(cmd: str, verbose=True) -> str:
     if verbose:
-        print("run: '{}'".format(cmd))
+        print(f"run: '{cmd}'")
     return os.popen(cmd).read()
 
 
@@ -84,7 +84,7 @@ class VnetInterface(object):
 
     def run_cmd(self, cmd, verbose=False):
         if self.vnet_name and not self.jailed:
-            cmd = "/usr/sbin/jexec {} {}".format(self.vnet_name, cmd)
+            cmd = f"/usr/sbin/jexec {self.vnet_name} {cmd}"
         return run_cmd(cmd, verbose)
 
     @classmethod
@@ -95,10 +95,12 @@ class VnetInterface(object):
         lo.turn_up()
 
     @classmethod
-    def create_iface(cls, alias_name: str, iface_name: str) -> List["VnetInterface"]:
-        name = run_cmd("/sbin/ifconfig {} create".format(iface_name)).rstrip()
+    def create_iface(
+        cls, alias_name: str, iface_name: str
+    ) -> List["VnetInterface"]:
+        name = run_cmd(f"/sbin/ifconfig {iface_name} create").rstrip()
         if not name:
-            raise Exception("Unable to create iface {}".format(iface_name))
+            raise Exception(f"Unable to create iface {iface_name}")
         ret = [cls(alias_name, name)]
         if name.startswith("epair"):
             ret.append(cls(alias_name, name[:-1] + "b"))
@@ -108,13 +110,13 @@ class VnetInterface(object):
         addr = ipaddress.ip_interface(_addr)
         if addr.version == 6:
             family = "inet6"
-            cmd = "/sbin/ifconfig {} {} {}".format(self.name, family, addr)
+            cmd = f"/sbin/ifconfig {self.name} {family} {addr}"
         else:
             family = "inet"
             if self.addr_map[family]:
-                cmd = "/sbin/ifconfig {} alias {}".format(self.name, addr)
+                cmd = f"/sbin/ifconfig {self.name} alias {addr}"
             else:
-                cmd = "/sbin/ifconfig {} {} {}".format(self.name, family, addr)
+                cmd = f"/sbin/ifconfig {self.name} {family} {addr}"
         self.run_cmd(cmd)
         self.addr_map[family][str(addr.ip)] = addr
 
@@ -122,24 +124,24 @@ class VnetInterface(object):
         addr = ipaddress.ip_address(_addr)
         if addr.version == 6:
             family = "inet6"
-            cmd = "/sbin/ifconfig {} inet6 {} delete".format(self.name, addr)
+            cmd = f"/sbin/ifconfig {self.name} inet6 {addr} delete"
         else:
             family = "inet"
-            cmd = "/sbin/ifconfig {} -alias {}".format(self.name, addr)
+            cmd = f"/sbin/ifconfig {self.name} -alias {addr}"
         self.run_cmd(cmd)
         del self.addr_map[family][str(addr)]
 
     def turn_up(self):
-        cmd = "/sbin/ifconfig {} up".format(self.name)
+        cmd = f"/sbin/ifconfig {self.name} up"
         self.run_cmd(cmd)
 
     def enable_ipv6(self):
-        cmd = "/usr/sbin/ndp -i {} -disabled".format(self.name)
+        cmd = f"/usr/sbin/ndp -i {self.name} -disabled"
         self.run_cmd(cmd)
 
     def has_tentative(self) -> bool:
         """True if an interface has some addresses in tenative state"""
-        cmd = "/sbin/ifconfig {} inet6".format(self.name)
+        cmd = f"/sbin/ifconfig {self.name} inet6"
         out = self.run_cmd(cmd, verbose=False)
         for line in out.splitlines():
             if "tentative" in line:
@@ -168,7 +170,9 @@ class IfaceFactory(object):
             pass
         return ret
 
-    def create_iface(self, alias_name: str, iface_name: str) -> List[VnetInterface]:
+    def create_iface(
+        self, alias_name: str, iface_name: str
+    ) -> List[VnetInterface]:
         ifaces = VnetInterface.create_iface(alias_name, iface_name)
         for iface in ifaces:
             if not self.is_autodeleted(iface.name):
@@ -184,15 +188,15 @@ class IfaceFactory(object):
     def cleanup_vnet_interfaces(self, vnet_name: str) -> List[str]:
         """Destroys"""
         ifaces_lst = ToolsHelper.get_output(
-            "/usr/sbin/jexec {} /sbin/ifconfig -l".format(vnet_name)
+            f"/usr/sbin/jexec {vnet_name} /sbin/ifconfig -l"
         )
         for iface_name in ifaces_lst.split():
             if not self.is_autodeleted(iface_name):
                 if iface_name not in self._list_ifaces():
-                    print("Skipping interface {}:{}".format(vnet_name, iface_name))
+                    print(f"Skipping interface {vnet_name}:{iface_name}")
                     continue
             run_cmd(
-                "/usr/sbin/jexec {} /sbin/ifconfig {} destroy".format(vnet_name, iface_name)
+                f"/usr/sbin/jexec {vnet_name} /sbin/ifconfig {iface_name} destroy"
             )
 
     def cleanup(self):
@@ -204,7 +208,11 @@ class IfaceFactory(object):
 
 class VnetInstance(object):
     def __init__(
-        self, vnet_alias: str, vnet_name: str, jid: int, ifaces: List[VnetInterface]
+        self,
+        vnet_alias: str,
+        vnet_name: str,
+        jid: int,
+        ifaces: List[VnetInterface],
     ):
         self.name = vnet_name
         self.alias = vnet_alias  # reference in the test topology
@@ -226,7 +234,7 @@ class VnetInstance(object):
 
     def run_vnet_cmd(self, cmd, verbose=True):
         if not self.attached:
-            cmd = "/usr/sbin/jexec {} {}".format(self.name, cmd)
+            cmd = f"/usr/sbin/jexec {self.name} {cmd}"
         return run_cmd(cmd, verbose)
 
     def disable_dad(self):
@@ -242,7 +250,7 @@ class VnetInstance(object):
     def attach_jid(jid: int):
         error_code = libc.jail_attach(jid)
         if error_code != 0:
-            raise Exception("jail_attach() failed: errno {}".format(error_code))
+            raise Exception(f"jail_attach() failed: errno {error_code}")
 
     def attach(self):
         self.attach_jid(self.jid)
@@ -264,7 +272,7 @@ class VnetFactory(object):
 
     @staticmethod
     def _wait_interfaces(vnet_name: str, ifaces: List[str]) -> List[str]:
-        cmd = "/usr/sbin/jexec {} /sbin/ifconfig -l".format(vnet_name)
+        cmd = f"/usr/sbin/jexec {vnet_name} /sbin/ifconfig -l"
         not_matched: List[str] = []
         for i in range(50):
             vnet_ifaces = run_cmd(cmd).strip().split(" ")
@@ -278,20 +286,20 @@ class VnetFactory(object):
         return not_matched
 
     def create_vnet(self, vnet_alias: str, ifaces: List[VnetInterface]):
-        vnet_name = "pytest:{}".format(convert_test_name(self.topology_id))
+        vnet_name = f"pytest:{convert_test_name(self.topology_id)}"
         if self._vnets:
             # add number to distinguish jails
-            vnet_name = "{}_{}".format(vnet_name, len(self._vnets) + 1)
-        iface_cmds = " ".join(["vnet.interface={}".format(i.name) for i in ifaces])
-        cmd = "/usr/sbin/jail -i -c name={} persist vnet {}".format(
-            vnet_name, iface_cmds
+            vnet_name = f"{vnet_name}_{len(self._vnets) + 1}"
+        iface_cmds = " ".join([f"vnet.interface={i.name}" for i in ifaces])
+        cmd = (
+            f"/usr/sbin/jail -i -c name={vnet_name} persist vnet {iface_cmds}"
         )
         jid = 0
         try:
             jid_str = run_cmd(cmd)
             jid = int(jid_str)
         except ValueError:
-            print("Jail creation failed, output: {}".format(jid_str))
+            print(f"Jail creation failed, output: {jid_str}")
             raise
         self._register_vnet(vnet_name)
 
@@ -301,7 +309,7 @@ class VnetFactory(object):
         not_found = self._wait_interfaces(vnet_name, [i.name for i in ifaces])
         if not_found:
             raise Exception(
-                "Interfaces {} has not appeared in vnet {}".format(not_found, vnet_name)
+                f"Interfaces {not_found} has not appeared in vnet {vnet_name}"
             )
         return VnetInstance(vnet_alias, vnet_name, jid, ifaces)
 
@@ -312,7 +320,7 @@ class VnetFactory(object):
                 for line in f:
                     vnet_name = line.strip()
                     iface_factory.cleanup_vnet_interfaces(vnet_name)
-                    run_cmd("/usr/sbin/jail -r  {}".format(vnet_name))
+                    run_cmd(f"/usr/sbin/jail -r {vnet_name}")
             os.unlink(self.JAILS_FNAME)
         except OSError:
             pass
@@ -334,7 +342,7 @@ class VnetTestTemplate(BaseTest):
     TOPOLOGY = {}
 
     def _get_vnet_handler(self, vnet_alias: str):
-        handler_name = "{}_handler".format(vnet_alias)
+        handler_name = f"{vnet_alias}_handler"
         return getattr(self, handler_name, None)
 
     def _setup_vnet(self, vnet: VnetInstance, obj_map: Dict, pipe):
@@ -343,7 +351,7 @@ class VnetTestTemplate(BaseTest):
         vnetX_handler() after setting up interface addresses
         """
         vnet.attach()
-        print("# setup_vnet({})".format(vnet.name))
+        print(f"# setup_vnet({vnet.name})")
         if pipe is not None:
             vnet.set_pipe(pipe)
 
@@ -389,7 +397,7 @@ class VnetTestTemplate(BaseTest):
                 for iface_alias in obj_data["ifaces"]:
                     iface_aliases.add(iface_alias)
         for iface_alias in iface_aliases:
-            print("Creating {}".format(iface_alias))
+            print(f"Creating {iface_alias}")
             iface_data = topo[iface_alias]
             iface_type = iface_data.get("type", "epair")
             ifaces = iface_factory.create_iface(iface_alias, iface_type)
@@ -418,31 +426,25 @@ class VnetTestTemplate(BaseTest):
         # Debug output
         print("============= TEST TOPOLOGY =============")
         for vnet_alias, vnet in vnet_map.items():
-            print("# vnet {} -> {}".format(vnet.alias, vnet.name), end="")
+            print(f"# vnet {vnet.alias} -> {vnet.name}", end="")
             handler = self._get_vnet_handler(vnet.alias)
             if handler:
-                print(" handler: {}".format(handler.__name__), end="")
+                print(f" handler: {handler.__name__}", end="")
             print()
         for iface_alias, iface_data in iface_map.items():
             vnets = iface_data.vnet_aliases
             ifaces: List[VnetInterface] = iface_data.ifaces
             if len(vnets) == 1 and len(ifaces) == 2:
                 print(
-                    "# iface {}: {}::{} -> main::{}".format(
-                        iface_alias, vnets[0], ifaces[0].name, ifaces[1].name
-                    )
+                    f"# iface {iface_alias}: {vnets[0]}::{ifaces[0].name} -> main::{ifaces[1].name}"
                 )
             elif len(vnets) == 2 and len(ifaces) == 2:
                 print(
-                    "# iface {}: {}::{} -> {}::{}".format(
-                        iface_alias, vnets[0], ifaces[0].name, vnets[1], ifaces[1].name
-                    )
+                    f"# iface {iface_alias}: {vnets[0]}::{ifaces[0].name} -> {vnets[1]}::{ifaces[1].name}"
                 )
             else:
                 print(
-                    "# iface {}: ifaces: {} vnets: {}".format(
-                        iface_alias, vnets, [i.name for i in ifaces]
-                    )
+                    f"# iface {iface_alias}: ifaces: {vnets} vnets: {[i.name for i in ifaces]}"
                 )
         print()
         return ObjectsMap(iface_map, vnet_map, topo)
@@ -489,7 +491,7 @@ class VnetTestTemplate(BaseTest):
         topology_id = get_topology_id(self.test_id)
 
         print("============= vnet cleanup =============")
-        print("# topology_id: '{}'".format(topology_id))
+        print(f"# topology_id: '{topology_id}'")
         VnetFactory(topology_id).cleanup()
         IfaceFactory().cleanup()
 

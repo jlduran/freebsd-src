@@ -21,7 +21,9 @@ from atf_python.utils import nodeid_to_method_name
 
 
 datefmt = "%H:%M:%S"
-fmt = "%(asctime)s.%(msecs)03d %(filename)s:%(funcName)s:%(lineno)d %(message)s"
+fmt = (
+    "%(asctime)s.%(msecs)03d %(filename)s:%(funcName)s:%(lineno)d %(message)s"
+)
 logging.basicConfig(level=logging.DEBUG, format=fmt, datefmt=datefmt)
 logger = logging.getLogger("ktest")
 
@@ -83,19 +85,31 @@ class KtestLoader(object):
         return family_id
 
     def _load_ktests(self):
-        msg = KtestInfoMessage(self.helper, self.family_id, KtestMsgType.KTEST_CMD_LIST)
+        msg = KtestInfoMessage(
+            self.helper, self.family_id, KtestMsgType.KTEST_CMD_LIST
+        )
         msg.set_request()
-        msg.add_nla(NlAttrStr(KtestAttrType.KTEST_ATTR_MOD_NAME, self.module_name))
+        msg.add_nla(
+            NlAttrStr(KtestAttrType.KTEST_ATTR_MOD_NAME, self.module_name)
+        )
         self.nlsock.write_message(msg, verbose=False)
         nlmsg_seq = msg.nl_hdr.nlmsg_seq
 
         ret = []
-        for rx_msg in NetlinkMultipartIterator(self.nlsock, nlmsg_seq, self.family_id):
+        for rx_msg in NetlinkMultipartIterator(
+            self.nlsock, nlmsg_seq, self.family_id
+        ):
             # rx_msg.print_message()
             tst = {
-                "mod_name": rx_msg.get_nla(KtestAttrType.KTEST_ATTR_MOD_NAME).text,
-                "name": rx_msg.get_nla(KtestAttrType.KTEST_ATTR_TEST_NAME).text,
-                "desc": rx_msg.get_nla(KtestAttrType.KTEST_ATTR_TEST_DESCR).text,
+                "mod_name": rx_msg.get_nla(
+                    KtestAttrType.KTEST_ATTR_MOD_NAME
+                ).text,
+                "name": rx_msg.get_nla(
+                    KtestAttrType.KTEST_ATTR_TEST_NAME
+                ).text,
+                "desc": rx_msg.get_nla(
+                    KtestAttrType.KTEST_ATTR_TEST_DESCR
+                ).text,
             }
             ret.append(tst)
         return ret
@@ -120,7 +134,9 @@ class BaseKernelTest(BaseTest):
 
     def _get_record_time(self, msg) -> float:
         timespec = msg.get_nla(KtestMsgAttrType.KTEST_MSG_ATTR_TS).ts
-        epoch_ktime = timespec.tv_sec * 1.0 + timespec.tv_nsec * 1.0 / 1000000000
+        epoch_ktime = (
+            timespec.tv_sec * 1.0 + timespec.tv_nsec * 1.0 / 1000000000
+        )
         if not hasattr(self, "_start_epoch"):
             self._start_ktime = epoch_ktime
             self._start_time = time.time()
@@ -152,7 +168,7 @@ class BaseKernelTest(BaseTest):
 
     def _runtest_name(self, test_name: str, test_data):
         module_name = self.KTEST_MODULE_NAME
-        # print("Running kernel test {} for module {}".format(test_name, module_name))
+        # print(f"Running kernel test {test_name} for module {module_name}")
         helper = NlHelper()
         nlsock = Nlsock(NlConst.NETLINK_GENERIC, helper)
         family_id = nlsock.get_genl_family_id(NETLINK_FAMILY)
@@ -161,7 +177,9 @@ class BaseKernelTest(BaseTest):
         msg.add_nla(NlAttrStr(KtestAttrType.KTEST_ATTR_MOD_NAME, module_name))
         msg.add_nla(NlAttrStr(KtestAttrType.KTEST_ATTR_TEST_NAME, test_name))
         if test_data is not None:
-            msg.add_nla(NlAttrNested(KtestAttrType.KTEST_ATTR_TEST_META, test_data))
+            msg.add_nla(
+                NlAttrNested(KtestAttrType.KTEST_ATTR_TEST_META, test_data)
+            )
         nlsock.write_message(msg, verbose=False)
 
         for log_msg in NetlinkMultipartIterator(

@@ -43,7 +43,9 @@ libc = LibCWrapper()
 
 
 class BaseTest(object):
-    NEED_ROOT: bool = False  # True if the class needs root privileges for the setup
+    NEED_ROOT: bool = (
+        False  # True if the class needs root privileges for the setup
+    )
     TARGET_USER = None  # Set to the target user by the framework
     REQUIRED_MODULES: List[str] = []
 
@@ -52,7 +54,7 @@ class BaseTest(object):
         if error_code == 0:
             return
         err_str = os.strerror(error_code)
-        txt = "kernel module '{}' not available: {}".format(mod_name, err_str)
+        txt = f"kernel module '{mod_name}' not available: {err_str}"
         if skip:
             pytest.skip(txt)
         else:
@@ -65,11 +67,13 @@ class BaseTest(object):
     @property
     def atf_vars(self) -> Dict[str, str]:
         px = "_ATF_VAR_"
-        return {k[len(px):]: v for k, v in os.environ.items() if k.startswith(px)}
+        return {
+            k[len(px) :]: v for k, v in os.environ.items() if k.startswith(px)
+        }
 
     def drop_privileges_user(self, user: str):
         uid = pwd.getpwnam(user)[2]
-        print("Dropping privs to {}/{}".format(user, uid))
+        print(f"Dropping privs to {user}/{uid}")
         os.setuid(uid)
 
     def drop_privileges(self):

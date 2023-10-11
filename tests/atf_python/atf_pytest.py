@@ -17,7 +17,7 @@ class ATFCleanupItem(pytest.Item):
     def runtest(self):
         """Runs cleanup procedure for the test instead of the test itself"""
         instance = self.parent.cls()
-        cleanup_name = "cleanup_{}".format(nodeid_to_method_name(self.nodeid))
+        cleanup_name = f"cleanup_{nodeid_to_method_name(self.nodeid)}"
         if hasattr(instance, cleanup_name):
             cleanup = getattr(instance, cleanup_name)
             cleanup(self.nodeid)
@@ -62,7 +62,7 @@ class ATFTestObj(object):
             if key not in ret:
                 ret[key] = "unprivileged_user"
             else:
-                ret[key] = "{} {}".format(ret[key], "unprivileged_user")
+                ret[key] = f"{ret[key]} {unprivileged_user}"
         # Check if the framework requires root
         test_cls = ATFHandler.get_test_class(obj)
         if test_cls and getattr(test_cls, "NEED_ROOT", False):
@@ -102,12 +102,12 @@ class ATFTestObj(object):
     def as_lines(self) -> List[str]:
         """Output test definition in ATF-specific format"""
         ret = []
-        ret.append("ident: {}".format(self.ident))
-        ret.append("descr: {}".format(self._get_test_description(self.obj)))
+        ret.append(f"ident: {self.ident}")
+        ret.append(f"descr: {self._get_test_description(self.obj)}")
         if self.has_cleanup:
             ret.append("has.cleanup: true")
         for key, value in self._convert_marks(self.obj).items():
-            ret.append("{}: {}".format(key, value))
+            ret.append(f"{key}: {value}")
         return ret
 
 
@@ -152,7 +152,7 @@ class ATFHandler(object):
         cls = self.get_test_class(obj)
         if cls is not None:
             method_name = nodeid_to_method_name(obj.nodeid)
-            cleanup_name = "cleanup_{}".format(method_name)
+            cleanup_name = f"cleanup_{method_name}"
             if hasattr(cls, "cleanup") or hasattr(cls, cleanup_name):
                 return True
         return False
@@ -195,7 +195,7 @@ class ATFHandler(object):
             reason = data[2]
             for prefix in "Skipped: ":
                 if reason.startswith(prefix):
-                    reason = reason[len(prefix):]
+                    reason = reason[len(prefix) :]
             return reason
         else:
             # string/ traceback / exception report. Capture the last line
@@ -288,11 +288,13 @@ class ATFHandler(object):
             if test.state == "passed":
                 line = test.state
             else:
-                line = "{}: {}".format(test.state, test.reason)
+                line = f"{test.state}: {test.reason}"
             print(line, file=self._report_file_handle)
         self._report_file_handle.close()
 
     @staticmethod
     def get_atf_vars() -> Dict[str, str]:
         px = "_ATF_VAR_"
-        return {k[len(px):]: v for k, v in os.environ.items() if k.startswith(px)}
+        return {
+            k[len(px) :]: v for k, v in os.environ.items() if k.startswith(px)
+        }

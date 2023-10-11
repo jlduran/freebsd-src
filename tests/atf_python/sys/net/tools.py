@@ -11,7 +11,7 @@ class ToolsHelper(object):
     @classmethod
     def get_output(cls, cmd: str, verbose=False) -> str:
         if verbose:
-            print("run: '{}'".format(cmd))
+            print(f"run: '{cmd}'")
         return os.popen(cmd).read()
 
     @classmethod
@@ -24,9 +24,10 @@ class ToolsHelper(object):
             print("Set rules:")
             print(pf_conf)
 
-        ps = subprocess.Popen("/sbin/pfctl -g -f -", shell=True,
-            stdin=subprocess.PIPE)
-        ps.communicate(bytes(pf_conf, 'utf-8'))
+        ps = subprocess.Popen(
+            "/sbin/pfctl -g -f -", shell=True, stdin=subprocess.PIPE
+        )
+        ps.communicate(bytes(pf_conf, "utf-8"))
         ret = ps.wait()
         if ret != 0:
             raise Exception("Failed to set pf rules %d" % ret)
@@ -37,7 +38,7 @@ class ToolsHelper(object):
     @classmethod
     def print_output(cls, cmd: str, verbose=True):
         if verbose:
-            print("======= {} =====".format(cmd))
+            print(f"======= {cmd} =======")
         print(cls.get_output(cmd))
         if verbose:
             print()
@@ -49,13 +50,13 @@ class ToolsHelper(object):
 
     @classmethod
     def set_sysctl(cls, oid, val):
-        cls.get_output("sysctl {}={}".format(oid, val))
+        cls.get_output(f"sysctl {oid}={val}")
 
     @classmethod
     def get_routes(cls, family: str, fibnum: int = 0):
         family_key = {"inet": "-4", "inet6": "-6"}.get(family)
         out = cls.get_output(
-            "{} {} -rnW -F {} --libxo json".format(cls.NETSTAT_PATH, family_key, fibnum)
+            f"{cls.NETSTAT_PATH} {family_key} -rnW -F {fibnum} --libxo json"
         )
         js = json.loads(out)
         js = js["statistics"]["route-information"]["route-table"]["rt-family"]
@@ -68,7 +69,7 @@ class ToolsHelper(object):
     def get_nhops(cls, family: str, fibnum: int = 0):
         family_key = {"inet": "-4", "inet6": "-6"}.get(family)
         out = cls.get_output(
-            "{} {} -onW -F {} --libxo json".format(cls.NETSTAT_PATH, family_key, fibnum)
+            f"{cls.NETSTAT_PATH} {family_key} -onW -F {fibnum} --libxo json"
         )
         js = json.loads(out)
         js = js["statistics"]["route-nhop-information"]["nhop-table"]["rt-family"]

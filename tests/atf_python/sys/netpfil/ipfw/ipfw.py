@@ -70,15 +70,13 @@ class DebugIoReader(object):
         return xmap
 
     def print_obj_header(self, hdr):
-        debug_type = "#{}".format(hdr.cmd_type)
+        debug_type = f"#{hdr.cmd_type}"
         for _type in self.HANDLER_CLASSES.keys():
             if _type.value == hdr.cmd_type:
                 debug_type = _type.name.lower()
                 break
         print(
-            "@@ record for {} len={} optname={}".format(
-                debug_type, hdr.total_len, hdr.opt_name
-            )
+            f"@@ record for {debug_type} len={hdr.total_len} optname={hdr.opt_name}"
         )
 
     def parse_record(self, data):
@@ -88,7 +86,7 @@ class DebugIoReader(object):
         if cls is not None:
             return cls.from_bytes(data)
         raise ValueError(
-            "unsupported cmd_type={} opt_name={}".format(hdr.cmd_type, hdr.opt_name)
+            f"unsupported cmd_type={hdr.cmd_type} opt_name={hdr.opt_name}"
         )
 
     def get_record_from_stdin(self):
@@ -104,7 +102,9 @@ class DebugIoReader(object):
         off = 0
         ret = []
         while off + sizeof(DebugHeader) <= len(data):
-            hdr = DebugHeader.from_buffer_copy(data[off : off + sizeof(DebugHeader)])
+            hdr = DebugHeader.from_buffer_copy(
+                data[off : off + sizeof(DebugHeader)]
+            )
             ret.append(self.parse_record(data[off : off + hdr.total_len]))
             off += hdr.total_len
         return ret
