@@ -25,9 +25,9 @@ class Handler {
     std::string src_dir;
     // Path to write test status to (provided by ATF)
     std::string dst_file;
-    // Path to add to PYTHONPATH (provided by the schebang args)
+    // Path to add to PYTHONPATH (provided by the shebang args)
     std::string python_path;
-    // Path to the script (provided by the schebang wrapper)
+    // Path to the script (provided by the shebang wrapper)
     std::string script_path;
     // Name of the test to run (provided by ATF)
     std::string test_name;
@@ -60,9 +60,9 @@ class Handler {
     }
 
     // Parse args received from the OS. There can be multiple valid options:
-    // * with schebang args (#!/binary -P/path):
+    // * with shebang args (#!/binary -P/path):
     // atf_wrap '-P /path' /path/to/script -l
-    // * without schebang args
+    // * without shebang args
     // atf_wrap /path/to/script -l
     // Running test:
     // atf_wrap '-P /path' /path/to/script -r /path1 -s /path2 -vk1=v1 testname
