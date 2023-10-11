@@ -2,13 +2,18 @@ src/tests: The FreeBSD test suite
 =================================
 
 Usage of the FreeBSD test suite:
-(1)  Run the tests:
-       kyua test -k /usr/tests/Kyuafile
-(2)  See the test results:
-       kyua report
+
+1.  Run the tests:
+
+        kyua test -k /usr/tests/Kyuafile
+
+2.  See the test results:
+
+        kyua report
 
 For further information on using the test suite, read tests(7):
-       man tests
+
+    man tests
 
 Description of FreeBSD test suite
 =================================
@@ -23,10 +28,10 @@ The build of the test suite is organized in the following manner:
   several of the design decisions described below.  This simplifies the
   discoverability of tests.  We want a mapping such as:
 
-    /usr/src/bin/cp/      -> /usr/tests/bin/cp/
-    /usr/src/lib/libc/    -> /usr/tests/lib/libc/
-    /usr/src/usr.bin/cut/ -> /usr/tests/usr.bin/cut/
-    ... and many more ...
+      /usr/src/bin/cp/      -> /usr/tests/bin/cp/
+      /usr/src/lib/libc/    -> /usr/tests/lib/libc/
+      /usr/src/usr.bin/cut/ -> /usr/tests/usr.bin/cut/
+      ... and many more ...
 
 * Test programs for specific utilities and libraries are located next
   to the source code of such programs.  For example, the tests for the
@@ -57,5 +62,3 @@ auto-discovery features.  As an example, take a look at src/lib/tests/
 whose sole purpose is to install a Kyuafile into /usr/tests/lib/.
 The goal in this specific case is for /usr/tests/lib/ to be generated
 entirely from src/lib/.
-
--- 
