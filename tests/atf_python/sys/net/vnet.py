@@ -98,7 +98,9 @@ class VnetInterface(object):
     def create_iface(
         cls, alias_name: str, iface_name: str
     ) -> List["VnetInterface"]:
-        name = run_cmd(f"/sbin/ifconfig {iface_name} create").rstrip()
+        name = run_cmd(
+            f"/sbin/ifconfig {iface_name} create", verbose=False
+        ).rstrip()
         if not name:
             raise Exception(f"Unable to create iface {iface_name}")
         ret = [cls(alias_name, name)]
@@ -275,7 +277,7 @@ class VnetFactory(object):
         cmd = f"/usr/sbin/jexec {vnet_name} /sbin/ifconfig -l"
         not_matched: List[str] = []
         for i in range(50):
-            vnet_ifaces = run_cmd(cmd).strip().split(" ")
+            vnet_ifaces = run_cmd(cmd, verbose=False).strip().split(" ")
             not_matched = []
             for iface_name in ifaces:
                 if iface_name not in vnet_ifaces:
@@ -296,7 +298,7 @@ class VnetFactory(object):
         )
         jid = 0
         try:
-            jid_str = run_cmd(cmd)
+            jid_str = run_cmd(cmd, verbose=False)
             jid = int(jid_str)
         except ValueError:
             print(f"Jail creation failed, output: {jid_str}")
