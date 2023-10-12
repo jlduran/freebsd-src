@@ -180,6 +180,7 @@ class IfaceFactory(object):
 
     @staticmethod
     def is_autodeleted(iface_name: str) -> bool:
+        return "lo0" not in iface_name
         iface_type = re.split(r"\d+", iface_name)[0]
         return iface_type in IfaceFactory.AUTODELETE_TYPES
 
