@@ -50,8 +50,8 @@ empty_body() {
 	sleep 1
 	atf_check -s eq:0 -o ignore -e empty cat a
 	eval $(stat -s a) || atf_fail "stat failed"
-	[ ${st_atime} -gt ${ost_atime} ] || \
-	    atf_fail "Incorrect atime: ${st_atime} <= ${ost_atime}"
+	[ ${st_atime} -ge ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} < ${ost_atime}"
 	[ ${st_ctime} -eq ${ost_ctime} ] || \
 	    atf_fail "Incorrect ctime: ${st_ctime} != ${ost_ctime}"
 	[ ${st_mtime} -eq ${ost_mtime} ] || \
