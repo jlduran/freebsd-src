@@ -212,12 +212,6 @@ tcp_get_pacing_burst_size_w_divisor(struct tcpcb *tp, uint64_t bw, uint32_t segs
 	return (new_tso);
 }
 
-/* Do nothing if RATELIMIT is not defined */
-static void
-tcp_rl_log_enobuf(const struct tcp_hwrate_limit_table *rte)
-{
-}
-
 #endif
 
 /*
