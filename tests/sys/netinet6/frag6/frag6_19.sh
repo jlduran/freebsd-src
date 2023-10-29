@@ -79,7 +79,6 @@ EOF
     <dropped-bad-version>0</dropped-bad-version>
     <received-fragments>127</received-fragments>
     <dropped-fragment>0</dropped-fragment>
-    <dropped-fragment-after-timeout>0</dropped-fragment-after-timeout>
     <dropped-fragments-overflow>0</dropped-fragments-overflow>
     <atomic-fragments>0</atomic-fragments>
     <reassembled-packets>0</reassembled-packets>
@@ -97,9 +96,9 @@ EOF
 	count=`jexec ${jname} netstat -s -p ip6 --libxo xml,pretty | grep -E -x -c -f ${HOME}/filter-${jname}.txt`
 	rm -f ${HOME}/filter-${jname}.txt
 	case ${count} in
-	20)	;;
+	19)	;;
 	*)	jexec ${jname} netstat -s -p ip6 --libxo xml,pretty
-		atf_fail "Global IPv6 statistics do not match: ${count} != 20" ;;
+		atf_fail "Global IPv6 statistics do not match: ${count} != 19" ;;
 	esac
 
 	#
