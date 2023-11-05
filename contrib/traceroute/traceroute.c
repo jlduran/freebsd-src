@@ -2126,7 +2126,8 @@ usage(void)
 	Fprintf(stderr, "Version %s\n", version);
 	Fprintf(stderr,
 	    "Usage: %s [-adDeFInrSvx] [-f first_ttl] [-g gateway] [-i iface]\n"
-	    "\t[-m max_ttl] [-p port] [-P proto] [-q nqueries] [-s src_addr]\n"
-	    "\t[-t tos] [-w waittime] [-A as_server] [-z pausemsecs] host [packetlen]\n", prog);
+	    "\t[-m max_ttl] [-M first_ttl] [-p port] [-P proto] [-q nprobes]\n"
+	    "\t[-s src_addr] [-t tos] [-w waittime] [-A as_server]\n"
+	    "\t[-z pausemsecs] host [packetlen]\n", prog);
 	exit(1);
 }
