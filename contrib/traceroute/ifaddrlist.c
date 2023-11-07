@@ -141,7 +141,7 @@ ifaddrlist(register struct ifaddrlist **ipaddrp, register char *errbuf)
 			continue;
 
 
-		(void)strncpy(device, ifr.ifr_name, sizeof(ifr.ifr_name));
+		(void)strncpy(device, ifr.ifr_name, sizeof(device) - 1);
 		device[sizeof(device) - 1] = '\0';
 #ifdef sun
 		/* Ignore sun virtual interfaces */
