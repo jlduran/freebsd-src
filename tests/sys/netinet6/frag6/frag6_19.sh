@@ -79,6 +79,7 @@ EOF
     <dropped-bad-version>0</dropped-bad-version>
     <received-fragments>127</received-fragments>
     <dropped-fragment>0</dropped-fragment>
+    <dropped-fragment-after-timeout>0</dropped-fragment-after-timeout>
     <dropped-fragments-overflow>0</dropped-fragments-overflow>
     <atomic-fragments>0</atomic-fragments>
     <reassembled-packets>0</reassembled-packets>
@@ -93,12 +94,15 @@ EOF
     <discard-cannot-fragment>0</discard-cannot-fragment>
     <discard-scope-violations>0</discard-scope-violations>
 EOF
+	# Set max fragment reassembly time back to 1 minute
+	jexec ${jname} sysctl net.inet6.ip6.fraglifetime_ms=60000
+
 	count=`jexec ${jname} netstat -s -p ip6 --libxo xml,pretty | grep -E -x -c -f ${HOME}/filter-${jname}.txt`
 	rm -f ${HOME}/filter-${jname}.txt
 	case ${count} in
-	19)	;;
+	20)	;;
 	*)	jexec ${jname} netstat -s -p ip6 --libxo xml,pretty
-		atf_fail "Global IPv6 statistics do not match: ${count} != 19" ;;
+		atf_fail "Global IPv6 statistics do not match: ${count} != 20" ;;
 	esac
 
 	#
