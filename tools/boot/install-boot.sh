@@ -57,9 +57,9 @@ make_esp_file() {
     fi
 
     stagedir=$(mktemp -d /tmp/stand-test.XXXXXX)
-    mkdir -p "${stagedir}/EFI/BOOT"
+    mkdir -p "${stagedir}/efi/boot"
     efibootname=$(get_uefi_bootname)
-    cp "${loader}" "${stagedir}/EFI/BOOT/${efibootname}.efi"
+    cp "${loader}" "${stagedir}/efi/boot/${efibootname}.efi"
     makefs -t msdos \
 	-o fat_type=${fatbits} \
 	-o sectors_per_cluster=1 \
@@ -98,23 +98,23 @@ make_esp_device() {
     loadersize=$(stat -f %z "${file}")
     loadersize=$((loadersize / 1024))
 
-    # Check if /EFI/BOOT/BOOTxx.EFI is the FreeBSD boot1.efi
+    # Check if /efi/boot/bootxx.efi is the FreeBSD boot1.efi
     # If it is, remove it to avoid leaving stale files around
-    efibootfile="${mntpt}/EFI/BOOT/${efibootname}.efi"
+    efibootfile="${mntpt}/efi/boot/${efibootname}.efi"
     if [ -f "${efibootfile}" ]; then
         isboot1=$(strings "${efibootfile}" | grep "FreeBSD EFI boot block")
 
         if [ -n "${isboot1}" ] && [ "$kbfree" -lt "${loadersize}" ]; then
-            echo "Only ${kbfree}KB space remaining: removing old FreeBSD boot1.efi file /EFI/BOOT/${efibootname}.efi"
+            echo "Only ${kbfree}KB space remaining: removing old FreeBSD boot1.efi file /efi/boot/${efibootname}.efi"
             rm "${efibootfile}"
-            rmdir "${mntpt}/EFI/BOOT"
+            rmdir "${mntpt}/efi/boot"
         else
-            echo "${kbfree}KB space remaining on ESP: renaming old boot1.efi file /EFI/BOOT/${efibootname}.efi /EFI/BOOT/${efibootname}-old.efi"
-            mv "${efibootfile}" "${mntpt}/EFI/BOOT/${efibootname}-old.efi"
+            echo "${kbfree}KB space remaining on ESP: renaming old boot1.efi file /efi/boot/${efibootname}.efi /efi/boot/${efibootname}-old.efi"
+            mv "${efibootfile}" "${mntpt}/efi/boot/${efibootname}-old.efi"
         fi
     fi
 
-    if [ ! -f "${mntpt}/EFI/freebsd/loader.efi" ] && [ "$kbfree" -lt "$loadersize" ]; then
+    if [ ! -f "${mntpt}/efi/freebsd/loader.efi" ] && [ "$kbfree" -lt "$loadersize" ]; then
         umount "${mntpt}"
 	rmdir "${mntpt}"
         echo "Failed to update the EFI System Partition ${dev}"
@@ -123,27 +123,27 @@ make_esp_device() {
         die
     fi
 
-    mkdir -p "${mntpt}/EFI/freebsd"
+    mkdir -p "${mntpt}/efi/freebsd"
 
     # Keep a copy of the existing loader.efi in case there's a problem with the new one
-    if [ -f "${mntpt}/EFI/freebsd/loader.efi" ] && [ "$kbfree" -gt "$((loadersize * 2))" ]; then
-        cp "${mntpt}/EFI/freebsd/loader.efi" "${mntpt}/EFI/freebsd/loader-old.efi"
+    if [ -f "${mntpt}/efi/freebsd/loader.efi" ] && [ "$kbfree" -gt "$((loadersize * 2))" ]; then
+        cp "${mntpt}/efi/freebsd/loader.efi" "${mntpt}/efi/freebsd/loader-old.efi"
     fi
 
-    echo "Copying loader to /EFI/freebsd on ESP"
-    cp "${file}" "${mntpt}/EFI/freebsd/loader.efi"
+    echo "Copying loader to /efi/freebsd on ESP"
+    cp "${file}" "${mntpt}/efi/freebsd/loader.efi"
 
     if [ -n "${updatesystem}" ]; then
-        existingbootentryloaderfile=$(efibootmgr -v | grep "${mntpt}//EFI/freebsd/loader.efi")
+        existingbootentryloaderfile=$(efibootmgr -v | grep -i "${mntpt}//efi/freebsd/loader.efi")
 
         if [ -z "$existingbootentryloaderfile" ]; then
             # Try again without the double forward-slash in the path
-            existingbootentryloaderfile=$(efibootmgr -v | grep "${mntpt}/EFI/freebsd/loader.efi")
+            existingbootentryloaderfile=$(efibootmgr -v | grep -i "${mntpt}/efi/freebsd/loader.efi")
         fi
 
         if [ -z "$existingbootentryloaderfile" ]; then
             echo "Creating UEFI boot entry for FreeBSD"
-            efibootmgr --create --label FreeBSD --loader "${mntpt}/EFI/freebsd/loader.efi" > /dev/null
+            efibootmgr --create --label FreeBSD --loader "${mntpt}/efi/freebsd/loader.efi" > /dev/null
             if [ $? -ne 0 ]; then
                 die "Failed to create new boot entry"
             fi
@@ -160,10 +160,10 @@ make_esp_device() {
         fi
     else
 	# Configure for booting from removable media
-	if [ ! -d "${mntpt}/EFI/BOOT" ]; then
-		mkdir -p "${mntpt}/EFI/BOOT"
+	if [ ! -d "${mntpt}/efi/boot" ]; then
+		mkdir -p "${mntpt}/efi/boot"
 	fi
-	cp "${file}" "${mntpt}/EFI/BOOT/${efibootname}.efi"
+	cp "${file}" "${mntpt}/efi/boot/${efibootname}.efi"
     fi
 
     umount "${mntpt}"
