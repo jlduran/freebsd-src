@@ -1,0 +1,16 @@
+#
+# Router -- kernel configuration file for Router
+#
+# This configuration file builds on top of MINIMAL, removing several debugging
+# options, including WITNESS and INVARIANTS checking, which are known to have
+# significant performance impact on running systems.
+#
+# For more information about Router, see:
+#
+#    https://github.com/jlduran/router
+#
+
+include		Router-DEBUG
+include		"../../conf/std.nodebug"
+
+ident		Router
