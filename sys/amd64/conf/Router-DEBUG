@@ -1,0 +1,15 @@
+#
+# Router-DEBUG -- kernel configuration file for Router
+#
+# This configuration file builds on top of GENERIC.
+#
+# For more information about Router, see:
+#
+#    https://github.com/jlduran/router
+#
+
+include		GENERIC
+
+ident		Router-DEBUG
+
+options 	TCPHPTS
