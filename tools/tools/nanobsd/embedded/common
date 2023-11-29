@@ -86,7 +86,7 @@ NANO_PMAKE="make -j $(sysctl -n hw.ncpu)"
 NANO_CFG_BASE=$(pwd)
 NANO_CFG_BASE=$(realpath ${NANO_CFG_BASE}/..)
 NANO_SRC=$(realpath ${NANO_CFG_BASE}/../../..)
-#### XXX share obj 
+#### XXX share obj
 if [ -z ${NANO_CPUTYPE} ]; then
 	NANO_OBJ=${NANO_SRC}/../embedded/obj
 else
@@ -125,7 +125,7 @@ cust_install_machine_files ( ) (
 	find . -print | grep -Ev '/(CVS|\.svn|\.hg|\.git)' | cpio -dumpv ${NANO_WORLDDIR}
 )
 customize_cmd cust_install_files
-customize_cmd cust_install_machine_files 
+customize_cmd cust_install_machine_files
 
 CONF_BUILD="
 LOCAL_XTOOL_DIRS=usr.bin/mkimg
@@ -181,7 +181,6 @@ create_diskimage_gpt ( ) (
 )
 
 create_diskimage_mbr ( ) (
-
 	local fmt
 
 	[ -z ${NANO_DISKIMAGE_FORMAT} ] || fmt=".${NANO_DISKIMAGE_FORMAT}"
@@ -252,7 +251,7 @@ create_diskimage_mbr ( ) (
 	eval "${NANO_MAKEFS_UFS}" -s ${NANO_SLICE_CFG_SIZE} \
 		"${NANO_LOG}/_.${NANO_SLICE_CFG}" "${NANO_CFGDIR}"
 
-	# data slice not supported since we need the part for FAT for 
+	# data slice not supported since we need the part for FAT for
 	# booting
 
 	# Now shuffle all the slices together into the proper layout
@@ -277,8 +276,6 @@ create_diskimage_mbr ( ) (
 			-p- \
 			-p ${s3}:=${NANO_LOG}/_.s3 \
 			-o ${out}
-
-
 		;;
 	std-uefi)
 		# s1 is boot, s2 is cfg, s3 is /, not sure how to make that
@@ -356,7 +353,7 @@ ${DEBUG_INSTALL}
 "
 
 if [ "${NANO_PACKAGE_ONLY}" -eq 1 ]; then
- 	CONF_INSTALL="${CONF_INSTALL}
+	CONF_INSTALL="${CONF_INSTALL}
 ${PKG_ONLY_MAKE_CONF}
 "
 	echo "Automatically building a thin image with packages"
