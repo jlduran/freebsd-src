@@ -397,10 +397,10 @@ fix_pkg ( ) (
 	mkdir -p pkg/tmp		# Needed for pkg bootstrap
 	mkdir -p usr/local/etc		# Will get moved to local/etc
 	(
-	echo 'PKG_DBDIR = "/pkg/db"'
-	echo 'PKG_CACHEDIR = "/pkg/cache"'
-	echo 'DEFAULT_ALWAYS_YES = "yes"'
-	echo 'ASSUME_ALWAYS_YES = "yes"'
+	echo 'PKG_DBDIR = "/pkg/db";'
+	echo 'PKG_CACHEDIR = "/pkg/cache";'
+	echo 'DEFAULT_ALWAYS_YES = true;'
+	echo 'ASSUME_ALWAYS_YES = true;'
 	) >> usr/local/etc/pkg.conf
 	[ -z ${NANO_NOPRIV_BUILD} ] || (
 	echo "./pkg type=dir uname=root gname=wheel mode=0755"
