@@ -411,6 +411,20 @@ fix_pkg ( ) (
 )
 customize_cmd fix_pkg
 
+fix_certctl ( ) (
+	chdir ${NANO_WORLDDIR}
+	mkdir -p etc/ssl/blacklisted
+	mkdir -p etc/ssl/certs
+	mkdir -p etc/ssl/untrusted
+	[ -z ${NANO_NOPRIV_BUILD} ] || (
+	echo "./etc/ssl type=dir uname=root gname=wheel mode=0755"
+	echo "./etc/ssl/blacklisted type=dir uname=root gname=wheel mode=0755"
+	echo "./etc/ssl/certs type=dir uname=root gname=wheel mode=0755"
+	echo "./etc/ssl/untrusted type=dir uname=root gname=wheel mode=0755"
+	) >> ${NANO_METALOG}
+)
+customize_cmd fix_certctl
+
 save_build ( ) (
 	VERSION_FILE=${NANO_WORLDDIR}/etc/version
 	if [ "${SVNREVISION}" = "${REVISION}" ]; then
