@@ -154,10 +154,10 @@ to the string
 .Bd -literal -offset indent
 #include <stdio.h>
 #include <monetary.h>
-#include <xlocale.h>
+#include <locale.h>
 
 int
-main()
+main(void)
 {
 	char string[100];
 	double money = 1234567.89;
@@ -169,6 +169,8 @@ main()
 
 	strfmon(string, sizeof(string) - 1, "%n", money);
 	printf("%s\\n", string);
+
+	return (0);
 }
 .Ed
 .Sh ERRORS
