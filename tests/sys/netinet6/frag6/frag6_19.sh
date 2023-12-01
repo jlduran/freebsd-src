@@ -94,6 +94,9 @@ EOF
     <discard-cannot-fragment>0</discard-cannot-fragment>
     <discard-scope-violations>0</discard-scope-violations>
 EOF
+	# Set max fragment reassembly time back to 1 minute
+	jexec ${jname} sysctl net.inet6.ip6.fraglifetime_ms=60000
+
 	count=`jexec ${jname} netstat -s -p ip6 --libxo xml,pretty | grep -E -x -c -f ${HOME}/filter-${jname}.txt`
 	rm -f ${HOME}/filter-${jname}.txt
 	case ${count} in
