@@ -458,6 +458,7 @@ name:		t = sp->fts_path + NAPPEND(p->fts_parent);
 	if (p->fts_level == FTS_ROOTLEVEL) {
 		if (FCHDIR(sp, sp->fts_rfd)) {
 			SET(FTS_STOP);
+			sp->fts_cur = p;
 			return (NULL);
 		}
 	} else if (p->fts_flags & FTS_SYMFOLLOW) {
@@ -466,12 +467,14 @@ name:		t = sp->fts_path + NAPPEND(p->fts_parent);
 			(void)_close(p->fts_symfd);
 			errno = saved_errno;
 			SET(FTS_STOP);
+			sp->fts_cur = p;
 			return (NULL);
 		}
 		(void)_close(p->fts_symfd);
 	} else if (!(p->fts_flags & FTS_DONTCHDIR) &&
 	    fts_safe_changedir(sp, p->fts_parent, -1, "..")) {
 		SET(FTS_STOP);
+		sp->fts_cur = p;
 		return (NULL);
 	}
 	p->fts_info = p->fts_errno ? FTS_ERR : FTS_DP;
