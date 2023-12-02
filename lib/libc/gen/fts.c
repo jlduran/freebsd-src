@@ -688,7 +688,7 @@ fts_build(FTS *sp, int type)
 	}
 
 #ifdef notdef
-	(void)printf("nlinks == %d (cur: %d)\n", nlinks, cur->fts_nlink);
+	(void)printf("nlinks == %ld (cur: %u)\n", nlinks, cur->fts_nlink);
 	(void)printf("NOSTAT %d PHYSICAL %d SEEDOT %d\n",
 	    ISSET(FTS_NOSTAT), ISSET(FTS_PHYSICAL), ISSET(FTS_SEEDOT));
 #endif
