@@ -204,6 +204,9 @@ fts_open(char * const *argv, int options,
 	    (sp->fts_rfd = _open(".", O_RDONLY | O_CLOEXEC, 0)) < 0)
 		SET(FTS_NOCHDIR);
 
+	if (nitems == 0)
+		free(parent);
+
 	return (sp);
 
 mem3:	fts_lfree(root);
