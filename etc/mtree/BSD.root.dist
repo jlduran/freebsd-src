@@ -92,6 +92,10 @@
         security
         ..
         ssh
+            ssh_config.d
+            ..
+            sshd_config.d
+            ..
         ..
         ssl
         ..
