@@ -11,12 +11,9 @@
 #
 # type The initial terminal type for this port.  For hardwired
 #      terminal lines, this will contain the type of terminal used.
-#      For virtual consoles, the correct type is typically xterm, but
-#      vt220 will work better if you need interoperability with other
-#      systems like Solaris or GNU/Linux.
-#      Other common values include network for network connections on
-#      pseudo-terminals, dialup for incoming modem ports, and unknown
-#      when the terminal type cannot be predetermined.
+#      For virtual consoles, the correct type is typically xterm.
+#      Other common values include dialup for incoming modem ports, and
+#      unknown when the terminal type cannot be predetermined.
 #
 # status Must be on or off.  If on, init will run the getty program on
 #        the specified port.  If the word "secure" appears, this tty
@@ -28,19 +25,19 @@
 # when going to single-user mode.
 console	none				unknown	off secure
 #
-ttyv0	"/usr/libexec/getty Pc"		xterm	on  secure
+ttyv0	"/usr/libexec/getty Pc"		xterm	onifexists secure
 # Virtual terminals
-ttyv1	"/usr/libexec/getty Pc"		xterm	on  secure
-ttyv2	"/usr/libexec/getty Pc"		xterm	on  secure
-ttyv3	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv4	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv5	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv6	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv7	"/usr/libexec/getty Pc"		xterm	off secure
-ttyv8	"/usr/local/bin/xdm -nodaemon"	xterm	off secure
+ttyv1	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv2	"/usr/libexec/getty Pc"		xterm	onifexists secure
+ttyv3	"/usr/libexec/getty Pc"		xterm	off        secure
+ttyv4	"/usr/libexec/getty Pc"		xterm	off        secure
+ttyv5	"/usr/libexec/getty Pc"		xterm	off        secure
+ttyv6	"/usr/libexec/getty Pc"		xterm	off        secure
+ttyv7	"/usr/libexec/getty Pc"		xterm	off        secure
+ttyv8	"/usr/local/bin/xdm -nodaemon"	xterm	off        secure
 # Serial terminals
 # The 'dialup' keyword identifies dialin lines to login, fingerd etc.
-ttyu0	"/usr/libexec/getty std.115200"	xterm-color	on secure
+ttyu0	"/usr/libexec/getty std.115200"	xterm-color	onifconsole secure
 ttyu1	"/usr/libexec/getty std.115200"	dialup	off secure
 ttyu2	"/usr/libexec/getty std.115200"	dialup	off secure
 ttyu3	"/usr/libexec/getty std.115200"	dialup	off secure
