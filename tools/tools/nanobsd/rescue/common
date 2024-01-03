@@ -27,15 +27,11 @@ CONF_BUILD='
 # Options to put in make.conf during installworld only                          
 CONF_INSTALL='
 '
-# Options to put in make.conf during both build- & installworld.                
-CONF_WORLD='                                                                    
-CFLAGS=-O -pipe                                                                
-# We do not need these for rescue
-WITHOUT_LIB32=true
-WITHOUT_TESTS=true
-WITHOUT_DEBUG_FILES=t
-WITHOUT_KERNEL_SYMBOLS=t
-'
+# Options to put in make.conf during both build- & installworld.
+CONF_WORLD="
+CFLAGS=-O -pipe
+$CONF_WORLD
+"
 
 # Functions
 toLower() {

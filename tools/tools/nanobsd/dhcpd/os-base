@@ -59,6 +59,10 @@ CONF_INSTALL="$CONF_INSTALL
 ${DEBUG_INSTALL}
 "
 
+CONF_WORLD="$CONF_WORLD
+CFLAGS=-O -pipe
+"
+
 add_port security/sudo
 add_port ftp/curl
 
