@@ -159,9 +159,11 @@ do_add_pkg()
 	    "${NANO_WORLDDIR}"/usr/ports/packages
 	mount -t nullfs -o noatime "${NANO_OBJ}"/ports/distfiles \
 	    "${NANO_WORLDDIR}"/usr/ports/distfiles
+	mount -t devfs devfs "${NANO_WORLDDIR}"/dev
 	CR env ASSUME_ALWAYS_YES=YES SIGNATURE_TYPE=none /usr/sbin/pkg add /usr/ports/packages/All/"$1".txz
 	umount "${NANO_WORLDDIR}"/usr/ports/distfiles
 	umount "${NANO_WORLDDIR}"/usr/ports/packages
+	umount "${NANO_WORLDDIR}"/dev
 	rmdir "${NANO_WORLDDIR}"/usr/ports/packages
 	rmdir "${NANO_WORLDDIR}"/usr/ports/distfiles
 	rmdir "${NANO_WORLDDIR}"/usr/ports
