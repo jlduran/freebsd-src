@@ -80,7 +80,12 @@ CONF_BUILD=' '
 CONF_INSTALL=' '
 
 # Options to put in make.conf during both build- & installworld.
-CONF_WORLD=' '
+CONF_WORLD='
+WITHOUT_DEBUG_FILES=true
+WITHOUT_KERNEL_SYMBOLS=true
+WITHOUT_LIB32=true
+WITHOUT_TESTS=true
+'
 
 # Kernel config file to use
 NANO_KERNEL=GENERIC
