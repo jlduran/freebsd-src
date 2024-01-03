@@ -27,7 +27,7 @@
 #
 #
 # Usage:
-# 	$0 PACKAGE_DUMP NANO_PACKAGE_DIR /usr/ports/foo/bar [package.txz]...
+# 	$0 PACKAGE_DUMP NANO_PACKAGE_DIR /usr/ports/foo/bar [package.pkg]...
 #
 # Will symlink the packages listed, including their runtime dependencies,
 # from the PACKAGE_DUMP to the NANO_PACKAGE_DIR.
@@ -61,21 +61,21 @@ ports_recurse() (
 			pkgname=`cd "${PORTSDIR}/$p" && make -V pkgname`
 			type=port
 			fullpath=${PORTSDIR}/$p
-		elif [ "${p%.txz}" != "$p" -a -f "$p" ] && pkg info -F "$p" > /dev/null 2>&1 ; then
+		elif [ "${p%.pkg}" != "$p" -a -f "$p" ] && pkg info -F "$p" > /dev/null 2>&1 ; then
 			msg 3 "$p: full package file name"
-			pkgname=`basename "$p" | sed 's/\.txz$//I'`
+			pkgname=`basename "$p" | sed 's/\.pkg$//I'`
 			type=pkg
 			fullpath=$p
-		elif [ "${p%.txz}" != "$p" -a -f "$dumpdir/$p" ] && pkg info -F "$dumpdir/$p" > /dev/null 2>&1 ; then
+		elif [ "${p%.pkg}" != "$p" -a -f "$dumpdir/$p" ] && pkg info -F "$dumpdir/$p" > /dev/null 2>&1 ; then
 			msg 3 "$p: package file name relative to $dumpdir"
-			pkgname=`basename "$p" | sed 's/\.txz$//I'`
+			pkgname=`basename "$p" | sed 's/\.pkg$//I'`
 			type=pkg
 			fullpath=$dumpdir/$p
-		elif [ -f "$dumpdir/$p.txz" ] && pkg info -F "$dumpdir/$p.txz" > /dev/null 2>&1 ; then
+		elif [ -f "$dumpdir/$p.pkg" ] && pkg info -F "$dumpdir/$p.pkg" > /dev/null 2>&1 ; then
 			msg 3 "$p: package name relative to $dumpdir"
 			pkgname=`basename "$p"`
 			type=pkg
-			fullpath=$dumpdir/$p.txz
+			fullpath=$dumpdir/$p.pkg
 		else
 			echo "Missing port or package $p" 1>&2
 			exit 2
@@ -106,7 +106,7 @@ ports_recurse() (
 			fi
 			deps=`pkg info -dF "$fullpath" | grep -v "$pkgname:"`
 			for dep in $deps ; do
-				arg=`echo $dep | sed -e "s|^|$dir|" -e 's/$/.txz/'`
+				arg=`echo $dep | sed -e "s|^|$dir|" -e 's/$/.pkg/'`
 				msg 2 "Check $arg as requirement for package $pkgname"
 				ports_recurse "$outputfile" "$dumpdir" "$arg"
 			done
@@ -155,8 +155,8 @@ for p do
 done
 
 for i in `cat "$PL"` ; do
-	if [ -f "$NANO_PKG_DUMP/$i.txz" ] ; then
-		ln -s "$NANO_PKG_DUMP/$i.txz" "$NANO_PKG_DIR"
+	if [ -f "$NANO_PKG_DUMP/$i.pkg" ] ; then
+		ln -s "$NANO_PKG_DUMP/$i.pkg" "$NANO_PKG_DIR"
 	else
 		echo "Package $i misssing in $NANO_PKG_DUMP" 1>&2
 		exit 1
