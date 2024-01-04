@@ -1,5 +1,6 @@
-NANO_SRC=$(pwd)
-NANO_SRC=${NANO_SRC%/tools/tools/nanobsd/rescue}
+NANO_CFG_BASE=$(pwd)
+NANO_CFG_BASE=$(realpath "${NANO_CFG_BASE}"/..)
+NANO_SRC=$(realpath "${NANO_CFG_BASE}"/../../..)
 NANO_OBJ=${NANO_SRC}/../nanobsd-builds/${NANO_NAME}/obj
 NANO_TOOLS=$(pwd)
 NANO_PACKAGE_DIR=$(pwd)/Pkg
@@ -56,7 +57,15 @@ cust_comconsole()
 customize_cmd cust_comconsole
 
 customize_cmd cust_allow_ssh_root
+
+cust_install_machine_files()
+{
+	echo "cd ${NANO_CFG_BASE}/Files"
+	cd "${NANO_CFG_BASE}"/Files || exit
+	find . -print | grep -Ev '/(CVS|\.git|\.hg|\.svn)' | cpio -dumpv "${NANO_WORLDDIR}"
+}
 customize_cmd cust_install_files
+customize_cmd cust_install_machine_files
 
 #cust_boot_cfg()
 #(
