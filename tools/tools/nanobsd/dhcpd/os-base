@@ -63,8 +63,7 @@ CONF_WORLD="$CONF_WORLD
 CFLAGS=-O -pipe
 "
 
-add_port security/sudo
-add_port ftp/curl
+add_port dns/dnsmasq
 
 if [ "${NANO_PACKAGE_ONLY}" -eq 1 ]; then
 	CONF_INSTALL="${CONF_INSTALL}
