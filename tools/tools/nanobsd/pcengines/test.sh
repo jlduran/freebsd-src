@@ -1,6 +1,4 @@
 #!/bin/sh
-#
-#
 
 _run () {
   case "$1" in
