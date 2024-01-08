@@ -198,8 +198,8 @@ do_add_port()
 	CR ldconfig /lib /usr/lib /usr/local/lib
 	CR ldconfig -R
 	CR ldconfig -r
-	CR "env UNAME_p=${NANO_ARCH} TARGET=${NANO_TARGET} \
-	    TARGET_ARCH=${NANO_ARCH} PORTSDIR=${NANO_PORTS} make \
+	CR "TARGET=${NANO_TARGET} TARGET_ARCH=${NANO_ARCH} \
+	    PORTSDIR=${NANO_PORTS} make \
 	    __MAKE_CONF=${NANO_MAKE_CONF_BUILD} \
 	    WRKDIRPREFIX=/usr/workdir -C /usr/ports/$port_path \
 	    package-recursive BATCH=yes $* clean FORCE_PKG_REGISTER=t"
