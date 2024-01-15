@@ -196,7 +196,7 @@ literal:
 		if (isdigit_l((unsigned char)*fmt, loc)) {
 			GET_NUMBER(width, loc);
 			/*
-			 * Do we have enough space to put number with
+			 * Do we have enough space to put number with 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 			 * required width ?
 			 */
 			if ((unsigned int)width >= maxsize - (dst - s))
