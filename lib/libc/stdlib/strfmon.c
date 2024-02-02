@@ -101,9 +101,7 @@ static int __calc_left_pad(int, char *, struct lconv *);
 static char *__format_grouped_double(double, int *, int, int, int,
     struct lconv *, locale_t);
 
-static ssize_t
-vstrfmon_l(char *__restrict s, size_t maxsize, locale_t loc,
-    const char *__restrict format, va_list ap)
+static ssize_t vstrfmon_l(char * __restrict s, size_t maxsize, locale_t loc, const char * __restrict format, va_list ap)
 {
 	char		*dst;		/* output destination pointer */
 	const char	*fmt;		/* current format poistion pointer */
