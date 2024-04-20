@@ -1,4 +1,3 @@
-
 #-
 # Copyright (c) 2015 M. Warner Losh <imp@FreeBSD.org>
 # Copyright (c) 2010-2011 iXsystems, Inc.
@@ -86,7 +85,7 @@ NANO_PMAKE="make -j $(sysctl -n hw.ncpu)"
 NANO_CFG_BASE=$(pwd)
 NANO_CFG_BASE=$(realpath ${NANO_CFG_BASE}/..)
 NANO_SRC=$(realpath ${NANO_CFG_BASE}/../../..)
-#### XXX share obj 
+#### XXX share obj
 if [ -z ${NANO_CPUTYPE} ]; then
 	NANO_OBJ=${NANO_SRC}/../embedded/obj
 else
@@ -114,18 +113,20 @@ NANO_FAT_DIR=${NANO_LOG}/_.fat
 
 customize_cmd cust_allow_ssh_root
 
-add_etc_make_conf ( ) (
+add_etc_make_conf()
+(
 	touch ${NANO_WORLDDIR}/etc/make.conf
 )
 customize_cmd add_etc_make_conf
 
-cust_install_machine_files ( ) (
+cust_install_machine_files()
+(
 	echo "cd ${NANO_CFG_BASE}/Files"
 	cd ${NANO_CFG_BASE}/Files
 	find . -print | grep -Ev '/(CVS|\.svn|\.hg|\.git)' | cpio -dumpv ${NANO_WORLDDIR}
 )
 customize_cmd cust_install_files
-customize_cmd cust_install_machine_files 
+customize_cmd cust_install_machine_files
 
 CONF_BUILD="
 LOCAL_XTOOL_DIRS=usr.bin/mkimg
@@ -174,14 +175,15 @@ NANO_PACKAGE_ONLY=1
 
 # Creates images for all the formats that use MBR / GPT
 # split later if the #ifdef soup gets too bad.
-create_diskimage_gpt ( ) (
+create_diskimage_gpt()
+(
 	pprint 2 "build diskimage gpt ${NANO_NAME}"
 
 	create_diskimage_mbr $*
 )
 
-create_diskimage_mbr ( ) (
-
+create_diskimage_mbr()
+(
 	local fmt
 
 	[ -z ${NANO_DISKIMAGE_FORMAT} ] || fmt=".${NANO_DISKIMAGE_FORMAT}"
@@ -218,7 +220,7 @@ create_diskimage_mbr ( ) (
 		fi
 	fi
 
-	# Populate the Powerpc boot image, if needed
+	# Populate the PowerPC boot image, if needed
 	if [ "${NANO_LAYOUT}" = powerpc64-ibm ]; then
 		dd if=${NANO_WORLDDIR}/boot/boot1.elf of=${NANO_LOG}/_.s1 bs=800k count=1 conv=sync
 	fi
@@ -252,7 +254,7 @@ create_diskimage_mbr ( ) (
 	eval "${NANO_MAKEFS_UFS}" -s ${NANO_SLICE_CFG_SIZE} \
 		"${NANO_LOG}/_.${NANO_SLICE_CFG}" "${NANO_CFGDIR}"
 
-	# data slice not supported since we need the part for FAT for 
+	# data slice not supported since we need the part for FAT for
 	# booting
 
 	# Now shuffle all the slices together into the proper layout
@@ -277,8 +279,6 @@ create_diskimage_mbr ( ) (
 			-p- \
 			-p ${s3}:=${NANO_LOG}/_.s3 \
 			-o ${out}
-
-
 		;;
 	std-uefi)
 		# s1 is boot, s2 is cfg, s3 is /, not sure how to make that
@@ -303,7 +303,7 @@ create_diskimage_mbr ( ) (
 		# A lie to make the boot loader work, it boots the first BSD partition
 		# it finds, regardless of the active flag.
 		s2=fat16b
-		# boot image is on a special partition, ala std-embedded, but that
+		# boot image is on a special partition, à la std-embedded, but that
 		# partition isn't FAT with special files, but a copy of the boot
 		# loader itself.
 		mkimg -a 1 ${fmtarg} -s mbr -p prepboot:=${NANO_LOG}/_.s1 \
@@ -317,14 +317,15 @@ create_diskimage_mbr ( ) (
 	) > ${NANO_LOG}/_.di 2>&1
 )
 
-die( ) {
+die()
+{
 	echo "$*"
 	exit 1
 }
 
 # Automatically include the packaging port here so it is always first so it
 # builds the port and adds the package so we can add other packages.
-#XXX Doesn't work for cross build, so punting until I can integreate qemu-static
+#XXX Doesn't work for cross build, so punting until I can integrate qemu-static
 #XXX or poudriere, both of which require priv'd execution. Or qemu-system,
 #XXX which is super, super slow.
 #add_port ports-mgmt/pkg
@@ -334,8 +335,8 @@ die( ) {
 rp=$(realpath ${NANO_OBJ}/)
 __a=`mount | grep ${rp} | awk '{print length($3), $3;}' | sort -rn | awk '{$1=""; print;}'`
 if [ -n "$__a" ]; then
-    echo "unmounting $__a"
-    umount $__a
+	echo "unmounting $__a"
+	umount $__a
 fi
 
 if [ "$DEBUG" = 1 ]; then
@@ -356,7 +357,7 @@ ${DEBUG_INSTALL}
 "
 
 if [ "${NANO_PACKAGE_ONLY}" -eq 1 ]; then
- 	CONF_INSTALL="${CONF_INSTALL}
+	CONF_INSTALL="${CONF_INSTALL}
 ${PKG_ONLY_MAKE_CONF}
 "
 	echo "Automatically building a thin image with packages"
@@ -374,7 +375,8 @@ $var=$val"
 	fi
 done
 
-typical_embedded ( ) (
+typical_embedded()
+(
 	# Need to create rc.conf before we copy over /etc to /conf/base/etc
 	# so now's a good time.
 
@@ -387,12 +389,13 @@ typical_embedded ( ) (
 	echo "ifconfig_DEFAULT=DHCP" >> $rc
 	echo "ntpdate_hosts='0.freebsd.pool.ntp.org 1.freebsd.pool.ntp.org'" >> $rc
 	# Make sure that firstboot scripts run so growfs works.
-	# Note: still some issues remvoing this XXX
+	# Note: still some issues removing this XXX
 	touch ${NANO_WORLDDIR}/firstboot
 )
 customize_cmd typical_embedded
 
-fix_pkg ( ) (
+fix_pkg()
+(
 	chdir ${NANO_WORLDDIR}
 	mkdir -p pkg
 	mkdir -p pkg/db
@@ -414,7 +417,8 @@ fix_pkg ( ) (
 )
 customize_cmd fix_pkg
 
-save_build ( ) (
+save_build()
+(
 	VERSION_FILE=${NANO_WORLDDIR}/etc/version
 	if [ "${SVNREVISION}" = "${REVISION}" ]; then
 		echo "${NANO_NAME}" > "${VERSION_FILE}"
@@ -424,7 +428,8 @@ save_build ( ) (
 )
 customize_cmd save_build
 
-shrink_md_fbsize ( ) (
+shrink_md_fbsize()
+(
 	# We have a lot of little files on our memory disks. Let's decrease
 	# the block and frag size to fit more little files on them (this
 	# halves our space requirement by ~50% on /etc and /var on 8.x --
@@ -437,7 +442,8 @@ customize_cmd shrink_md_fbsize
 
 customize_cmd cust_comconsole
 
-dos_boot_part ( ) (
+dos_boot_part()
+(
 	local d=/usr/local/share/u-boot/${NANO_BOOT_PKG}
 	local f=${NANO_FAT_DIR}
 
@@ -469,7 +475,8 @@ if [ -n "$NANO_BOOT_PKG" ]; then
 	customize_cmd dos_boot_part
 fi
 
-product_custom ( ) (
+product_custom()
+(
 	# not quite ready to tweak these in nopriv build
 	if [ -z ${NANO_NOPRIV_BUILD} ]; then
 		# Last second tweaks -- generally not needed
@@ -496,23 +503,21 @@ late_customize_cmd product_custom
 # set global variables
 #
 
-std_aarch64 ( ) {
-}
+std_aarch64(){}
 
-std_amd64 ( ) {
+std_amd64()
+{
 	std_i386
 }
 
-std_arm ( ) {
-}
+std_arm(){}
 
-std_armv6 ( ) {
-}
+std_armv6(){}
 
-std_armv7 ( ) {
-}
+std_armv7(){}
 
-std_i386 ( ) {
+std_i386()
+{
 	# Default values, if not overridden in .cfg file
 	: ${NANO_KERNEL:=GENERIC}
 	: ${NANO_DRIVE:=ada0}
@@ -521,11 +526,13 @@ std_i386 ( ) {
 	: ${NANO_BOOT_BSD:=${NANO_WORLDDIR}/boot/boot}
 }
 
-std_powerpc ( ) {
+std_powerpc()
+{
 	NANO_ENDIAN=big
 }
 
-std_powerpc64 ( ) {
+std_powerpc64()
+{
 	NANO_LAYOUT=powerpc64-ibm
 	NANO_ENDIAN=big
 }
@@ -533,8 +540,8 @@ std_powerpc64 ( ) {
 #
 # QEMU settings for the standard environments
 #
-qemu_env ( ) {
-
+qemu_env()
+{
 	NANO_DISKIMAGE_FORMAT=qcow2
 }
 
@@ -622,21 +629,20 @@ esac
 NANO_SLICE_DATA=		# Not included
 
 # These don't make any sense to this strategy, so stub them out.
-calculate_partitioning ( ) (
-)
+calculate_partitioning()()
 
 # These don't make any sense to this strategy, so stub them out.
-create_code_slice ( ) (
-)
+create_code_slice()()
 
 # Each major disk scheme has its own routine. Generally
 # this is for mbr, gpt, etc. These are generally are widely
 # shared, but some specialized formats won't be shared.
-create_diskimage ( ) (
+create_diskimage()
+(
 	eval create_diskimage_${NANO_DISK_SCHEME}
 )
 
-# Set the path to the same path we use for buldworld to use latest mkimg
+# Set the path to the same path we use for buildworld to use latest mkimg
 NANO_TARGET=$(cd ${NANO_SRC}; ${NANO_MAKE} TARGET_ARCH=${NANO_ARCH} -V _TARGET)
 NANO_TMPPATH=$(cd ${NANO_SRC}; ${NANO_MAKE} MK_AUTO_OBJ=no TARGET=${NANO_TARGET} TARGET_ARCH=${NANO_ARCH} -f Makefile.inc1 buildenv -V TMPPATH)
 export PATH="${NANO_TMPPATH}:${PATH}"

@@ -1,10 +1,7 @@
-#
-#
-
 cpu		I586_CPU
 ident		ALIX_DSK
 makeoptions	DEBUG=-g
-options		CPU_GEODE
+options 	CPU_GEODE
 options 	SCHED_ULE
 options 	PREEMPTION
 options 	INET
@@ -35,7 +32,7 @@ options 	SYSVSHM
 options 	SYSVMSG
 options 	SYSVSEM
 options 	P1003_1B_SEMAPHORES
-options 	_KPOSIX_PRIORITY_SCHEDULING 
+options 	_KPOSIX_PRIORITY_SCHEDULING
 options 	PRINTF_BUFR_SIZE=128
 device		apic
 device		cpufreq
@@ -94,20 +91,20 @@ options         ALTQ_PRIQ
 
 device          pf
 device          pflog
-device          pfsync                                                          
-device          carp                                                            
+device          pfsync
+device          carp
 device          if_bridge
 
 options         DEVICE_POLLING
 
-options         NETGRAPH                                                        
-options         NETGRAPH_BPF                                                    
-options         NETGRAPH_ETHER                                                  
-options         NETGRAPH_IFACE                                                  
-options         NETGRAPH_PPP                                                    
-options         NETGRAPH_PPPOE                                                  
-options         NETGRAPH_PPTPGRE                                                
-options         NETGRAPH_MPPC_ENCRYPTION                                        
-options         NETGRAPH_SOCKET                                                 
-options         NETGRAPH_KSOCKET                                                
+options         NETGRAPH
+options         NETGRAPH_BPF
+options         NETGRAPH_ETHER
+options         NETGRAPH_IFACE
+options         NETGRAPH_PPP
+options         NETGRAPH_PPPOE
+options         NETGRAPH_PPTPGRE
+options         NETGRAPH_MPPC_ENCRYPTION
+options         NETGRAPH_SOCKET
+options         NETGRAPH_KSOCKET
 options         NETGRAPH_VJC

@@ -1,4 +1,3 @@
-
 #-
 # Copyright (c) 2014 M. Warner Losh <imp@FreeBSD.org>
 # Copyright (c) 2010-2011 iXsystems, Inc.
@@ -37,7 +36,7 @@
 NANO_BOOT0CFG="-o packet -s 1 -m 3 -t 18"
 
 # /var -> ~10MB (look through rc.initdiskless for the formula of how this
-# number is calculated out). Since we hope to run 
+# number is calculated out). Since we hope to run
 NANO_RAM_TMPVARSIZE=10240
 
 NANO_IMAGES=2
@@ -60,11 +59,14 @@ CONF_INSTALL="$CONF_INSTALL
 ${DEBUG_INSTALL}
 "
 
-add_port security/sudo
-add_port ftp/curl
+CONF_WORLD="$CONF_WORLD
+CFLAGS=-O -pipe
+"
+
+add_port dns/dnsmasq
 
 if [ "${NANO_PACKAGE_ONLY}" -eq 1 ]; then
- 	CONF_INSTALL="${CONF_INSTALL}
+	CONF_INSTALL="${CONF_INSTALL}
 ${PKG_ONLY_MAKE_CONF}
 "
 	echo "Automatically building a thin image with packages"
@@ -87,16 +89,15 @@ if [ "$PACKAGE_PREP_BUILD" = 1 ]; then
 	do_image=false
 else
 
-hack_nsswitch_conf ( )
+hack_nsswitch_conf()
 {
 	# Remove all references to NIS in the nsswitch.conf file
 	# Not sure this is still needed, but FreeNAS has it...
-	sed -i.bak -es/nis/files/g ${NANO_WORLDDIR}/etc/nsswitch.conf
-	rm -f ${NANO_WORLDDIR}/etc/nsswitch.conf.bak
+	sed -i '' -e 's/nis/files/g' "${NANO_WORLDDIR}"/etc/nsswitch.conf
 }
 customize_cmd hack_nsswitch_conf
 
-save_build ( )
+save_build()
 {
 	VERSION_FILE=${NANO_WORLDDIR}/etc/version
 	if [ "${SVNREVISION}" = "${REVISION}" ]; then
@@ -107,16 +108,16 @@ save_build ( )
 }
 customize_cmd save_build
 
-remove_patch_divots ( )
+remove_patch_divots()
 {
-	find ${NANO_WORLDDIR} -name \*.orig -or -name \*.rej -delete
+	find "${NANO_WORLDDIR}" \( -name '*.orig' -o -name '*.rej' \) -delete
 }
 customize_cmd remove_patch_divots
 
-configure_mnt_md ( )
+configure_mnt_md()
 {
-	mkdir -m 755 -p ${NANO_WORLDDIR}/conf/base/mnt
-	echo 2048 > ${NANO_WORLDDIR}/conf/base/mnt/md_size
+	mkdir -m 0755 -p "${NANO_WORLDDIR}"/conf/base/mnt
+	echo 2048 > "${NANO_WORLDDIR}"/conf/base/mnt/md_size
 }
 customize_cmd configure_mnt_md
 
@@ -127,8 +128,8 @@ shrink_md_fbsize()
 	# halves our space requirement by ~50% on /etc and /var on 8.x --
 	# and gives us more back on 9.x as the default block and frag size
 	# are 4 times larger).
-	sed -i '' -e 's,-S -i 4096,-S -i 4096 -b 4096 -f 512,' \
-		${NANO_WORLDDIR}/etc/rc.initdiskless
+	sed -i '' -e 's/-s \$1 auto \$2/-S -i 4096 -s \$1 auto \$2 -b 4096 -f 512/g' \
+	    "${NANO_WORLDDIR}"/etc/rc.initdiskless
 }
 customize_cmd shrink_md_fbsize
 
@@ -147,46 +148,46 @@ fi
 
 product_custom()
 {
-	gzip -v9 ${NANO_WORLDDIR}/boot/kernel/kernel
+	gzip -v9 "${NANO_WORLDDIR}"/boot/kernel/kernel
 
 	# kill includes (saves 14MB)
-	find ${NANO_WORLDDIR}/usr/local/include \! -name 'pyconfig.h' -type f | xargs rm -f
+	find "${NANO_WORLDDIR}"/usr/local/include \! -name 'pyconfig.h' -type f -print0 | xargs -0 rm -f
 
 	# kill docs (saves 22MB)
-	rm -rf ${NANO_WORLDDIR}/usr/local/share/doc
-	rm -rf ${NANO_WORLDDIR}/usr/local/share/gtk-doc
+	rm -rf "${NANO_WORLDDIR}"/usr/local/share/doc
+	rm -rf "${NANO_WORLDDIR}"/usr/local/share/gtk-doc
 
 	# and info (2MB)
-	rm -rf ${NANO_WORLDDIR}/usr/local/info
+	rm -rf "${NANO_WORLDDIR}"/usr/local/info
 
 	# and man pages (4.4MB)
-	rm -rf ${NANO_WORLDDIR}/usr/local/man
+	rm -rf "${NANO_WORLDDIR}"/usr/local/man
 
 	# and examples (1.7M)
-	rm -rf ${NANO_WORLDDIR}/usr/local/share/examples
+	rm -rf "${NANO_WORLDDIR}"/usr/local/share/examples
 
 	# and groff_fonts junk (3MB)
-	rm -rf ${NANO_WORLDDIR}/usr/share/groff_font
-	rm -rf ${NANO_WORLDDIR}/usr/share/tmac
-	rm -rf ${NANO_WORLDDIR}/usr/share/me
+	rm -rf "${NANO_WORLDDIR}"/usr/share/groff_font
+	rm -rf "${NANO_WORLDDIR}"/usr/share/tmac
+	rm -rf "${NANO_WORLDDIR}"/usr/share/me
 
 	# Kill all .a's and .la's that are installed (20MB+)
-	find ${NANO_WORLDDIR} -name \*.a -or -name \*.la -delete
+	find "${NANO_WORLDDIR}" \( -name '*.a' -o -name '*.la' \) -delete
 
 	# magic.mgc is just a speed optimization.  Kill it for 1.7MB
-	rm -f ${NANO_WORLDDIR}/usr/share/misc/magic.mgc
+	rm -f "${NANO_WORLDDIR}"/usr/share/misc/magic.mgc
 
 	# Last second tweaks
-	chown -R root:wheel ${NANO_WORLDDIR}/root
-	chmod 0755 ${NANO_WORLDDIR}/root/*
-	chmod 0755 ${NANO_WORLDDIR}/*
-	chown -R root:wheel ${NANO_WORLDDIR}/etc
-	chown -R root:wheel ${NANO_WORLDDIR}/boot
-	chown root:wheel ${NANO_WORLDDIR}/
-	chown root:wheel ${NANO_WORLDDIR}/usr
-	find ${NANO_WORLDDIR} -type f -name "*~" -delete
-	find ${NANO_WORLDDIR}/usr/local -type f -name "*.po" -delete
-	find ${NANO_WORLDDIR} -type f -name "*.service" -delete
+	chown -R root:wheel "${NANO_WORLDDIR}"/root
+	chmod 0755 "${NANO_WORLDDIR}"/root/*
+	chmod 0755 "${NANO_WORLDDIR}"/*
+	chown -R root:wheel "${NANO_WORLDDIR}"/etc
+	chown -R root:wheel "${NANO_WORLDDIR}"/boot
+	chown root:wheel "${NANO_WORLDDIR}"/
+	chown root:wheel "${NANO_WORLDDIR}"/usr
+	find "${NANO_WORLDDIR}" -type f -name '*~' -delete
+	find "${NANO_WORLDDIR}"/usr/local -type f -name '*.po' -delete
+	find "${NANO_WORLDDIR}" -type f -name '*.service' -delete
 }
 late_customize_cmd product_custom
 
