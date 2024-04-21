@@ -83,7 +83,7 @@ arm_create_disk() {
 	fi
 
 	# Create the EFI and UFS filesystems
-	chroot ${CHROOTDIR} newfs_msdos -L efi -F ${FAT_TYPE} /dev/${mddev}${EFIPART_SUFFIX}
+	chroot ${CHROOTDIR} newfs_msdos -L EFISYS -F ${FAT_TYPE} /dev/${mddev}${EFIPART_SUFFIX}
 	chroot ${CHROOTDIR} newfs -U -L rootfs /dev/${mddev}${ROOTFSPART_SUFFIX}
 
 	return 0
