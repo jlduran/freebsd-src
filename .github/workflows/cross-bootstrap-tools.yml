@@ -2,9 +2,9 @@ name: Cross-build Kernel
 
 on:
   push:
-    branches: [ main, 'stable/14', 'stable/13' ]
+    branches: '*'
   pull_request:
-    branches: [ main ]
+    branches: '*'
   workflow_dispatch:
 
 permissions:
@@ -49,6 +49,7 @@ jobs:
         run: |
           brew update --quiet || true
           brew install ${{ matrix.pkgs }} || true
+          brew info llvm@18 || true
       - name: create environment
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
