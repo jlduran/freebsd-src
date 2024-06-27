@@ -666,10 +666,9 @@ enterthispgrp(struct proc *p, struct pgrp *pgrp)
 	}
 	MPASS(old_pgrp == p->p_pgrp);
 	if (!sx_try_xlock(&pgrp->pg_killsx)) {
-		sx_xunlock(&old_pgrp->pg_killsx);
 		sx_xunlock(&proctree_lock);
-		sx_xlock(&pgrp->pg_killsx);
-		sx_xunlock(&pgrp->pg_killsx);
+		sx_xlock(&old_pgrp->pg_killsx);
+		sx_xunlock(&old_pgrp->pg_killsx);
 		return (ERESTART);
 	}
 
