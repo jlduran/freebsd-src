@@ -38,9 +38,15 @@
 #endif
 #include <bsm/audit.h>
 
+#define	XU_NGROUPS	16
+
+#if defined(_KERNEL) || defined(_WANT_UCRED)
 struct loginclass;
 
-#define	XU_NGROUPS	16
+/*
+ * Flags for cr_flags.
+ */
+#define	CRED_FLAG_CAPMODE	0x00000001	/* In capability mode. */
 
 /*
  * Credentials.
@@ -55,7 +61,6 @@ struct loginclass;
  *
  * See "Credential management" comment in kern_prot.c for more information.
  */
-#if defined(_KERNEL) || defined(_WANT_UCRED)
 struct ucred {
 	struct mtx cr_mtx;
 	long	cr_ref;			/* (c) reference count */
@@ -83,11 +88,6 @@ struct ucred {
 #define	NOCRED	((struct ucred *)0)	/* no credential available */
 #define	FSCRED	((struct ucred *)-1)	/* filesystem credential */
 #endif /* _KERNEL || _WANT_UCRED */
-
-/*
- * Flags for cr_flags.
- */
-#define	CRED_FLAG_CAPMODE	0x00000001	/* In capability mode. */
 
 /*
  * This is the external representation of struct ucred.
