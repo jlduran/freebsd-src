@@ -50,6 +50,7 @@
 #include <sys/acct.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
+#include <sys/libkern.h>
 #include <sys/lock.h>
 #include <sys/loginclass.h>
 #include <sys/malloc.h>
@@ -832,6 +833,18 @@ sys_setgroups(struct thread *td, struct setgroups_args *uap)
 	return (error);
 }
 
+static int
+gidp_cmp(const void *p1, const void *p2)
+{
+	const gid_t *const gp1 = p1;
+	const gid_t *const gp2 = p2;
+
+	return (*gp1 > *gp2) - (*gp1 < *gp2);
+}
+
+/*
+ * CAUTION: This function sorts 'groups'.
+ */
 int
 kern_setgroups(struct thread *td, u_int ngrp, gid_t *groups)
 {
@@ -840,6 +853,7 @@ kern_setgroups(struct thread *td, u_int ngrp, gid_t *groups)
 	int error;
 
 	MPASS(ngrp <= ngroups_max + 1);
+	qsort(groups, ngrp, sizeof(*groups), gidp_cmp);
 	AUDIT_ARG_GROUPSET(groups, ngrp);
 	newcred = crget();
 	crextend(newcred, ngrp);
@@ -2296,41 +2310,46 @@ crextend(struct ucred *cr, int n)
 }
 
 /*
- * Copy groups in to a credential, preserving any necessary invariants.
- * Currently this includes the sorting of all supplemental gids.
- * crextend() must have been called before hand to ensure sufficient
- * space is available.
+ * Copy groups into a credential.
+ *
+ * The 'groups' array MUST have been sorted, excluding its first element (which
+ * is the effective GID).
+ *
+ * crextend() must have been called beforehand to ensure sufficient space is
+ * available.
  */
 static void
 crsetgroups_locked(struct ucred *cr, int ngrp, gid_t *groups)
 {
-	int i;
-	int j;
-	gid_t g;
+	gid_t prev_g __unused, g __unused;
 
 	KASSERT(cr->cr_agroups >= ngrp, ("cr_ngroups is too small"));
-
+	KASSERT(ngrp > 0, ("must fill at least one slot (effective GID)"));
 	bcopy(groups, cr->cr_groups, ngrp * sizeof(gid_t));
 	cr->cr_ngroups = ngrp;
 
+#ifdef INVARIANTS
 	/*
-	 * Sort all groups except cr_groups[0] to allow groupmember to
-	 * perform a binary search.
-	 *
-	 * XXX: If large numbers of groups become common this should
-	 * be replaced with shell sort like linux uses or possibly
-	 * heap sort.
+	 * Sanity check that cr_groups[] is sorted except for cr_groups[0].  We
+	 * assume that property when determining whether a group is in the
+	 * supplementary groups set.
 	 */
-	for (i = 2; i < ngrp; i++) {
+	if (ngrp <= 1)
+		return;
+	prev_g = groups[1];
+	for (int i = 2; i < ngrp; ++i) {
 		g = cr->cr_groups[i];
-		for (j = i-1; j >= 1 && g < cr->cr_groups[j]; j--)
-			cr->cr_groups[j + 1] = cr->cr_groups[j];
-		cr->cr_groups[j + 1] = g;
+		if (prev_g > g)
+			panic("cr_groups[] %p unsorted at index %d",
+			    &cr->cr_groups, i);
+		prev_g = g;
 	}
+#endif
 }
 
 /*
  * Copy groups in to a credential after expanding it if required.
+ * Array 'groups' doesn't need to be sorted.
  * Truncate the list to (ngroups_max + 1) if it is too large.
  */
 void
@@ -2341,6 +2360,10 @@ crsetgroups(struct ucred *cr, int ngrp, gid_t *groups)
 		ngrp = ngroups_max + 1;
 
 	crextend(cr, ngrp);
+	/*
+	 * See comments in crsetgroups_locked() and is_a_supplementary_group().
+	 */
+	qsort(groups, ngrp, sizeof(*groups), gidp_cmp);
 	crsetgroups_locked(cr, ngrp, groups);
 }
 
