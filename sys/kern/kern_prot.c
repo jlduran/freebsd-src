@@ -1280,7 +1280,7 @@ sys___setugid(struct thread *td, struct __setugid_args *uap)
  * Returns whether gid designates a supplementary group in cred.
  */
 static bool
-supplementary_group_member(gid_t gid, struct ucred *cred)
+is_a_supplementary_group(const gid_t gid, const struct ucred *const cred)
 {
 	int l, h, m;
 
@@ -1313,7 +1313,7 @@ groupmember(gid_t gid, struct ucred *cred)
 	if (gid == cred->cr_groups[0])
 		return (true);
 
-	return (supplementary_group_member(gid, cred));
+	return (is_a_supplementary_group(gid, cred));
 }
 
 /*
@@ -1326,7 +1326,7 @@ realgroupmember(gid_t gid, struct ucred *cred)
 	if (gid == cred->cr_rgid)
 		return (true);
 
-	return (supplementary_group_member(gid, cred));
+	return (is_a_supplementary_group(gid, cred));
 }
 
 /*
