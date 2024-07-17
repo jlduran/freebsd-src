@@ -2727,10 +2727,12 @@ sub process {
 
 	print report_dump();
 	if ($summary && !($clean == 1 && $quiet == 1)) {
+		open(FH, '>>', '/tmp/github_step_file') or die $!;
 		print "$filename " if ($summary_file);
 		print "total: $cnt_error errors, $cnt_warn warnings, " .
 			"$cnt_lines lines checked\n";
 		print "\n" if ($quiet == 0);
+		close(FH);
 	}
 
 	if ($quiet == 0) {
@@ -2743,7 +2745,9 @@ sub process {
 	}
 
 	if ($clean == 1 && $quiet == 0) {
-		print "$vname has no obvious style problems and is ready for submission.\n"
+		open(FH, '>', '/tmp/github_step_file') or die $!;
+		print "$vname has no obvious style problems and is ready for submission.\n";
+		close(FH);
 	}
 
 	return ($no_warnings ? $clean : $cnt_error == 0);
