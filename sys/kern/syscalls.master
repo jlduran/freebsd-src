@@ -3333,5 +3333,12 @@
 		    uintptr_t idx2
 		);
 	}
+589	AUE_SETCRED	STD|CAPENABLED {
+		int setcred(
+		    u_int flags,
+		    _In_reads_bytes_(size) const void *wcred,
+		    size_t size
+		);
+	}
 
 ; vim: syntax=off

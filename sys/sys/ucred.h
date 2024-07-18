@@ -32,6 +32,7 @@
 #ifndef _SYS_UCRED_H_
 #define	_SYS_UCRED_H_
 
+#include <sys/types.h>
 #if defined(_KERNEL) || defined(_WANT_UCRED)
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
@@ -39,8 +40,6 @@
 #include <bsm/audit.h>
 
 #if defined(_KERNEL) || defined(_WANT_UCRED)
-struct loginclass;
-
 /*
  * Flags for cr_flags.
  */
@@ -52,6 +51,11 @@ struct loginclass;
  * stack.
  */
 #define	CRED_SMALLGROUPS_NB	16
+
+struct label;
+struct loginclass;
+struct prison;
+struct uidinfo;
 
 /*
  * Credentials.
@@ -115,7 +119,50 @@ struct xucred {
 /* This can be used for both ucred and xucred structures. */
 #define	cr_gid cr_groups[0]
 
+struct mac;
+/*
+ * Structure to pass as an argument to the setcred() system call.
+ */
+struct setcred_v0 {
+	uid_t	 sc_uid;		/* effective user id */
+	uid_t	 sc_ruid;		/* real user id */
+	uid_t	 sc_svuid;		/* saved user id */
+	gid_t	 sc_gid;		/* effective group id */
+	gid_t	 sc_rgid;		/* real group id */
+	gid_t	 sc_svgid;		/* saved group id */
+	int	 sc_supp_groups_nb;	/* number of supplementary groups */
+	gid_t	*sc_supp_groups;	/* supplementary groups */
+	struct mac *sc_label;		/* MAC label */
+};
+
+/*
+ * Flags to setcred().
+ *
+ * Descending order to leave room for more version bits (if ever needed).
+ */
+#define	SETCREDF_UID		(1u << 31)
+#define	SETCREDF_RUID		(1u << 30)
+#define SETCREDF_SVUID		(1u << 29)
+#define SETCREDF_GID		(1u << 28)
+#define SETCREDF_RGID		(1u << 27)
+#define SETCREDF_SVGID		(1u << 26)
+#define SETCREDF_SUPP_GROUPS	(1u << 25)
+#define SETCREDF_MAC_LABEL	(1u << 24)
+
+#define SETCREDF_FROM_VERSION(version)	(((u_int)version) & 0xFF)
+#define SETCREDF_TO_VERSION(flags)	((flags) & 0xFF)
+
 #ifdef _KERNEL
+/*
+ * Masks of the currently valid flags to setcred() (v0).  As new versions are
+ * added, they may or may not use the same flags.
+ */
+#define SETCREDF_VERSION_BITS	(0xFF)
+#define SETCREDF_SET_MASK	(SETCREDF_UID | SETCREDF_RUID | SETCREDF_SVUID | \
+    SETCREDF_GID | SETCREDF_RGID | SETCREDF_SVGID | SETCREDF_SUPP_GROUPS | \
+    SETCREDF_MAC_LABEL)
+#define SETCREDF_MASK		(SETCREDF_SET_MASK | SETCREDF_VERSION_BITS)
+
 struct proc;
 struct thread;
 
@@ -178,6 +225,13 @@ bool	is_a_supplementary_group(const gid_t gid,
 	    const struct ucred *const cred);
 bool	groupmember(gid_t gid, struct ucred *cred);
 bool	realgroupmember(gid_t gid, struct ucred *cred);
+
+#else /* !_KERNEL */
+
+__BEGIN_DECLS
+int	setcred(u_int flags, const void *wcred, size_t size);
+__END_DECLS
+
 #endif /* _KERNEL */
 
 #endif /* !_SYS_UCRED_H_ */
