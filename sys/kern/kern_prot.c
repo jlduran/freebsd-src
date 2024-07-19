@@ -1282,24 +1282,13 @@ sys___setugid(struct thread *td, struct __setugid_args *uap)
 static bool
 is_a_supplementary_group(const gid_t gid, const struct ucred *const cred)
 {
-	int l, h, m;
 
 	/*
 	 * Perform a binary search of the supplemental groups.  This is possible
 	 * because we sort the groups in crsetgroups().
 	 */
-	l = 1;
-	h = cred->cr_ngroups;
-
-	while (l < h) {
-		m = l + (h - l) / 2;
-		if (cred->cr_groups[m] < gid)
-			l = m + 1;
-		else
-			h = m;
-	}
-
-	return (l < cred->cr_ngroups && cred->cr_groups[l] == gid);
+	return (bsearch(&gid, cred->cr_groups + 1, cred->cr_ngroups - 1,
+	    sizeof(gid), gidp_cmp) != NULL);
 }
 
 /*
