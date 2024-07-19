@@ -1279,7 +1279,7 @@ sys___setugid(struct thread *td, struct __setugid_args *uap)
 /*
  * Returns whether gid designates a supplementary group in cred.
  */
-static bool
+bool
 is_a_supplementary_group(const gid_t gid, const struct ucred *const cred)
 {
 
