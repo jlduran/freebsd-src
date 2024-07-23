@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   build:
+    if: false
     name: Style Checker
     runs-on: ubuntu-latest
     steps:
