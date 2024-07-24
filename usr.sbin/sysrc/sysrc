@@ -848,25 +848,27 @@ while [ $# -gt 0 ]; do
 			new="${1#*=}"
 		esac
 
-		#
-		# If `-N' is passed, simplify the output
-		#
-		if [ ! "$SHOW_VALUE" ]; then
-			echo "$NAME"
-			f_sysrc_set "$NAME" "$new" || status=$FAILURE
-		else
-			if f_sysrc_set "$NAME" "$new"; then
-				if [ "$SHOW_FILE" ]; then
-					after=$( f_sysrc_find "$NAME" )
-				else
-					after=$( f_sysrc_get "$NAME" )
-				fi
-				echo -n "${SHOW_NAME:+$NAME$SEP}"
-				echo -n "$before${SHOW_EQUALS:+\" #}"
-				echo -n " -> ${SHOW_EQUALS:+\"}$after"
-				echo "${SHOW_EQUALS:+\"}"
+		if [ ! "$QUIET" ]; then
+			#
+			# If `-N' is passed, simplify the output
+			#
+			if [ ! "$SHOW_VALUE" ]; then
+				echo "$NAME"
+				f_sysrc_set "$NAME" "$new" || status=$FAILURE
 			else
-				status=$FAILURE
+				if f_sysrc_set "$NAME" "$new"; then
+					if [ "$SHOW_FILE" ]; then
+						after=$( f_sysrc_find "$NAME" )
+					else
+						after=$( f_sysrc_get "$NAME" )
+					fi
+					echo -n "${SHOW_NAME:+$NAME$SEP}"
+					echo -n "$before${SHOW_EQUALS:+\" #}"
+					echo -n " -> ${SHOW_EQUALS:+\"}$after"
+					echo "${SHOW_EQUALS:+\"}"
+				else
+					status=$FAILURE
+				fi
 			fi
 		fi
 		;;
