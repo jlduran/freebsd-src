@@ -16,6 +16,7 @@ atf_test_case config2_pubkeys
 atf_test_case config2_pubkeys_user_data
 atf_test_case config2_network
 atf_test_case config2_network_static_v4
+atf_test_case sanitize_user_data
 
 args_body()
 {
@@ -386,6 +387,34 @@ EOF
 	atf_check -o file:routing cat ${here}/etc/rc.conf.d/routing
 }
 
+sanitize_user_data_head()
+{
+	atf_set "require.user" root
+}
+sanitize_user_data_body()
+{
+	export NUAGE_FAKE_ROOTDIR=${PWD}
+	mkdir -p media/nuageinit
+	touch media/nuageinit/meta_data.json
+	cat > media/nuageinit/user_data << EOF
+#cloud-config
+users:
+  - name: foobar
+    shell: /bin/sh ; echo "All your base are belong to us."
+EOF
+	mkdir -p etc
+	cat > etc/master.passwd <<EOF
+root:*:0:0::0:0:Charlie &:/root:/bin/csh
+sys:*:1:0::0:0:Sys:/home/sys:/bin/csh
+EOF
+	pwd_mkdb -d etc "${PWD}"/etc/master.passwd
+	cat > etc/group <<EOF
+wheel:*:0:root
+users:*:1:
+EOF
+	atf_check -o empty /usr/libexec/nuageinit "${PWD}"/media/nuageinit config-2
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case args
@@ -399,4 +428,5 @@ atf_init_test_cases()
 	atf_add_test_case config2_pubkeys_user_data
 	atf_add_test_case config2_network
 	atf_add_test_case config2_network_static_v4
+	atf_add_test_case sanitize_user_data
 }
