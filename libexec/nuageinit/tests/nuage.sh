@@ -28,9 +28,9 @@ addsshkey_body()
 	fi
 	atf_check -o inline:"40700\n" stat -f %p .ssh
 	atf_check -o inline:"100600\n" stat -f %p .ssh/authorized_keys
-	atf_check -o inline:"mykey\n" cat .ssh/authorized_keys
-	atf_check /usr/libexec/flua $(atf_get_srcdir)/addsshkey.lua
-	atf_check -o inline:"mykey\nmykey\n" cat .ssh/authorized_keys
+	atf_check -o inline:"mykey1\n" cat .ssh/authorized_keys
+	atf_check /usr/libexec/flua $(atf_get_srcdir)/addsshkey.lua 2
+	atf_check -o inline:"mykey1\nmykey2\n" cat .ssh/authorized_keys
 }
 
 adduser_head()
