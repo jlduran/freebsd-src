@@ -4,13 +4,36 @@
 
 local pu = require("posix.unistd")
 
-local function warnmsg(str)
-	io.stderr:write(str.."\n")
+local function warnmsg(str, prepend)
+	local pre = ""
+	if prepend ~= false then
+		pre = "nuageinit: "
+	end
+	io.stderr:write(pre .. str .. "\n")
 end
 
-local function errmsg(str)
-	io.stderr:write(str.."\n")
+local function errmsg(str, prepend)
+	local pre = ""
+	if prepend ~= false then
+		pre = "nuageinit: "
+	end
+	io.stderr:write(pre .. str .. "\n")
 	os.exit(1)
+end
+
+--- Serialize a string
+local function serialize(str)
+	return ("%q"):format(str)
+end
+
+-- Remove outer double quotation marks from a string
+local function unquote(str)
+	return ((str:gsub('"(.*)"', "%1")))
+end
+
+--- Sanitize a string
+local function sanitize(str)
+	return unquote(serialize(str))
 end
 
 local function dirname(oldpath)
@@ -28,29 +51,31 @@ local function mkdir_p(path)
 	if lfs.attributes(path, "mode") ~= nil then
 		return true
 	end
-	local r,err = mkdir_p(dirname(path))
+	local r, err = mkdir_p(dirname(path))
 	if not r then
-		return nil,err.." (creating "..path..")"
+		return nil, err .. " (creating " .. path .. ")"
 	end
 	return lfs.mkdir(path)
 end
 
 local function sethostname(hostname)
-	if hostname == nil then return end
+	if hostname == nil then
+		return
+	end
+	hostname = sanitize(hostname)
 	local root = os.getenv("NUAGE_FAKE_ROOTDIR")
 	if not root then
 		root = ""
 	end
-	local hostnamepath = root .. "/etc/rc.conf.d/hostname"
+	local hostnamepath = sanitize(root .. "/etc/rc.conf.d/hostname")
 
 	mkdir_p(dirname(hostnamepath))
-	local f,err = io.open(hostnamepath, "w")
+	local f, err = io.open(hostnamepath, "w")
 	if not f then
-		warnmsg("Impossible to open "..hostnamepath .. ":" ..err)
+		warnmsg("impossible to open " .. hostnamepath .. ": " .. err)
 		return
 	end
-	f:write("hostname=\""..hostname.."\"\n")
-	f:close()
+	os.execute("sysrc -f " .. hostnamepath .. " hostname=" .. hostname .. " 1>/dev/null")
 end
 
 local function splitlist(list)
@@ -62,69 +87,77 @@ local function splitlist(list)
 	elseif type(list) == "table" then
 		ret = list
 	else
-		warnmsg("Invalid type ".. type(list) ..", expecting table or string")
+		warnmsg("invalid type ".. type(list) ..", expecting table or string")
 	end
 	return ret
 end
 
 local function adduser(pwd)
 	if (type(pwd) ~= "table") then
-		warnmsg("Argument should be a table")
+		warnmsg("argument should be a table")
 		return nil
 	end
 	local root = os.getenv("NUAGE_FAKE_ROOTDIR")
+	local gecos
+	local homedir
+	local shell = sanitize(pwd.shell)
+	local name = sanitize(pwd.name)
 	local cmd = "pw "
+	local extraargs=""
 	if root then
-		cmd = cmd .. "-R " .. root .. " "
+		cmd = sanitize(cmd .. "-R " .. root .. " ")
 	end
-	local f = io.popen(cmd .. " usershow " ..pwd.name .. " -7 2>/dev/null")
+	local f = io.popen(cmd .. " usershow " .. name .. " -7 2>/dev/null")
 	local pwdstr = f:read("*a")
 	f:close()
 	if pwdstr:len() ~= 0 then
 		return pwdstr:match("%a+:.+:%d+:%d+:.*:(.*):.*")
 	end
 	if not pwd.gecos then
-		pwd.gecos = pwd.name .. " User"
+		gecos = name .. " User"
+	else
+		gecos = sanitize(pwd.gecos)
 	end
 	if not pwd.homedir then
-		pwd.homedir = "/home/" .. pwd.name
+		homedir = "/home/" .. name
+	else
+		homedir = sanitize(pwd.homedir)
 	end
-	local extraargs=""
 	if pwd.groups then
 		local list = splitlist(pwd.groups)
-		extraargs = " -G ".. table.concat(list, ',')
+		extraargs = " -G " .. table.concat(list, ',')
 	end
 	-- pw will automatically create a group named after the username
 	-- do not add a -g option in this case
-	if pwd.primary_group and pwd.primary_group ~= pwd.name then
+	if pwd.primary_group and pwd.primary_group ~= name then
 		extraargs = extraargs .. " -g " .. pwd.primary_group
 	end
 	if not pwd.no_create_home then
 		extraargs = extraargs .. " -m "
 	end
 	if not pwd.shell then
-		pwd.shell = "/bin/sh"
+		shell = "/bin/sh"
 	end
 	local precmd = ""
 	local postcmd = ""
 	if pwd.passwd then
-		precmd = "echo "..pwd.passwd .. "| "
+		precmd = "echo " .. sanitize(pwd.passwd) .. " | "
 		postcmd = " -H 0 "
 	elseif pwd.plain_text_passwd then
-		precmd = "echo "..pwd.plain_text_passwd .. "| "
+		precmd = "echo " .. sanitize(pwd.plain_text_passwd) .. " | "
 		postcmd = " -h 0 "
 	end
 	cmd = precmd .. "pw "
 	if root then
 		cmd = cmd .. "-R " .. root .. " "
 	end
-	cmd = cmd .. "useradd -n ".. pwd.name .. " -M 0755 -w none "
-	cmd = cmd .. extraargs .. " -c '".. pwd.gecos
-	cmd = cmd .. "' -d '" .. pwd.homedir .. "' -s "..pwd.shell .. postcmd
+	cmd = cmd .. "useradd -n ".. name .. " -M 0755 -w none "
+	cmd = cmd .. extraargs .. " -c '".. gecos
+	cmd = cmd .. "' -d " .. homedir .. " -s ".. shell .. postcmd
 
 	local r = os.execute(cmd)
 	if not r then
-		warnmsg("nuageinit: fail to add user "..pwd.name);
+		warnmsg("fail to add user " .. name);
 		warnmsg(cmd)
 		return nil
 	end
@@ -133,23 +166,24 @@ local function adduser(pwd)
 		if root then
 			cmd = cmd .. "-R " .. root .. " "
 		end
-		cmd = cmd .. "lock " .. pwd.name
+		cmd = cmd .. "lock " .. name
 		os.execute(cmd)
 	end
-	return pwd.homedir
+	return homedir
 end
 
 local function addgroup(grp)
 	if (type(grp) ~= "table") then
-		warnmsg("Argument should be a table")
+		warnmsg("argument should be a table")
 		return false
 	end
+	local name = sanitize(grp.name)
 	local root = os.getenv("NUAGE_FAKE_ROOTDIR")
 	local cmd = "pw "
 	if root then
-		cmd = cmd .. "-R " .. root .. " "
+		cmd = sanitize(cmd .. "-R " .. root .. " ")
 	end
-	local f = io.popen(cmd .. " groupshow " ..grp.name .. " 2>/dev/null")
+	local f = io.popen(cmd .. " groupshow " .. name .. " 2>/dev/null")
 	local grpstr = f:read("*a")
 	f:close()
 	if grpstr:len() ~= 0 then
@@ -162,12 +196,12 @@ local function addgroup(grp)
 	end
 	cmd = "pw "
 	if root then
-		cmd = cmd .. "-R " .. root .. " "
+		cmd = sanitize(cmd .. "-R " .. root .. " ")
 	end
-	cmd = cmd .. "groupadd -n ".. grp.name .. extraargs
+	cmd = cmd .. "groupadd -n " .. name .. extraargs
 	local r = os.execute(cmd)
 	if not r then
-		warnmsg("nuageinit: fail to add group ".. grp.name);
+		warnmsg("fail to add group " .. grp.name);
 		warnmsg(cmd)
 		return false
 	end
@@ -175,11 +209,13 @@ local function addgroup(grp)
 end
 
 local function addsshkey(homedir, key)
+	homedir = sanitize(homedir)
+	key = sanitize(key)
 	local chownak = false
 	local chowndotssh = false
 	local root = os.getenv("NUAGE_FAKE_ROOTDIR")
 	if root then
-		homedir = root .. "/" .. homedir
+		homedir = sanitize(root .. "/" .. homedir)
 	end
 	local ak_path = homedir .. "/.ssh/authorized_keys"
 	local dotssh_path = homedir .. "/.ssh"
@@ -189,7 +225,7 @@ local function addsshkey(homedir, key)
 		dirattrs = lfs.attributes(dotssh_path)
 		if dirattrs == nil then
 			if not lfs.mkdir(dotssh_path) then
-				warnmsg("nuageinit: impossible to create ".. dotssh_path)
+				warnmsg("impossible to create " .. dotssh_path)
 				return
 			end
 			chowndotssh = true
@@ -199,7 +235,7 @@ local function addsshkey(homedir, key)
 
 	local f = io.open(ak_path, "a")
 	if not f then
-		warnmsg("nuageinit: impossible to open "..ak_path)
+		warnmsg("impossible to open " .. ak_path)
 		return
 	end
 	f:write(key .. "\n")
@@ -217,12 +253,15 @@ end
 local n = {
 	warn = warnmsg,
 	err = errmsg,
+	serialize = serialize,
+	unquote = unquote,
+	sanitize = sanitize,
+	dirname = dirname,
+	mkdir_p = mkdir_p,
 	sethostname = sethostname,
 	adduser = adduser,
 	addgroup = addgroup,
 	addsshkey = addsshkey,
-	dirname = dirname,
-	mkdir_p = mkdir_p,
 }
 
 return n
