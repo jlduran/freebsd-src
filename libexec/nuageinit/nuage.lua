@@ -58,6 +58,40 @@ local function mkdir_p(path)
 	return lfs.mkdir(path)
 end
 
+-- Check if a file exists
+local function file_exists(file)
+	local f = io.open(file, "rb")
+	if f then
+		f:close()
+	end
+	return f ~= nil
+end
+
+-- Read all the lines from a file
+-- Return an empty table if the file does not exist
+local function lines_from(file)
+	local lines = {}
+	if file_exists(file) then
+		for line in io.lines(file) do
+			lines[#lines + 1] = line
+		end
+	end
+	return lines
+end
+
+-- Check if an element is in a table
+-- Return the index if found or nil if not present
+local function find_in(any_table, element)
+	local found = nil
+	for i in pairs(any_table) do
+		if any_table[i] == element then
+			found = i
+			break
+		end
+	end
+	return found
+end
+
 local function sethostname(hostname)
 	if hostname == nil then
 		return
@@ -72,9 +106,10 @@ local function sethostname(hostname)
 	mkdir_p(dirname(hostnamepath))
 	local f, err = io.open(hostnamepath, "w")
 	if not f then
-		warnmsg("impossible to open " .. hostnamepath .. ": " .. err)
+		warnmsg("impossible to write " .. hostnamepath .. ": " .. err)
 		return
 	end
+	f:close()
 	os.execute("sysrc -f " .. hostnamepath .. " hostname=" .. hostname .. " 1>/dev/null")
 end
 
@@ -213,6 +248,7 @@ local function addsshkey(homedir, key)
 	key = sanitize(key)
 	local chownak = false
 	local chowndotssh = false
+	local authorized_keys
 	local root = os.getenv("NUAGE_FAKE_ROOTDIR")
 	if root then
 		homedir = sanitize(root .. "/" .. homedir)
@@ -232,10 +268,13 @@ local function addsshkey(homedir, key)
 			dirattrs = lfs.attributes(homedir)
 		end
 	end
-
+	authorized_keys = lines_from(ak_path)
+	if find_in(authorized_keys, key) then
+		return
+	end
 	local f = io.open(ak_path, "a")
 	if not f then
-		warnmsg("impossible to open " .. ak_path)
+		warnmsg("impossible to append " .. ak_path)
 		return
 	end
 	f:write(key .. "\n")
@@ -254,7 +293,6 @@ local n = {
 	warn = warnmsg,
 	err = errmsg,
 	serialize = serialize,
-	unquote = unquote,
 	sanitize = sanitize,
 	dirname = dirname,
 	mkdir_p = mkdir_p,
