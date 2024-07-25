@@ -3,6 +3,7 @@
 -- Copyright(c) 2022 Baptiste Daroussin <bapt@FreeBSD.org>
 
 local pu = require("posix.unistd")
+local lfs = require("lfs")
 
 local function warnmsg(str, prepend)
 	local pre = ""
@@ -81,10 +82,10 @@ end
 
 -- Check if an element is in a table
 -- Return the index if found or nil if not present
-local function find_in(any_table, element)
+local function find_in(a_table, element)
 	local found = nil
-	for i in pairs(any_table) do
-		if any_table[i] == element then
+	for i in pairs(a_table) do
+		if a_table[i] == element then
 			found = i
 			break
 		end
