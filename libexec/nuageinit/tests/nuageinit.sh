@@ -21,7 +21,7 @@ args_body()
 	atf_check -s exit:1 -e inline:"Usage /usr/libexec/nuageinit <cloud-init directory> [config-2|nocloud]\n" /usr/libexec/nuageinit
 	atf_check -s exit:1 -e inline:"Usage /usr/libexec/nuageinit <cloud-init directory> [config-2|nocloud]\n" /usr/libexec/nuageinit bla
 	atf_check -s exit:1 -e inline:"Usage /usr/libexec/nuageinit <cloud-init directory> [config-2|nocloud]\n" /usr/libexec/nuageinit bla meh plop
-	atf_check -s exit:1 -e inline:"Unknown cloud init type: meh\n" /usr/libexec/nuageinit bla meh
+	atf_check -s exit:1 -e inline:"nuageinit: Unknown cloud init type: meh\n" /usr/libexec/nuageinit bla meh
 }
 
 nocloud_body()
@@ -173,7 +173,7 @@ config2_body()
 {
 	here=$(pwd)
 	mkdir -p media/nuageinit
-	atf_check -s exit:1 -e match:"nuageinit: error parsing config-2: meta_data.json.*" /usr/libexec/nuageinit ${here}/media/nuageinit config-2
+	atf_check -s exit:1 -e match:"nuageinit: error parsing config-2 meta_data.json:.*" /usr/libexec/nuageinit ${here}/media/nuageinit config-2
 	printf "{}" > media/nuageinit/meta_data.json
 	atf_check /usr/libexec/nuageinit ${here}/media/nuageinit config-2
 	cat > media/nuageinit/meta_data.json << EOF
