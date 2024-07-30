@@ -23,6 +23,25 @@ local function errmsg(str, prepend)
 	os.exit(1)
 end
 
+-- Determine if a string is shell-safe
+local function safe(str)
+	return str:find("[^%w_@%%%+=:,%./%-]") == nil
+end
+
+-- Return a shell-escaped version of a string
+local function quote(str)
+	if not str then
+		return "''"
+	end
+	if safe(str) then
+		return str
+	end
+
+	-- Enclose with single quotes, and
+	-- single quotes with double quotes
+	return "'" .. ((str:gsub("'", "'\"'\"'"))) .. "'"
+end
+
 local function dirname(oldpath)
 	if not oldpath then
 		return nil
@@ -226,6 +245,8 @@ end
 local n = {
 	warn = warnmsg,
 	err = errmsg,
+	safe = safe,
+	quote = quote,
 	dirname = dirname,
 	mkdir_p = mkdir_p,
 	sethostname = sethostname,

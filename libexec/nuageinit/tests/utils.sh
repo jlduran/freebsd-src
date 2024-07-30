@@ -6,6 +6,7 @@
 
 atf_test_case warn
 atf_test_case err
+atf_test_case quote
 atf_test_case dirname
 
 warn_body()
@@ -18,6 +19,12 @@ err_body()
 	atf_check -e "inline:nuageinit: plop\n" -s exit:1 /usr/libexec/flua $(atf_get_srcdir)/err.lua
 }
 
+quote_body()
+{
+	export CATS="ALL YOUR CLOUD ARE BELONG TO US."
+	atf_check -o "inline:/bin/cat; echo \"\$CATS\"\n" -s exit:0 /usr/libexec/flua $(atf_get_srcdir)/quote.lua
+}
+
 dirname_body()
 {
 	atf_check -o "inline:/my/path/\n" -s exit:0 /usr/libexec/flua $(atf_get_srcdir)/dirname.lua
@@ -27,5 +34,6 @@ atf_init_test_cases()
 {
 	atf_add_test_case warn
 	atf_add_test_case err
+	atf_add_test_case quote
 	atf_add_test_case dirname
 }
