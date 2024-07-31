@@ -54,15 +54,12 @@ local function dirname(path)
 	return path
 end
 
+-- Create a directory (mkdir -p path)
 local function mkdir_p(path)
-	if lfs.attributes(path, "mode") ~= nil then
-		return true
+	if not path or path == "" then
+		return nil, "argument should be a path"
 	end
-	local r, err = mkdir_p(dirname(path))
-	if not r then
-		return nil, err .. " (creating " .. path .. ")"
-	end
-	return lfs.mkdir(path)
+	return os.execute("mkdir -p " .. quote(path))
 end
 
 local function sethostname(hostname)

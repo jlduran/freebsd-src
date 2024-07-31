@@ -8,6 +8,7 @@ atf_test_case warn
 atf_test_case err
 atf_test_case quote
 atf_test_case dirname
+atf_test_case mkdir_p
 
 warn_body()
 {
@@ -37,10 +38,31 @@ dirname_body()
 	atf_check -e file:stderr -o file:stdout /usr/libexec/flua $(atf_get_srcdir)/dirname.lua
 }
 
+mkdir_p_body()
+{
+	export NUAGE_FAKE_ROOTDIR="$PWD"
+	mkdir -p "${PWD}/my/existing_path"
+
+	cat > stderr <<- EOF
+	nuageinit: mkdir_p: argument should be a path
+	EOF
+	cat > stdout <<- EOF
+	nuageinit: mkdir_p: path1
+	nuageinit: mkdir_p: /my/existing_path
+	nuageinit: mkdir_p: /my/quoted path/path1
+	nuageinit: mkdir_p: /my/path/path1
+	EOF
+	atf_check -e file:stderr -o file:stdout /usr/libexec/flua $(atf_get_srcdir)/mkdir_p.lua
+	test -d "${PWD}path1" || atf_fail "'path1' not created"
+	test -d "${PWD}/my/quoted path/path1" || atf_fail "'/my/quoted path/path1' not created"
+	test -d "${PWD}"/my/path/path1 || atf_fail "'/my/path/path1' not created"
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case warn
 	atf_add_test_case err
 	atf_add_test_case quote
 	atf_add_test_case dirname
+	atf_add_test_case mkdir_p
 }
