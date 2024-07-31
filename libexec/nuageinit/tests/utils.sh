@@ -27,7 +27,14 @@ quote_body()
 
 dirname_body()
 {
-	atf_check -o "inline:/my/path/\n" -s exit:0 /usr/libexec/flua $(atf_get_srcdir)/dirname.lua
+	cat > stderr <<- EOF
+	nuageinit: dirname: argument should be a path
+	nuageinit: dirname: no path found
+	EOF
+	cat > stdout <<- EOF
+	nuageinit: dirname: /my/path/
+	EOF
+	atf_check -e file:stderr -o file:stdout /usr/libexec/flua $(atf_get_srcdir)/dirname.lua
 }
 
 atf_init_test_cases()
