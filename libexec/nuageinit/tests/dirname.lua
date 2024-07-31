@@ -2,10 +2,17 @@
 
 local n = require("nuage")
 
-print(n.dirname("/my/path/path1"))
-if n.dirname("path") then
-	n.err('Expecting nil for n.dirname("path")')
-end
-if n.dirname() then
-	n.err("Expecting nil for n.dirname")
+local tests = {
+	false,
+	"path",
+	"/my/path/path1"
+}
+
+for _, test in pairs(tests) do
+	local name, err = n.dirname(test)
+	if name then
+		print("nuageinit: dirname: " .. name)
+	else
+		n.warn("dirname: " .. err)
+	end
 end

@@ -42,13 +42,14 @@ local function quote(str)
 	return "'" .. ((str:gsub("'", "'\"'\"'"))) .. "'"
 end
 
-local function dirname(oldpath)
-	if not oldpath then
-		return nil
+-- Return the directory portion of a path
+local function dirname(path)
+	if not path then
+		return nil, "argument should be a path"
 	end
-	local path = oldpath:gsub("[^/]+/*$", "")
+	path = path:gsub("[^/]+/*$", "")
 	if path == "" then
-		return nil
+		return nil, "no path found"
 	end
 	return path
 end
