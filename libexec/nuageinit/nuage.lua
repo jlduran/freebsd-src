@@ -62,6 +62,31 @@ local function mkdir_p(path)
 	return os.execute("mkdir -p " .. quote(path))
 end
 
+-- XXX JL this is slow!
+-- -q does not work as expected.
+-- -R does not work, because it chroots and expects a sh inside.
+-- Its only real value would be without -f, but then we won't
+-- be able to mock the tests.
+-- Run sysrc [-f file] name=[value]
+local function sysrc_f(name, value, file)
+	if not name or not safe(name) or name == "" then
+		return
+	end
+	if not value then
+		return
+	end
+	if not file or file == "" then
+		file = ""
+	else
+		file = "-f " .. quote(file) .. " "
+	end
+
+	os.execute(
+		"sysrc -q " .. file .. name .. "=" ..
+		quote(value) .. " 1> /dev/null"
+	)
+end
+
 local function sethostname(hostname)
 	if hostname == nil then
 		return
@@ -247,6 +272,7 @@ local n = {
 	quote = quote,
 	dirname = dirname,
 	mkdir_p = mkdir_p,
+	sysrc_f = sysrc_f,
 	sethostname = sethostname,
 	adduser = adduser,
 	addgroup = addgroup,
