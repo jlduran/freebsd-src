@@ -2,12 +2,14 @@ PACKAGE=	tests
 
 ATF_TESTS_SH=	nuage utils nuageinit
 
-${PACKAGE}FILES+=	warn.lua
-${PACKAGE}FILES+=	err.lua
-${PACKAGE}FILES+=	dirname.lua
-${PACKAGE}FILES+=	sethostname.lua
+${PACKAGE}FILES+=	addgroup.lua
 ${PACKAGE}FILES+=	addsshkey.lua
 ${PACKAGE}FILES+=	adduser.lua
-${PACKAGE}FILES+=	addgroup.lua
+${PACKAGE}FILES+=	dirname.lua
+${PACKAGE}FILES+=	err.lua
+${PACKAGE}FILES+=	mkdir_p.lua
+${PACKAGE}FILES+=	quote.lua
+${PACKAGE}FILES+=	sethostname.lua
+${PACKAGE}FILES+=	warn.lua
 
 .include <bsd.test.mk>
