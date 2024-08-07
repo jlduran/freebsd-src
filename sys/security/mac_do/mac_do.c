@@ -24,6 +24,8 @@
 #include <sys/ucred.h>
 #include <sys/vnode.h>
 
+#include <machine/stdarg.h>
+
 #include <security/mac/mac_policy.h>
 
 static SYSCTL_NODE(_security_mac, OID_AUTO, do,
@@ -32,6 +34,11 @@ static SYSCTL_NODE(_security_mac, OID_AUTO, do,
 static int	do_enabled = 1;
 SYSCTL_INT(_security_mac_do, OID_AUTO, enabled, CTLFLAG_RWTUN,
     &do_enabled, 0, "Enforce do policy");
+
+static int	print_parse_error = 1;
+SYSCTL_INT(_security_mac_do, OID_AUTO, print_parse_error, CTLFLAG_RWTUN,
+    &print_parse_error, 0, "Print parse errors on setting rules "
+    "(via sysctl(8)).");
 
 static MALLOC_DEFINE(M_DO, "do_rule", "Rules for mac_do");
 
@@ -51,6 +58,13 @@ static const char *id_type_to_str[] = {
 	[IT_GID]	= "gid",
 	/* See also parse_id_type(). */
 	[IT_ANY]	= "*",
+};
+
+#define PARSE_ERROR_SIZE	256
+
+struct parse_error {
+	size_t	pos;
+	char	msg[PARSE_ERROR_SIZE];
 };
 
 /*
@@ -351,8 +365,32 @@ strtonni(const char *const restrict s, const char **const restrict endptr,
 	return ((int)l);
 }
 
+
+static void
+alloc_parse_error(struct parse_error **const parse_error, const size_t pos,
+    const char *const fmt, ...)
+{
+	struct parse_error *const err = malloc(sizeof(*err), M_DO, M_WAITOK);
+	va_list ap;
+
+	err->pos = pos;
+	va_start(ap, fmt);
+	vsnprintf(err->msg, PARSE_ERROR_SIZE, fmt, ap);
+	va_end(ap);
+
+	MPASS(*parse_error == NULL);
+	*parse_error = err;
+}
+
+static void
+free_parse_error(struct parse_error *const parse_error)
+{
+	free(parse_error, M_DO);
+}
+
 static int
-parse_id_type(const char *const string, id_type_t *const type)
+parse_id_type(const char *const string, id_type_t *const type,
+    struct parse_error **const parse_error)
 {
 	/*
 	 * Special case for "any", as the canonical form for IT_ANY in
@@ -372,6 +410,7 @@ parse_id_type(const char *const string, id_type_t *const type)
 	}
 
 	*type = IT_INVALID;
+	alloc_parse_error(parse_error, 0, "No valid type found.");
 	return (EINVAL);
 }
 
@@ -389,8 +428,10 @@ has_clauses(const id_nb_t nb, const flags_t type_flags)
 
 static int
 parse_target_clause(char *to, struct rule *const rule,
-    struct id_list *const uid_list, struct id_list *const gid_list)
+    struct id_list *const uid_list, struct id_list *const gid_list,
+    struct parse_error **const parse_error)
 {
+	const char *const start = to;
 	char *to_type, *to_id;
 	const char *p;
 	struct id_list *list;
@@ -402,18 +443,23 @@ parse_target_clause(char *to, struct rule *const rule,
 	id_type_t type;
 	int error;
 
+	MPASS(*parse_error == NULL);
+	MPASS(to != NULL);
 	to_type = strsep(&to, "=");
-	if (to_type == NULL)
-		goto einval;
-	error = parse_id_type(to_type, &type);
+	MPASS(to_type != NULL);
+	error = parse_id_type(to_type, &type, parse_error);
 	if (error != 0)
 		goto einval;
 
 	to_id = strsep(&to, "");
 	switch (type) {
 	case IT_GID:
-		if (to_id == NULL)
+		if (to_id == NULL) {
+			alloc_parse_error(parse_error, to_type - start,
+			    "No '=' and ID specification after type '%s'.",
+			    to_type);
 			goto einval;
+		}
 
 		/*
 		 * This is easily wrapped into a loop for when/if we allow
@@ -453,17 +499,33 @@ parse_target_clause(char *to, struct rule *const rule,
 			 * supplementary groups).
 			 */
 			if (is.flags & MDF_PRIMARY) {
-				if (*tflags & MDF_HAS_PRIMARY_CLAUSE)
+				if (*tflags & MDF_HAS_PRIMARY_CLAUSE) {
+					alloc_parse_error(parse_error,
+					    to_id - start,
+					    "'any' specified after another "
+					    "(primary) GID.");
 					goto einval;
+				}
 				*tflags |= gid_flags | MDF_ANY;
 			} else {
 				/*
 				 * If a supplementary group flag was present, it
 				 * must be MDF_SUPP_ALLOW ("+").
 				 */
-				if ((is.flags & MDF_SUPP_MASK) != MDF_SUPP_ALLOW ||
-				    (*tflags & MDF_HAS_SUPP_CLAUSE))
+				if ((is.flags & MDF_SUPP_MASK) != MDF_SUPP_ALLOW) {
+					alloc_parse_error(parse_error,
+					    to_id - start,
+					    "'any' specified with another "
+					    "flag than '+'.");
 					goto einval;
+				}
+				if (*tflags & MDF_HAS_SUPP_CLAUSE) {
+					alloc_parse_error(parse_error,
+					    to_id - start,
+					    "'+any' specified after another "
+					    "(supplementary) GID.");
+					goto einval;
+				}
 				*tflags |= gid_flags | MDF_ANY_SUPP;
 			}
 			goto check_type_and_finish;
@@ -473,17 +535,32 @@ parse_target_clause(char *to, struct rule *const rule,
 			 * category.
 			 */
 			if ((is.flags & MDF_PRIMARY)) {
-				if (*tflags & MDF_ANY)
+				if (*tflags & MDF_ANY) {
+					alloc_parse_error(parse_error,
+					    to_id - start,
+					    "Some (primary) GID specified after "
+					    "'any'.");
 					goto einval;
-			} else if (*tflags & MDF_ANY_SUPP)
+				}
+			} else if (*tflags & MDF_ANY_SUPP &&
+			    is.flags & MDF_SUPP_ALLOW) {
+				alloc_parse_error(parse_error,
+				    to_id - start,
+				    "Some (supplementary) GID specified after "
+				    "'+any'.");
 				goto einval;
+			}
 			*tflags |= gid_flags;
 		}
 		break;
 
 	case IT_UID:
-		if (to_id == NULL)
+		if (to_id == NULL) {
+			alloc_parse_error(parse_error, to_type - start,
+			    "No '=' and ID specification after type '%s'.",
+			    to_type);
 			goto einval;
+		}
 
 		list = uid_list;
 		nb = &rule->uids_nb;
@@ -492,8 +569,11 @@ parse_target_clause(char *to, struct rule *const rule,
 		/* "*" or "any"? */
 		if (parse_any(to_id)) {
 			/* There must not be any other clause. */
-			if (has_clauses(*nb, *tflags))
+			if (has_clauses(*nb, *tflags)) {
+				alloc_parse_error(parse_error, to_id - start,
+				    "'any' specified after another UID.");
 				goto einval;
+			}
 			*tflags |= MDF_ANY;
 			goto check_type_and_finish;
 		} else {
@@ -501,22 +581,32 @@ parse_target_clause(char *to, struct rule *const rule,
 			 * Check that we haven't already seen "any" for the same
 			 * category.
 			 */
-			if (*tflags & MDF_ANY)
+			if (*tflags & MDF_ANY) {
+				alloc_parse_error(parse_error, to_id - start,
+				    "Some UID specified after 'any'.");
 				goto einval;
+			}
 		}
 		break;
 
 	case IT_ANY:
 		/* No ID allowed. */
-		if (to_id != NULL)
+		if (to_id != NULL) {
+			alloc_parse_error(parse_error, to_type - start,
+			    "No '=' and ID allowed after type '%s'.", to_type);
 			goto einval;
+		}
 		/*
 		 * We can't have IT_ANY after any other IT_*, it must be the
 		 * only one.
 		 */
 		if (has_clauses(rule->uids_nb, rule->uid_flags) ||
-		    has_clauses(rule->gids_nb, rule->gid_flags))
+		    has_clauses(rule->gids_nb, rule->gid_flags)) {
+			alloc_parse_error(parse_error, to_type - start,
+			    "Target clause of type '%s' coming after another "
+			    "clause (must be alone).", to_type);
 			goto einval;
+		}
 		rule->uid_flags |= MDF_ANY;
 		rule->gid_flags |= MDF_ANY | MDF_ANY_SUPP |
 		    MDF_HAS_PRIMARY_CLAUSE | MDF_HAS_SUPP_CLAUSE;
@@ -538,8 +628,12 @@ parse_target_clause(char *to, struct rule *const rule,
 		if (*tflags & MDF_CURRENT) {
 			/* Duplicate "." <id>.  Try to coalesce. */
 			error = coalesce_id_flags(is.flags, tflags);
-			if (error != 0)
+			if (error != 0) {
+				alloc_parse_error(parse_error, to_id - start,
+				    "Incompatible flags with prior clause "
+				    "with same target.");
 				goto einval;
+			}
 		} else
 			*tflags |= MDF_CURRENT | is.flags;
 		goto check_type_and_finish;
@@ -547,8 +641,11 @@ parse_target_clause(char *to, struct rule *const rule,
 
 	/* Parse an ID. */
 	is.id = strtonni(to_id, &p, 10);
-	if (is.id < 0 || *p != '\0')
+	if (is.id < 0 || *p != '\0') {
+		alloc_parse_error(parse_error, to_id - start,
+		    "Cannot parse a numerical ID (base 10, no sign).");
 		goto einval;
+	}
 
 	/*
 	 * We check for duplicate IDs and coalesce their 'struct id_spec' only
@@ -556,18 +653,22 @@ parse_target_clause(char *to, struct rule *const rule,
 	 * (using sorted arrays).
 	 */
 	++*nb;
-	if (*nb == 0)
+	if (*nb == 0) {
+		alloc_parse_error(parse_error, 0,
+		    "Too many target clauses of type '%s'.", to_type);
 		return (EOVERFLOW);
+	}
 	ie = malloc(sizeof(*ie), M_DO, M_WAITOK);
 	ie->spec = is;
 	TAILQ_INSERT_TAIL(list, ie, ie_entries);
 	check_type_and_id_spec(type, &is);
-finish:
-	return (0);
 check_type_and_finish:
 	check_type_and_type_flags(type, *tflags);
+finish:
 	return (0);
 einval:
+	/* We must have built a parse error on error. */
+	MPASS(*parse_error != NULL);
 	return (EINVAL);
 }
 
@@ -598,7 +699,8 @@ id_spec_cmp(const void *const p1, const void *const p2)
  */
 static int
 pour_list_into_rule(const id_type_t type, struct id_list *const list,
-    struct id_spec *const array, id_nb_t *const nb)
+    struct id_spec *const array, id_nb_t *const nb,
+    struct parse_error **const parse_error)
 {
 	struct id_elem *ie, *ie_next;
 	size_t idx = 0;
@@ -628,8 +730,12 @@ pour_list_into_rule(const id_type_t type, struct id_list *const list,
 				    coalesce_id_flags(array[idx].flags,
 				    &array[ref_idx].flags);
 
-				if (error != 0)
+				if (error != 0) {
+					alloc_parse_error(parse_error, 0,
+					    "Incompatible or duplicate flags "
+					    "for ID %d.", id);
 					return (EINVAL);
+				}
 				check_type_and_id_flags(type,
 				    array[ref_idx].flags);
 			}
@@ -660,8 +766,10 @@ pour_list_into_rule(const id_type_t type, struct id_list *const list,
  * explained in functions checking privileges below.
  */
 static int
-parse_single_rule(char *rule, struct rules *const rules)
+parse_single_rule(char *rule, struct rules *const rules,
+    struct parse_error **const parse_error)
 {
+	const char *const start = rule;
 	const char *from_type, *from_id, *p;
 	char *to_list;
 	struct id_list uid_list, gid_list;
@@ -669,7 +777,7 @@ parse_single_rule(char *rule, struct rules *const rules)
 	struct rule *new;
 	int error;
 
-	MPASS(rule != NULL);
+	MPASS(*parse_error == NULL);
 	TAILQ_INIT(&uid_list);
 	TAILQ_INIT(&gid_list);
 
@@ -678,7 +786,7 @@ parse_single_rule(char *rule, struct rules *const rules)
 
 	from_type = strsep(&rule, "=");
 	MPASS(from_type != NULL); /* Because 'rule' was not NULL. */
-	error = parse_id_type(from_type, &new->from_type);
+	error = parse_id_type(from_type, &new->from_type, parse_error);
 	if (error != 0)
 		goto einval;
 	switch (new->from_type) {
@@ -686,16 +794,23 @@ parse_single_rule(char *rule, struct rules *const rules)
 	case IT_GID:
 		break;
 	default:
+		alloc_parse_error(parse_error, 0, "Type '%s' not allowed in "
+		    "the \"from\" part of rules.");
 		goto einval;
 	}
 
 	from_id = strsep(&rule, ":");
-	if (is_null_or_empty(from_id))
+	if (is_null_or_empty(from_id)) {
+		alloc_parse_error(parse_error, 0, "No ID specified.");
 		goto einval;
+	}
 
 	new->from_id = strtonni(from_id, &p, 10);
-	if (new->from_id < 0 || *p != '\0')
+	if (new->from_id < 0 || *p != '\0') {
+		alloc_parse_error(parse_error, from_id - start,
+		    "Cannot parse a numerical ID (base 10, no sign).");
 		goto einval;
+	}
 
 	/*
 	 * We will now parse the "to" list.
@@ -710,12 +825,17 @@ parse_single_rule(char *rule, struct rules *const rules)
 	 * O(log(n)) instead of linearly.
 	 */
 	to_list = strsep(&rule, ",");
-	if (to_list == NULL)
+	if (to_list == NULL) {
+		alloc_parse_error(parse_error, 0, "No target list.");
 		goto einval;
+	}
 	do {
-		error = parse_target_clause(to_list, new, &uid_list, &gid_list);
-		if (error != 0)
+		error = parse_target_clause(to_list, new, &uid_list, &gid_list,
+		    parse_error);
+		if (error != 0) {
+			(*parse_error)->pos += to_list - start;
 			goto einval;
+		}
 
 		to_list = strsep(&rule, ",");
 	} while (to_list != NULL);
@@ -724,7 +844,7 @@ parse_single_rule(char *rule, struct rules *const rules)
 		new->uids = malloc(sizeof(*new->uids) * new->uids_nb, M_DO,
 		    M_WAITOK);
 		error = pour_list_into_rule(IT_UID, &uid_list, new->uids,
-		    &new->uids_nb);
+		    &new->uids_nb, parse_error);
 		if (error != 0)
 			goto einval;
 	}
@@ -740,7 +860,7 @@ parse_single_rule(char *rule, struct rules *const rules)
 		new->gids = malloc(sizeof(*new->gids) * new->gids_nb, M_DO,
 		    M_WAITOK);
 		error = pour_list_into_rule(IT_GID, &gid_list, new->gids,
-		    &new->gids_nb);
+		    &new->gids_nb, parse_error);
 		if (error != 0)
 			goto einval;
 	}
@@ -764,6 +884,7 @@ einval:
 	    free(ie, M_DO);
 	TAILQ_FOREACH_SAFE(ie, &uid_list, ie_entries, ie_next)
 	    free(ie, M_DO);
+	MPASS(*parse_error != NULL);
 	return (EINVAL);
 }
 
@@ -774,7 +895,9 @@ einval:
  * representing the rules.  On error, the returned value is non-zero and
  * '*rulesp' is unchanged.  If 'string' has length greater or equal to
  * MAC_RULE_STRING_LEN, ENAMETOOLONG is returned.  If it is not in the expected
- * format, EINVAL is returned.
+ * format, EINVAL is returned.  If an error is returned, '*parse_error' is set
+ * to point to a 'struct parse_error' giving an error message for the problem,
+ * else '*parse_error' is set to NULL.
  *
  * Expected format: A semi-colon-separated list of rules of the form
  * "<from>:<target>".  The <from> part is of the form "<type>=<id>" where <type>
@@ -788,15 +911,22 @@ einval:
  * - "gid=1010:gid=1011,gid=1012,gid=1013"
  */
 static int
-parse_rules(const char *const string, struct rules **const rulesp)
+parse_rules(const char *const string, struct rules **const rulesp,
+    struct parse_error **const parse_error)
 {
 	const size_t len = strlen(string);
 	char *copy, *p, *rule;
 	struct rules *rules;
 	int error = 0;
 
-	if (len >= MAC_RULE_STRING_LEN)
+	*parse_error = NULL;
+
+	if (len >= MAC_RULE_STRING_LEN) {
+		alloc_parse_error(parse_error, 0,
+		    "Rule specification string is too long (%zu, max %zu)",
+		    len, MAC_RULE_STRING_LEN - 1);
 		return (ENAMETOOLONG);
+	}
 
 	rules = alloc_rules();
 	bcopy(string, rules->string, len + 1);
@@ -810,8 +940,9 @@ parse_rules(const char *const string, struct rules **const rulesp)
 	while ((rule = strsep(&p, ";")) != NULL) {
 		if (rule[0] == '\0')
 			continue;
-		error = parse_single_rule(rule, rules);
+		error = parse_single_rule(rule, rules, parse_error);
 		if (error != 0) {
+			(*parse_error)->pos += rule - copy;
 			toast_rules(rules);
 			goto out;
 		}
@@ -920,12 +1051,13 @@ set_empty_rules(struct prison *const pr)
  * Returns the same error code as parse_rules() (which see).
  */
 static int
-parse_and_set_rules(struct prison *const pr, const char *rules_string)
+parse_and_set_rules(struct prison *const pr, const char *rules_string,
+    struct parse_error **const parse_error)
 {
 	struct rules *rules;
 	int error;
 
-	error = parse_rules(rules_string, &rules);
+	error = parse_rules(rules_string, &rules, parse_error);
 	if (error != 0)
 		return (error);
 	set_rules(pr, rules);
@@ -939,6 +1071,7 @@ mac_do_sysctl_rules(SYSCTL_HANDLER_ARGS)
 	struct prison *const td_pr = req->td->td_ucred->cr_prison;
 	struct prison *pr;
 	struct rules *rules;
+	struct parse_error *parse_error;
 	int error;
 
 	rules = find_rules(td_pr, &pr);
@@ -950,7 +1083,13 @@ mac_do_sysctl_rules(SYSCTL_HANDLER_ARGS)
 		goto out;
 
 	/* Set our prison's rules, not that of the jail we inherited from. */
-	error = parse_and_set_rules(td_pr, buf);
+	error = parse_and_set_rules(td_pr, buf, &parse_error);
+	if (error != 0) {
+		if (print_parse_error)
+			printf("MAC/do: Parse error at index %zu: %s\n",
+			    parse_error->pos, parse_error->msg);
+		free_parse_error(parse_error);
+	}
 out:
 	free(buf, M_DO);
 	return (error);
@@ -1093,6 +1232,7 @@ mac_do_jail_set(void *obj, void *data)
 	struct prison *pr = obj;
 	struct vfsoptlist *opts = data;
 	char *rules_string;
+	struct parse_error *parse_error;
 	int error, jsys;
 
 	/*
@@ -1138,7 +1278,13 @@ mac_do_jail_set(void *obj, void *data)
 		break;
 	case JAIL_SYS_DISABLE:
 	case JAIL_SYS_NEW:
-		error = parse_and_set_rules(pr, rules_string);
+		error = parse_and_set_rules(pr, rules_string, &parse_error);
+		if (error != 0) {
+			vfs_opterror(opts,
+			    "MAC/do: Parse error at index %zu: %s\n",
+			    parse_error->pos, parse_error->msg);
+			free_parse_error(parse_error);
+		}
 		break;
 	default:
 		__assert_unreachable();
