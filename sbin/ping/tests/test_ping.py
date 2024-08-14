@@ -63,14 +63,14 @@ def build_response_packet(echo, ip, icmp, oip_ihl, special):
     if icmp.type in icmp_id_seq_types:
         pkt = ip / icmp / load
     else:
-        ip.options = ""
+        del ip.options
         pkt = ip / icmp / oip / oicmp / load
     return pkt
 
 
 def generate_ip_options(opts):
     if not opts:
-        return ""
+        return []
 
     routers = [
         "192.0.2.10",
@@ -118,7 +118,7 @@ def generate_ip_options(opts):
         ToolsHelper.set_sysctl("net.inet.ip.process_options", 0)
         options = sc.IPOption(b"\x9f" * 40)
     else:
-        options = ""
+        options = []
     return options
 
 
