@@ -134,7 +134,7 @@ def pinger(
     icmp_code: sc.scapy.fields.MultiEnumField,
     # IP arguments
     ihl: Optional[sc.scapy.fields.BitField] = None,
-    flags: Optional[sc.scapy.fields.FlagsField] = None,
+    flags: Optional[sc.scapy.fields.FlagsField] = 0,
     opts: Optional[str] = None,
     oip_ihl: Optional[sc.scapy.fields.BitField] = None,
     special: Optional[str] = None,
@@ -169,7 +169,7 @@ def pinger(
 
     :keyword ihl: Internet Header Length, defaults to None
     :type ihl: class:`scapy.fields.BitField`, optional
-    :keyword flags: IP flags - one of `DF`, `MF` or `evil`, defaults to None
+    :keyword flags: IP flags - one of `DF`, `MF` or `evil`, defaults to 0
     :type flags: class:`scapy.fields.FlagsField`, optional
     :keyword opts: Include IP options - one of `EOL`, `NOP`, `NOP-40`, `unk`,
         `unk-40`, `RR`, `RR-same`, `RR-trunc`, `LSRR`, `LSRR-trunc`, `SSRR` or
