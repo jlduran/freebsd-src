@@ -148,12 +148,16 @@ wildcard_body()
 		"block" \
 		"anchor \"foo/*\""
 
+	atf_check -s exit:0 jexec alcatraz pfctl -a foo -sA
+
 	atf_check -s exit:2 -o ignore ping -c 1 192.0.2.1
 
 	echo "pass" | jexec alcatraz pfctl -g -f - -a "foo/bar"
 
 	jexec alcatraz pfctl -sr -a "*"
 	atf_check -s exit:0 -o ignore ping -c 1 192.0.2.1
+
+	atf_check -s exit:0 -o ignore jexec alcatraz pfctl -a foo -sa
 }
 
 wildcard_cleanup()

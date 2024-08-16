@@ -1169,7 +1169,7 @@ pfctl_show_eth_rules(int dev, char *path, int opts, enum pfctl_show format,
 	}
 
 	if ((ret = pfctl_get_eth_rules_info(dev, &info, path)) != 0) {
-		warnc(ret, "DIOCGETETHRULES");
+		//warnc(ret, "XXX DIOCGETETHRULES");
 		return (-1);
 	}
 	for (int nr = 0; nr < info.nr; nr++) {
@@ -1286,7 +1286,7 @@ pfctl_show_rules(int dev, char *path, int opts, enum pfctl_show format,
 	if (opts & PF_OPT_SHOWALL) {
 		ret = pfctl_get_rules_info_h(pfh, &ri, PF_PASS, path);
 		if (ret != 0) {
-			warnc(ret, "DIOCGETRULES");
+			//warnc(ret, "XXX DIOCGETRULES");
 			goto error;
 		}
 		header++;
@@ -1490,7 +1490,7 @@ pfctl_show_nat(int dev, char *path, int opts, char *anchorname, int depth,
 	for (i = 0; i < 3; i++) {
 		ret = pfctl_get_rules_info_h(pfh, &ri, nattype[i], path);
 		if (ret != 0) {
-			warnc(ret, "DIOCGETRULES");
+			//warnc(ret, "XXX DIOCGETRULES");
 			return (-1);
 		}
 		for (nr = 0; nr < ri.nr; ++nr) {
@@ -2827,8 +2827,8 @@ pfctl_show_anchors(int dev, int opts, char *anchorname)
 		if (errno == EINVAL)
 			fprintf(stderr, "Anchor '%s' not found.\n",
 			    anchorname);
-		else
-			err(1, "DIOCGETRULESETS");
+		//else
+			//err(1, "XXX DIOCGETRULESETS");
 		return (-1);
 	}
 	mnr = pr.nr;
@@ -2862,10 +2862,11 @@ pfctl_show_eth_anchors(int dev, int opts, char *anchorname)
 	int ret;
 
 	if ((ret = pfctl_get_eth_rulesets_info(dev, &ri, anchorname)) != 0) {
-		if (ret == ENOENT)
-			fprintf(stderr, "Anchor '%s' not found.\n",
-			    anchorname);
-		else
+		if (ret != ENOENT)
+		//if (ret == ENOENT)
+		//	fprintf(stderr, "XXX Anchor '%s' not found.\n",
+		//	    anchorname);
+		//else
 			errc(1, ret, "DIOCGETETHRULESETS");
 		return (-1);
 	}
