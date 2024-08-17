@@ -4,38 +4,36 @@
 
 /set type=dir uname=root gname=wheel mode=0755 tags=package=runtime
 .
-    account             mode=0750
+    account         mode=0750
     ..
-    at
-/set uname=daemon
+/set type=dir uname=daemon gname=wheel mode=0755
+    at              uname=root
         jobs            tags=package=at
         ..
         spool           tags=package=at
         ..
-/set uname=root
     ..
-/set mode=0750
-/set gname=audit
-    audit
-        dist            uname=auditdistd gname=audit mode=0770
+/set type=dir uname=auditdistd gname=audit mode=0770
+    audit           uname=root mode=0750
+        dist
         ..
-        remote          uname=auditdistd gname=wheel mode=0700
+        remote          gname=wheel mode=0700
         ..
     ..
-    authpf              uname=root gname=authpf mode=0770
+    authpf          uname=root gname=authpf
     ..
-/set gname=wheel
-    backups
+    backups         uname=root gname=wheel mode=0750
     ..
-    cache               mode=0755
+    cache           uname=root gname=wheel mode=0755
     ..
-    crash
+    crash           uname=root gname=wheel mode=0750
     ..
-    cron
-        tabs            mode=0700
+/set type=dir uname=root gname=wheel mode=0700
+    cron            mode=0750
+        tabs
         ..
     ..
-/set mode=0755
+/set type=dir uname=root gname=wheel mode=0755
     db
         entropy         uname=operator gname=operator mode=0700
         ..
@@ -53,7 +51,7 @@
         ..
         ports
         ..
-        zfsd tags=package=zfs
+        zfsd            tags=package=zfs
             cases
             ..
         ..
@@ -73,39 +71,40 @@
     preserve
     ..
     run
-        bhyve tags=package=bhyve
+        bhyve           tags=package=bhyve
         ..
-        dhclient tags=package=dhclient
+        dhclient        tags=package=dhclient
         ..
         ppp             gname=network mode=0770 tags=package=ppp
         ..
-        wpa_supplicant tags=package=wpa
+        wpa_supplicant  tags=package=wpa
         ..
     ..
     rwho            gname=daemon mode=0775
     ..
-    spool
-        dma             uname=root gname=mail mode=0770 tags=package=dma
+/set type=dir uname=root gname=daemon mode=0755
+    spool           gname=wheel
+        dma             gname=mail mode=0770 tags=package=dma
         ..
         lock            uname=uucp gname=dialer mode=0775
         ..
-/set gname=daemon
         lpd
         ..
         output
             lpd
             ..
         ..
-/set gname=wheel
     ..
-    tmp             mode=01777
-        vi.recover      mode=01777
+/set type=dir uname=root gname=wheel mode=01777
+    tmp
+        vi.recover
         ..
     ..
-    unbound         uname=unbound gname=unbound mode=0755 tags=package=unbound
-        conf.d          uname=unbound gname=unbound mode=0755 tags=package=unbound
+/set type=dir uname=unbound gname=unbound mode=0755
+    unbound         tags=package=unbound
+        conf.d          tags=package=unbound
         ..
     ..
-    yp
+    yp              uname=root gname=wheel
     ..
 ..
