@@ -1,4 +1,4 @@
-/*	$NetBSD: blacklist.c,v 1.5 2015/01/22 16:19:53 christos Exp $	*/
+/*	$NetBSD: blacklist.c,v 1.3 2024/08/02 17:11:56 christos Exp $	*/
 
 /*-
  * Copyright (c) 2014 The NetBSD Foundation, Inc.
@@ -33,7 +33,7 @@
 #endif
 
 #include <sys/cdefs.h>
-__RCSID("$NetBSD: blacklist.c,v 1.5 2015/01/22 16:19:53 christos Exp $");
+__RCSID("$NetBSD: blacklist.c,v 1.3 2024/08/02 17:11:56 christos Exp $");
 
 #include <stdio.h>
 #include <bl.h>
@@ -98,7 +98,14 @@ blacklist_r(struct blacklist *bl, int action, int rfd, const char *msg)
 
 struct blacklist *
 blacklist_open(void) {
-	return bl_create(false, NULL, vsyslog);
+	return bl_create(false, NULL, vsyslog_r);
+}
+
+struct blacklist *
+blacklist_open2(
+    void (*logger)(int, struct syslog_data *, const char *, va_list))
+{
+	return bl_create(false, NULL, logger);
 }
 
 void

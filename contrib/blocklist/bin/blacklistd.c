@@ -1,4 +1,4 @@
-/*	$NetBSD: blacklistd.c,v 1.38 2019/02/27 02:20:18 christos Exp $	*/
+/*	$NetBSD: blacklistd.c,v 1.5 2024/08/02 17:11:55 christos Exp $	*/
 
 /*-
  * Copyright (c) 2015 The NetBSD Foundation, Inc.
@@ -32,7 +32,7 @@
 #include "config.h"
 #endif
 #include <sys/cdefs.h>
-__RCSID("$NetBSD: blacklistd.c,v 1.38 2019/02/27 02:20:18 christos Exp $");
+__RCSID("$NetBSD: blacklistd.c,v 1.5 2024/08/02 17:11:55 christos Exp $");
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -334,7 +334,7 @@ static void
 addfd(struct pollfd **pfdp, bl_t **blp, size_t *nfd, size_t *maxfd,
     const char *path)
 {
-	bl_t bl = bl_create(true, path, vflag ? vdlog : vsyslog);
+	bl_t bl = bl_create(true, path, vflag ? vdlog : vsyslog_r);
 	if (bl == NULL || !bl_isconnected(bl))
 		exit(EXIT_FAILURE);
 	if (*nfd >= *maxfd) {
@@ -395,15 +395,25 @@ rules_flush(void)
 static void
 rules_restore(void)
 {
+	DB *db;
 	struct conf c;
 	struct dbinfo dbi;
 	unsigned int f;
 
-	for (f = 1; state_iterate(state, &c, &dbi, f) == 1; f = 0) {
+	db = state_open(dbfile, O_RDONLY, 0);
+	if (db == NULL) {
+		(*lfun)(LOG_ERR, "Can't open `%s' to restore state (%m)",
+			dbfile);
+		return;
+	}
+	for (f = 1; state_iterate(db, &c, &dbi, f) == 1; f = 0) {
 		if (dbi.id[0] == '\0')
 			continue;
 		(void)run_change("add", &c, dbi.id, sizeof(dbi.id));
+		state_put(state, &c, &dbi);
 	}
+	state_close(db);
+	state_sync(state);
 }
 
 int
