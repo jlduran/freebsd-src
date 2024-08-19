@@ -1,4 +1,4 @@
-/*	$NetBSD: blacklist.h,v 1.3 2015/01/23 18:48:56 christos Exp $	*/
+/*	$NetBSD: blacklist.h,v 1.3 2024/08/02 17:11:55 christos Exp $	*/
 
 /*-
  * Copyright (c) 2014 The NetBSD Foundation, Inc.
@@ -32,9 +32,13 @@
 #define _BLACKLIST_H
 
 #include <sys/socket.h>
+#include <syslog.h>
 
 __BEGIN_DECLS
+struct syslog_data;
 struct blacklist *blacklist_open(void);
+struct blacklist *blacklist_open2(
+    void (*)(int, struct syslog_data *, const char *, va_list));
 void blacklist_close(struct blacklist *);
 int blacklist(int, int, const char *);
 int blacklist_r(struct blacklist *, int, int, const char *);
