@@ -114,7 +114,7 @@ ${X_}LINKER_FEATURES+=	retpoline
 .if ${${X_}LINKER_TYPE} == "lld" && ${${X_}LINKER_VERSION} >= 90000
 ${X_}LINKER_FEATURES+=	ifunc-noplt
 .endif
-.if ${${X_}LINKER_TYPE} == "lld" && ${${X_}LINKER_VERSION} >= 140000 && \
+.if ${${X_}LINKER_TYPE} == "lld" && ${${X_}LINKER_VERSION} >= 130000 && \
 	defined(BTI_REPORT_ERROR)
 ${X_}LINKER_FEATURES+=	bti-report
 .endif
