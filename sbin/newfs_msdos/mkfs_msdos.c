@@ -728,7 +728,7 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 		    mk1(bs->bsJump[0], 0xeb);
 		    mk1(bs->bsJump[1], x1 - 2);
 		    mk1(bs->bsJump[2], 0x90);
-		    setstr(bs->bsOemName, o.OEM_string ? o.OEM_string : "BSD4.4  ",
+		    setstr(bs->bsOemName, o.OEM_string ? o.OEM_string : "FreeBSD",
 			   sizeof(bs->bsOemName));
 		    memcpy(img + x1, bootcode, sizeof(bootcode));
 		    mk2(img + MINBPS - 2, DOSMAGIC);
