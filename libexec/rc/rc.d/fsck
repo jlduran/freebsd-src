@@ -26,9 +26,9 @@ fsck_start()
 		startmsg "Starting file system checks:"
 		# Background fsck can only be run with -p
 		if checkyesno background_fsck; then
-			fsck -F -p
+			fsck -F -p > /dev/null
 		else
-			fsck ${fsck_flags}
+			fsck ${fsck_flags} > /dev/null
 		fi
 
 		err=$?

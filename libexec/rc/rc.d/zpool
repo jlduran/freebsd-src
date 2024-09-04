@@ -21,7 +21,7 @@ zpool_start()
 
 	for cachefile in /etc/zfs/zpool.cache /boot/zfs/zpool.cache; do
 		if [ -r $cachefile ]; then
-			zpool import -c $cachefile -a -N
+			zpool import -c $cachefile -a -N 2> /dev/null
 			if [ $? -ne 0 ]; then
 				echo "Import of zpool cache ${cachefile} failed," \
 				    "will retry after root mount hold release"
