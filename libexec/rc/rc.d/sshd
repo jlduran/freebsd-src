@@ -60,7 +60,7 @@ sshd_keygen_alg()
 		return 1
 	fi
 
-	echo "Generating $ALG host key."
+	startmsg "Generating $ALG host key."
 	/usr/bin/ssh-keygen -q -t $alg -f "$keyfile" -N ""
 	/usr/bin/ssh-keygen -l -f "$keyfile.pub"
 }
@@ -75,7 +75,7 @@ sshd_keygen()
 
 sshd_configtest()
 {
-	echo "Performing sanity check on ${name} configuration."
+	startmsg "Performing sanity check on ${name} configuration."
 	eval ${command} ${sshd_flags} -t
 }
 
