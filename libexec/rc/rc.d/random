@@ -47,12 +47,12 @@ random_start()
 {
 
 	if [ -n "${harvest_mask}" ]; then
-		echo -n 'Setting up harvesting: '
+		startmsg -n 'Setting up harvesting: '
 		${SYSCTL} kern.random.harvest.mask=${harvest_mask} > /dev/null
-		${SYSCTL_N} kern.random.harvest.mask_symbolic
+		startcmd ${SYSCTL_N} kern.random.harvest.mask_symbolic
 	fi
 
-	echo -n 'Feeding entropy: '
+	startmsg -n 'Feeding entropy: '
 
 	if [ ! -w /dev/random ] ; then
 		warn "/dev/random is not writeable"
@@ -87,7 +87,7 @@ random_start()
 		;;
 	esac
 
-	echo '.'
+	startmsg '.'
 }
 
 random_stop()
@@ -99,7 +99,7 @@ random_stop()
 	[Nn][Oo])
 		;;
 	*)
-		echo -n 'Writing entropy file: '
+		startmsg -n 'Writing entropy file: '
 		rm -f ${entropy_file} 2> /dev/null
 		oumask=`umask`
 		umask 077
@@ -119,7 +119,7 @@ random_stop()
 			;;
 		*)
 			save_dev_random "${entropy_file_confirmed}"
-			echo '.'
+			startmsg '.'
 			;;
 		esac
 		umask ${oumask}
@@ -129,7 +129,7 @@ random_stop()
 	[Nn][Oo])
 		;;
 	*)
-		echo -n 'Writing early boot entropy file: '
+		startmsg -n 'Writing early boot entropy file: '
 		rm -f ${entropy_boot_file} 2> /dev/null
 		oumask=`umask`
 		umask 077
@@ -142,7 +142,7 @@ random_stop()
 			;;
 		*)
 			save_dev_random "${entropy_boot_file_confirmed}"
-			echo '.'
+			startmsg '.'
 			;;
 		esac
 		umask ${oumask}
