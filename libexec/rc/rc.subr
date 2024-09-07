@@ -891,6 +891,20 @@ startmsg()
 }
 
 #
+# startcmd
+#	Preferred method to use when displaying the output of commands at boot
+#	time.
+#
+startcmd()
+{
+	if check_startmsgs; then
+		"$@"
+	else
+		"$@" > /dev/null
+	fi
+}
+
+#
 # run_rc_command argument
 #	Search for argument in the list of supported commands, which is:
 #		"start stop restart rcvar status poll ${extra_commands}"
