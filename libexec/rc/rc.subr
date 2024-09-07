@@ -1142,6 +1142,10 @@ run_rc_command()
 		rc_arg=${rc_arg#${_rc_prefix}}
 		rc_quiet=yes
 		;;
+	*)				# "default" (no) prefix; omit some messages
+		rc_arg=${rc_arg#${_rc_prefix}}
+		rc_quiet=yes
+		;;
 	esac
 
 	eval _override_command=\$${name}_program
