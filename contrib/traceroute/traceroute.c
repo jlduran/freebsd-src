@@ -27,8 +27,6 @@ The Regents of the University of California.  All rights reserved.\n";
 static const char rcsid[] =
     "@(#)$Id: traceroute.c,v 1.68 2000/12/14 08:04:33 leres Exp $ (LBL)";
 #endif
-static const char rcsid[] =
-    "$FreeBSD$";
 #endif
 
 /*
@@ -498,7 +496,7 @@ struct	outproto protos[] = {
 };
 struct	outproto *proto = &protos[0];
 
-const char *ip_hdr_key = "vhtslen id  off tlprsum srcip   dstip   opts";
+const char *ip_hdr_key = "vhtslen id  fofftlprsum srcip   dstip   opts";
 
 int
 main(int argc, char **argv)
