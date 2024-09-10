@@ -101,10 +101,10 @@ Config Variables:
                           Defaults to false.
 
     arc.list [bool]    -- Always use "list mode" (-l) with create and update.
-			  In this mode, the list of git revisions to use
+                          In this mode, the list of git revisions to use
                           is listed with a single prompt before creating or
                           updating reviews.  The diffs for individual commits
-			  are not shown.
+                          are not shown.
 
     arc.verbose [bool] -- Verbose output.  Equivalent to the -v flag.
 
@@ -205,7 +205,7 @@ diff2status()
         arc_call_conduit -- phid.lookup > "$tmp"
     status=$(jq -r "select(.response != []) | .response.${diff}.status" < "$tmp")
     summary=$(jq -r "select(.response != []) |
-         .response.${diff}.fullName" < "$tmp")
+        .response.${diff}.fullName" < "$tmp")
     printf "%-14s %s\n" "${status}" "${summary}"
 }
 
@@ -305,7 +305,7 @@ create_one_review()
                     "type": "parents.add",
                     "value": ["'"${parentphid}"'"]
                 }
-             ]}' |
+            ]}' |
             arc_call_conduit -- differential.revision.edit >&3
     fi
     rm -f "$msg"
@@ -321,17 +321,17 @@ diff2reviewers()
     reviewid=$(diff2phid "$diff")
     userids=$( \
         echo '{
-                  "constraints": {"phids": ["'"$reviewid"'"]},
-                  "attachments": {"reviewers": true}
-              }' |
+        "constraints": {"phids": ["'"$reviewid"'"]},
+        "attachments": {"reviewers": true}
+        }' |
         arc_call_conduit -- differential.revision.search |
         jq '.response.data[0].attachments.reviewers.reviewers[] | select(.status == "accepted").reviewerPHID')
     if [ -n "$userids" ]; then
         echo '{
-                  "constraints": {"phids": ['"$(echo -n "$userids" | tr '[:space:]' ',')"']}
-              }' |
-            arc_call_conduit -- user.search |
-            jq -r '.response.data[].fields.username'
+        "constraints": {"phids": ['"$(echo -n "$userids" | tr '[:space:]' ',')"']}
+        }' |
+        arc_call_conduit -- user.search |
+        jq -r '.response.data[].fields.username'
     fi
 }
 
@@ -427,7 +427,7 @@ gitarc__create()
 
     for commit in ${commits}; do
         if create_one_review "$commit" "$reviewers" "$subscribers" "$prev" \
-                             "$doprompt"; then
+            "$doprompt"; then
             prev=$(commit2diff "$commit")
         else
             prev=""
@@ -448,8 +448,8 @@ gitarc__list()
 
         diff=$(log2diff "$commit")
         if [ -n "$diff" ]; then
-                diff2status "$diff"
-                continue
+            diff2status "$diff"
+            continue
         fi
 
         # This does not use commit2diff as it needs to handle errors
@@ -457,7 +457,7 @@ gitarc__list()
         title=$(git show -s --format=%s "$commit")
         diff=$(echo "$openrevs" | \
             awk -F'D[1-9][0-9]*: ' \
-                '{if ($2 == "'"$(echo $title | sed 's/"/\\"/g')"'") print $0}')
+            '{if ($2 == "'"$(echo $title | sed 's/"/\\"/g')"'") print $0}')
         if [ -z "$diff" ]; then
             echo "No Review            : $title"
         elif [ "$(echo "$diff" | wc -l)" -ne 1 ]; then
@@ -491,18 +491,18 @@ find_author()
     # freebsd.org (which isn't surprising for ports committers getting src
     # commits reviewed).
     case "${addr}" in
-    *.*) ;;		# external user
+    *.*) ;;             # external user
     *)
-	echo "${name} <${addr}@FreeBSD.org>"
-	return
-	;;
+        echo "${name} <${addr}@FreeBSD.org>"
+        return
+        ;;
     esac
 
     # Choice 2: author_addr and author_name were set in the bundle, so use
     # that. We may need to filter some known bogus ones, should they crop up.
     if [ -n "$author_name" -a -n "$author_addr" ]; then
-	echo "${author_name} <${author_addr}>"
-	return
+        echo "${author_name} <${author_addr}>"
+        return
     fi
 
     # Choice 3: We can find this user in the FreeBSD repo. They've submited
@@ -510,8 +510,8 @@ find_author()
     # similar to their phab username.
     email=$(git log -1 --author "$(echo ${addr} | tr _ .)" --pretty="%aN <%aE>")
     if [ -n "${email}" ]; then
-	echo "${email}"
-	return
+        echo "${email}"
+        return
     fi
 
     # Choice 4: We know this user. They've committed before, and they happened
@@ -519,11 +519,11 @@ find_author()
     # might not be a good idea, since names can be somewhat common (there
     # are two Andrew Turners that have contributed to FreeBSD, for example).
     if ! (echo "${name}" | grep -w "[Uu]ser" -q); then
-	email=$(git log -1 --author "${name}" --pretty="%aN <%aE>")
-	if [ -n "$email" ]; then
-	    echo "$email"
-	    return
-	fi
+        email=$(git log -1 --author "${name}" --pretty="%aN <%aE>")
+        if [ -n "$email" ]; then
+            echo "$email"
+            return
+        fi
     fi
 
     # Choice 5: Wing it as best we can. In this scenario, we replace the last _
@@ -532,10 +532,10 @@ find_author()
     # don't know if the prior _ are _ or + or any number of other characters.
     # Since there's issues here, prompt
     a=$(printf "%s <%s>\n" "${name}" $(echo "$addr" | sed -e 's/\(.*\)_/\1@/'))
-    echo "Making best guess: Truning ${addr} to ${a}"
+    echo "Making best guess: Turning ${addr} to ${a}"
     if ! prompt; then
-       echo "ABORT"
-       return
+        echo "ABORT"
+        return
     fi
     echo "${a}"
 }
@@ -549,16 +549,16 @@ patch_commit()
     reviewid=$(diff2phid "$diff")
     # Get the author phid for this patch
     review_data=$(echo '{
-                  "constraints": {"phids": ["'"$reviewid"'"]}
-		}' |
+        "constraints": {"phids": ["'"$reviewid"'"]}
+        }' |
         arc_call_conduit -- differential.revision.search)
     authorid=$(echo "$review_data" | jq -r '.response.data[].fields.authorPHID' )
     # Get metadata about the user that submitted this patch
     user_data=$(echo '{
-                  "constraints": {"phids": ["'"$authorid"'"]}
-		}' |
-            arc call-conduit -- user.search | grep -v ^Warning: |
-            jq -r '.response.data[].fields')
+        "constraints": {"phids": ["'"$authorid"'"]}
+        }' |
+        arc call-conduit -- user.search | grep -v ^Warning: |
+        jq -r '.response.data[].fields')
     user_addr=$(echo "$user_data" | jq -r '.username')
     user_name=$(echo "$user_data" | jq -r '.realName')
     # Dig the data out of querydiffs api endpoint, although it's deprecated,
@@ -568,17 +568,17 @@ patch_commit()
     # remove duplicates 'just to be sure' since we've not seen multiple
     # records that match.
     diff_data=$(echo '{
-		"revisionIDs": [ '"${diff#D}"' ]
-		}' | arc_call_conduit -- differential.querydiffs |
-	     jq -r '.response | flatten | .[]')
+        "revisionIDs": [ '"${diff#D}"' ]
+        }' | arc_call_conduit -- differential.querydiffs |
+        jq -r '.response | flatten | .[]')
     author_addr=$(echo "$diff_data" | jq -r ".authorEmail?" | sort -u)
     author_name=$(echo "$diff_data" | jq -r ".authorName?" | sort -u)
     author=$(find_author "$user_addr" "$user_name" "$author_addr" "$author_name")
 
     # If we had to guess, and the user didn't want to guess, abort
     if [ "${author}" = "ABORT" ]; then
-	warn "Not committing due to uncertainty over author name"
-	exit 1
+        warn "Not committing due to uncertainty over author name"
+        exit 1
     fi
 
     tmp=$(mktemp)
@@ -609,7 +609,7 @@ gitarc__patch()
     while getopts c o; do
         case "$o" in
         c)
-	    require_clean_work_tree "patch -c"
+            require_clean_work_tree "patch -c"
             commit=true
             ;;
         *)
@@ -623,9 +623,9 @@ gitarc__patch()
         arc patch --skip-dependencies --nocommit --nobranch --force "$rev"
         echo "Applying ${rev}..."
         [ $? -eq 0 ] || break
-	if ${commit}; then
-	    patch_commit $rev
-	fi
+        if ${commit}; then
+            patch_commit $rev
+        fi
     done
 }
 
