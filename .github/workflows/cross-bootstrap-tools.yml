@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest]
-        clang_version: [12, 13, 14, 15]
+        clang_version: [14, 15, 16, 17, 18]
         target_arch: [amd64, aarch64]
         include:
           # TODO: both Ubuntu and macOS have bmake packages, we should try them instead of bootstrapping our own copy.
