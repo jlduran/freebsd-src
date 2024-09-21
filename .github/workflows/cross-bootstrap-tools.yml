@@ -45,7 +45,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
-          echo "EXTRA_BUILD_ARGS=--cross-bindir=/usr/local/opt/llvm@${{ matrix.clang_version }}/bin" >> $GITHUB_ENV
+          echo "EXTRA_BUILD_ARGS=--cross-bindir=/opt/homebrew/opt/llvm@${{ matrix.clang_version }}/bin" >> $GITHUB_ENV
           mkdir -p ../build
           echo "MAKEOBJDIRPREFIX=${PWD%/*}/build" >> $GITHUB_ENV
           echo "NPROC=3" >> $GITHUB_ENV
