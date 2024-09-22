@@ -11,33 +11,53 @@ permissions:
   contents: read
 
 jobs:
-  cross-build-linux:
-    name: ${{ matrix.target_arch }} Linux (clang-${{ matrix.clang_version}})
-    runs-on: ubuntu-latest
+  cross-build:
+    name: ${{ matrix.os }} ${{ matrix.target_arch }} (clang-${{ matrix.clang_version}})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        clang_version: [14, 15, 18]
+        os: [macos-latest, ubuntu-latest]
         target_arch: [amd64, aarch64]
+        clang_version: [14, 15, 18]
         include:
           # TODO: both Ubuntu and macOS have bmake packages, we should try them instead of bootstrapping our own copy.
           - target_arch: amd64
             target: amd64
           - target_arch: aarch64
             target: arm64
+        exclude:
+          - os: macos-latest
+            target_arch: amd64
     steps:
       - uses: actions/checkout@v4
-      - name: Install packages
+      - name: Install packages (Linux)
+        if: runner.os == 'Linux'
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh ${{ matrix.clang_version }}
           sudo apt-get update --quiet || true
           sudo apt-get -yq --no-install-suggests --no-install-recommends install bmake libarchive-dev || true
-      - name: Create environment
+      - name: Install packages (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update --quiet || true
+          brew install -f bmake libarchive llvm@${{ matrix.clang_version }} || true
+      - name: Create environment (Linux)
+        if: runner.os == 'Linux'
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
           echo "EXTRA_BUILD_ARGS=--cross-bindir=/usr/lib/llvm-${{ matrix.clang_version }}/bin" >> $GITHUB_ENV
+          mkdir -p ../build
+          echo "MAKEOBJDIRPREFIX=${PWD%/*}/build" >> $GITHUB_ENV
+          # heh, works on Linux/BSD/macOS ...
+          echo "NPROC=`getconf _NPROCESSORS_ONLN 2>/dev/null || getconf NPROCESSORS_ONLN 2>/dev/null || echo 1`" >> $GITHUB_ENV
+      - name: Create environment (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
+          echo "EXTRA_BUILD_ARGS=--cross-bindir=/opt/homebrew/opt/llvm@${{ matrix.clang_version }}/bin" >> $GITHUB_ENV
           mkdir -p ../build
           echo "MAKEOBJDIRPREFIX=${PWD%/*}/build" >> $GITHUB_ENV
           # heh, works on Linux/BSD/macOS ...
@@ -48,32 +68,3 @@ jobs:
         run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} kernel-toolchain -s -j$NPROC -DWITH_DISK_IMAGE_TOOLS_BOOTSTRAP
       - name: make buildkernel
         run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} KERNCONF=GENERIC NO_MODULES=yes buildkernel -s -j$NPROC $EXTRA_MAKE_ARGS
-
-  cross-build-macos:
-    name: aarch64 macOS (clang-${{ matrix.clang_version}})
-    runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        clang_version: [16, 17]
-        # TODO: both Ubuntu and macOS have bmake packages, we should try them instead of bootstrapping our own copy.
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install packages
-        run: |
-          brew update --quiet || true
-          brew install -f bmake libarchive llvm@${{ matrix.clang_version }} || true
-      - name: Create environment
-        run: |
-          echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
-          echo "EXTRA_BUILD_ARGS=--cross-bindir=/opt/homebrew/opt/llvm@${{ matrix.clang_version }}/bin" >> $GITHUB_ENV
-          mkdir -p ../build
-          echo "MAKEOBJDIRPREFIX=${PWD%/*}/build" >> $GITHUB_ENV
-          # heh, works on Linux/BSD/macOS ...
-          echo "NPROC=`getconf _NPROCESSORS_ONLN 2>/dev/null || getconf NPROCESSORS_ONLN 2>/dev/null || echo 1`" >> $GITHUB_ENV
-      - name: bootstrap bmake
-        run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=arm64 TARGET_ARCH=aarch64 -n
-      - name: make kernel-toolchain
-        run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=arm64 TARGET_ARCH=aarch64 kernel-toolchain -s -j$NPROC -DWITH_DISK_IMAGE_TOOLS_BOOTSTRAP
-      - name: make buildkernel
-        run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=arm64 TARGET_ARCH=aarch64 KERNCONF=GENERIC NO_MODULES=yes buildkernel -s -j$NPROC $EXTRA_MAKE_ARGS
