@@ -53,7 +53,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update --quiet || true
-          brew install -f bmake libarchive llvm@${{ matrix.clang_version }} || true
+          brew install bmake libarchive llvm@${{ matrix.clang_version }} || true
       - name: Create environment
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
