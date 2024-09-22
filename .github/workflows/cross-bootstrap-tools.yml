@@ -18,27 +18,28 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest]
+        target_arch: [amd64, aarch64]
+        clang_version: [15, 16, 17, 18]
         include:
           # TODO: both Ubuntu and macOS have bmake packages, we should try them instead of bootstrapping our own copy.
-          - os: macos-latest
-            target_arch: aarch64
-            target: arm64
-            cross_bindir_base: /opt/homebrew/opt/llvm@
-            clang_version: 14, 15
-          - os: ubuntu-latest
-            #target_arch: [amd64, aarch64]
-            #target: [amd64, arm64]
-            target_arch: amd64
+          - target_arch: amd64
             target: amd64
-            cross_bindir_base: /usr/lib/llvm-
-            clang_version: 16, 17
-          - os: ubuntu-latest
-            target_arch: aarch64
+          - target_arch: aarch64
             target: arm64
+          - os: macos-latest
+            cross_bindir_base: /opt/homebrew/opt/llvm@
+          - os: ubuntu-latest
             cross_bindir_base: /usr/lib/llvm-
-            clang_version: 18
+        exclude:
+          - os: macos-latest
+            target_arch: amd64
     steps:
       - uses: actions/checkout@v4
+      - name: Install packages (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update --quiet || true
+          brew install bmake libarchive llvm@${{ matrix.clang_version }} || true
       - name: Install packages (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -47,11 +48,6 @@ jobs:
           sudo ./llvm.sh ${{ matrix.clang_version }}
           sudo apt-get update --quiet || true
           sudo apt-get -yq --no-install-suggests --no-install-recommends install bmake libarchive-dev || true
-      - name: Install packages (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew update --quiet || true
-          brew install bmake libarchive llvm@${{ matrix.clang_version }} || true
       - name: Create environment
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
