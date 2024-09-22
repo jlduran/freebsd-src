@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   cross-build:
-    name: ${{ matrix.os }} ${{ matrix.target_arch }} (clang-${{ matrix.clang_version}})
+    name: ${{ runner.os }} ${{ matrix.target_arch }} (clang-${{ matrix.clang_version}})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
