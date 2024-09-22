@@ -33,7 +33,7 @@ jobs:
           chmod +x llvm.sh
           sudo ./llvm.sh ${{ matrix.clang_version }}
           sudo apt-get update --quiet || true
-          sudo apt-get -yq --no-install-suggests --no-install-recommends install bmake libarchive-dev clang-${{ matrix.clang_version }} lld-${{ matrix.clang_version }} || true
+          sudo apt-get -yq --no-install-suggests --no-install-recommends install bmake libarchive-dev || true
       - name: Create environment
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
