@@ -572,6 +572,16 @@ patch_commit()
         jq -r '.response | flatten | .[]' > "$diff_data"
     author_addr=$(jq -r ".authorEmail?" "$diff_data" | sort -u)
     author_name=$(jq -r ".authorName?" "$diff_data" | sort -u)
+
+    # JSON will return "null" when a field is not populated.
+    # Turn this string into an empty one.
+    if [ "$author_addr" = "null" ]; then
+        author_addr=""
+    fi
+    if [ "$author_name" = "null" ]; then
+        author_name=""
+    fi
+
     author=$(find_author "$user_addr" "$user_name" "$author_addr" "$author_name")
     rm "$diff_data"
 
