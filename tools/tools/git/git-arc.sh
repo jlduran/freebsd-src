@@ -147,6 +147,42 @@ __EOF__
     exit 1
 }
 
+status_term_color()
+{
+    # Color list obtained from ArcanistListWorkflow.php
+    red="\033[31m"     # Changes Planned, Needs Revision
+    green="\033[32m"   # Accepted
+    blue="\033[34m"    # No Revision
+    magenta="\033[35m" # Needs Review
+    cyan="\033[36m"    # Closed
+    default="\033[0m"  # Abandoned
+    color_reset="\033[0m"
+
+    case "$1" in
+    red)
+        printf "${red}"
+        ;;
+    green)
+        printf "${green}"
+        ;;
+    blue)
+        printf "${blue}"
+        ;;
+    magenta)
+        printf "${magenta}"
+        ;;
+    cyan)
+        printf "${cyan}"
+        ;;
+    default)
+        printf "${default}"
+        ;;
+    *)
+        printf "${color_reset}"
+        ;;
+    esac
+}
+
 #
 # Fetch the value of a boolean config variable ($1) and return true
 # (0) if the variable is true.  The default value to use if the
@@ -193,7 +229,7 @@ diff2phid()
 
 diff2status()
 {
-    local diff tmp status summary
+    local diff tmp phid status status_color status_name summary term_color
 
     diff=$1
     if ! expr "$diff" : 'D[1-9][0-9]*$' >/dev/null; then
@@ -203,10 +239,23 @@ diff2status()
     tmp=$(mktemp)
     echo '{"names":["'"$diff"'"]}' |
         arc_call_conduit -- phid.lookup > "$tmp"
-    status=$(jq -r "select(.response != []) | .response.${diff}.status" < "$tmp")
+    phid=$(jq -r ".response[].phid" "$tmp")
+    if [ -z "$phid" ] || [ "$phid" = "null" ]; then
+        rm -f "$tmp"
+        err "invalid Phabricator ID for ${diff}"
+    fi
+
+    status=$(printf "%s" '{"constraints": {"phids": ["'"$phid"'"]}}' | \
+        arc_call_conduit -- differential.revision.search | \
+        jq -r '.response.data[0].fields.status')
+    status_name=$(echo "$status" | jq -r '.name')
+    status_color=$(echo "$status" | jq -r '."color.ansi"')
+    term_color=$(status_term_color "$status_color")
+
     summary=$(jq -r "select(.response != []) |
         .response.${diff}.fullName" < "$tmp")
-    printf "%-14s %s\n" "${status}" "${summary}"
+    printf "${term_color}%-15s\033[0m %s\n" "${status_name}" "${summary}"
+    rm -f "$tmp"
 }
 
 log2diff()
@@ -459,7 +508,7 @@ gitarc__list()
             awk -F'D[1-9][0-9]*: ' \
             '{if ($2 == "'"$(echo $title | sed 's/"/\\"/g')"'") print $0}')
         if [ -z "$diff" ]; then
-            echo "No Review            : $title"
+            echo "No Review             : $title"
         elif [ "$(echo "$diff" | wc -l)" -ne 1 ]; then
             printf "%s" "Ambiguous Reviews: "
             echo "$diff" | grep -E -o 'D[1-9][0-9]*:' | tr -d ':' \
