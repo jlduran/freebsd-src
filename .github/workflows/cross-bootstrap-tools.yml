@@ -2,7 +2,7 @@ name: Cross-build Kernel
 
 on:
   push:
-    branches: [ main, 'stable/14', 'stable/13' ]
+    branches: [ main, 'stable/14', 'stable/13', github-cross-build-full-matrix-2 ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -11,50 +11,47 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: ${{ matrix.target_arch }} ${{ matrix.os }} (${{ matrix.compiler }})
+  cross-build:
+    name: ${{ matrix.os }} ${{ matrix.target_arch }} (clang-${{ matrix.clang_version}})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        target_arch: [ amd64, aarch64 ]
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-latest ]
+        os: [macos-latest, ubuntu-latest]
+        target_arch: [amd64, aarch64]
+        clang_version: [15, 16, 17, 18]
         include:
           # TODO: both Ubuntu and macOS have bmake packages, we should try them instead of bootstrapping our own copy.
-          - os: ubuntu-20.04
-            compiler: clang-12
-            cross-bindir: /usr/lib/llvm-12/bin
-            pkgs: bmake libarchive-dev clang-12 lld-12
-          - os: ubuntu-22.04
-            compiler: clang-14
-            cross-bindir: /usr/lib/llvm-14/bin
-            pkgs: bmake libarchive-dev clang-14 lld-14
-          - os: macos-latest
-            compiler: clang-13
-            cross-bindir: /opt/homebrew/opt/llvm@13/bin
-            pkgs: bmake libarchive llvm@13
           - target_arch: amd64
             target: amd64
           - target_arch: aarch64
             target: arm64
+          - os: macos-latest
+            cross_bindir_base: /opt/homebrew/opt/llvm@
+          - os: ubuntu-latest
+            cross_bindir_base: /usr/lib/llvm-
+        exclude:
+          - os: macos-latest
+            target_arch: amd64
     steps:
       - uses: actions/checkout@v4
-      - name: install packages (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update --quiet || true
-          sudo apt-get -yq --no-install-suggests --no-install-recommends install ${{ matrix.pkgs }}
-      - name: install packages (macOS)
+      - name: Install packages (macOS)
         if: runner.os == 'macOS'
         run: |
           brew update --quiet || true
-          brew install ${{ matrix.pkgs }} || true
-      - name: create environment
+          brew install bmake libarchive llvm@${{ matrix.clang_version }} || true
+      - name: Install packages (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh ${{ matrix.clang_version }}
+          sudo apt-get update --quiet || true
+          sudo apt-get -yq --no-install-suggests --no-install-recommends install bmake libarchive-dev || true
+      - name: Create environment
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
-          if [ -n "${{ matrix.cross-bindir }}" ]; then
-            echo "EXTRA_BUILD_ARGS=--cross-bindir=${{ matrix.cross-bindir }}" >> $GITHUB_ENV
-          fi
+          echo "EXTRA_BUILD_ARGS=--cross-bindir=${{ matrix.cross_bindir_base }}${{ matrix.clang_version }}/bin" >> $GITHUB_ENV
           mkdir -p ../build
           echo "MAKEOBJDIRPREFIX=${PWD%/*}/build" >> $GITHUB_ENV
           # heh, works on Linux/BSD/macOS ...
