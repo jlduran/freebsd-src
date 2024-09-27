@@ -339,7 +339,7 @@ to check the packet flow over the
 link.
 .It Supports PPP over TCP and PPP over UDP.
 If a device name is specified as
-.Em host Ns No : Ns Em port Ns
+.Em host : Ns Em port Ns
 .Xo
 .Op / Ns tcp|udp ,
 .Xc
@@ -353,9 +353,8 @@ into synchronous mode.
 If
 .Nm
 is given a device specification of the format
-.No PPPoE: Ns Ar iface Ns Xo
-.Op \&: Ns Ar provider Ns
-.Xc
+.No PPPoE\&: Ns Ar iface Ns Xo
+.Op \&: Ns Ar provider Ns Xc
 and if
 .Xr netgraph 4
 is available,
@@ -521,7 +520,7 @@ commands below for details.
 .Sh MANUAL DIALING
 In the following examples, we assume that your machine name is
 .Dv awfulhak .
-when you invoke
+When you invoke
 .Nm
 (see
 .Sx PERMISSIONS
@@ -2166,13 +2165,15 @@ set device /dev/cuau0
 set speed 115200
 .Ed
 .Pp
-Cuad0 is the first serial port on
+.Pa cuau0
+is the first serial port on
 .Fx .
 If you are running
 .Nm
 on
 .Ox ,
-cua00 is the first.
+.Pa cua00
+is the first.
 A speed of 115200 should be specified
 if you have a modem capable of bit rates of 28800 or more.
 In general, the serial speed should be about four times the modem speed.
@@ -2734,7 +2735,7 @@ Default: Disabled and Denied.
 This option allows DNS negotiation.
 .Pp
 If
-.Dq enable Ns No d,
+.Dq enable Ns No d ,
 .Nm
 will request that the peer confirms the entries in
 .Pa /etc/resolv.conf .
@@ -2743,7 +2744,7 @@ If the peer NAKs our request (suggesting new IP numbers),
 is updated and another request is sent to confirm the new entries.
 .Pp
 If
-.Dq accept Ns No ed,
+.Dq accept Ns No ed ,
 .Nm
 will answer any DNS queries requested by the peer rather than rejecting
 them.
@@ -3167,7 +3168,7 @@ and the
 address of the local network in which
 .Dv HISADDR
 appears.
-This allows other machines connecteed to the LAN to talk to
+This allows other machines connected to the LAN to talk to
 the peer as if the peer itself was connected to the LAN.
 The proxy entry cannot be made unless
 .Dv HISADDR
@@ -3446,8 +3447,7 @@ This command gives a summary of available nat commands.
 This option causes various NAT statistics and information to
 be logged to the file
 .Pa /var/log/alias.log .
-.It nat port Ar proto Ar targetIP Ns Xo
-.No : Ns Ar targetPort Ns
+.It nat port Ar proto Ar targetIP Ns Xo : Ns Ar targetPort Ns
 .Oo
 .No - Ns Ar targetPort
 .Oc Ar aliasPort Ns
@@ -4358,7 +4358,7 @@ CBCP negotiation time, you must specify both
 and
 .Ar none
 as callback options.
-.It E.164 *| Ns Xo
+.It E.164 * Ns | Ns Xo
 .Ar number Ns Op , Ns Ar number Ns
 .No ...
 .Xc
@@ -4390,8 +4390,7 @@ This is required (in addition to one or more other callback
 options) if you wish callback to be optional.
 .El
 .It set cbcp Oo
-.No *| Ns Ar number Ns Oo
-.No , Ns Ar number Ns ...\& Oc
+.No * Ns | Ns Ar number Ns Oo , Ns Ar number Ns ...\& Oc
 .Op Ar delay Op Ar retry
 .Oc
 If no arguments are given, CBCP (Microsoft's CallBack Control Protocol)
@@ -4403,7 +4402,7 @@ requesting no callback in the CBCP phase.
 Otherwise,
 .Nm
 attempts to use the given phone
-.Ar number Ns No (s).
+.Ar number Ns No (s) .
 .Pp
 In server mode
 .Pq Fl direct ,
@@ -4421,7 +4420,7 @@ is specified,
 .Nm
 will expect the peer to specify the number.
 .It set cd Oo
-.No off| Ns Ar seconds Ns Op !\&
+.No off Ns | Ns Ar seconds Ns Op !\&
 .Oc
 Normally,
 .Nm
@@ -4578,7 +4577,7 @@ does not begin with
 it must either begin with an exclamation mark
 .Pq Dq !\& ,
 be of the format
-.No PPPoE: Ns Ar iface Ns Xo
+.No PPPoE\&: Ns Ar iface Ns Xo
 .Op \&: Ns Ar provider Ns
 .Xc
 (on
@@ -4596,7 +4595,7 @@ Standard input, output and error are fed back to
 and are read and written as if they were a regular device.
 .Pp
 If a
-.No PPPoE: Ns Ar iface Ns Xo
+.No PPPoE\&: Ns Ar iface Ns Xo
 .Op \&: Ns Ar provider Ns
 .Xc
 specification is given,
@@ -4635,7 +4634,7 @@ and
 for further details.
 .Pp
 If a
-.Ar host Ns No : Ns Ar port Ns Oo
+.Ar host : Ns Ar port Ns Oo
 .No /tcp|udp
 .Oc
 specification is given,
@@ -4864,7 +4863,7 @@ It allows the user to specify a set of characters that will be
 .Sq escaped
 as they travel across the link.
 .It set filter dial|alive|in|out Ar rule-no Xo
-.No permit|deny|clear| Ns Ar rule-no
+.No permit|deny|clear|\& Ns Ar rule-no
 .Op !\&
 .Oo Op host
 .Ar src_addr Ns Op / Ns Ar width
