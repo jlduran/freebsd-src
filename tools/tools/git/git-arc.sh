@@ -735,6 +735,7 @@ gitarc__stage()
         fi
         git commit --edit --file "$tmp" --author "${author}"
     done
+    rm -f "$tmp"
 }
 
 gitarc__update()
