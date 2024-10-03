@@ -172,7 +172,7 @@ if citype == "config-2" then
 	local obj = parser:get_object()
 	if obj.public_keys then
 		local homedir = nuage.adduser(default_user)
-		for _,v in pairs(obj.public_keys) do
+		for _, v in pairs(obj.public_keys) do
 			nuage.addsshkey(homedir, v)
 		end
 	end
