@@ -426,6 +426,10 @@ color_body()
 
 	atf_check -o file:"$(atf_get_srcdir)/d_color_c.out" \
 	    grep --color=always -f grepfile "$(atf_get_srcdir)/d_color_b.in"
+
+	for i in $(seq 33); do printf "%s" "foobar"; done > grepfile
+	atf_check -o file:"$(atf_get_srcdir)/d_color_d.out" \
+	    grep --color=always foo grepfile
 }
 
 atf_test_case f_file_empty
