@@ -23,26 +23,68 @@ local function errmsg(str, prepend)
 	os.exit(1)
 end
 
-local function dirname(oldpath)
-	if not oldpath then
-		return nil
+-- Determine if a string is shell-safe
+local function safe(str)
+	return str:find("[^%w_@%%%+=:,%./%-]") == nil
+end
+
+-- Return a shell-escaped version of a string
+local function quote(str)
+	if not str then
+		return "''"
 	end
-	local path = oldpath:gsub("[^/]+/*$", "")
+	if safe(str) then
+		return str
+	end
+
+	-- Enclose with single quotes, and
+	-- single quotes with double quotes
+	return "'" .. ((str:gsub("'", "'\"'\"'"))) .. "'"
+end
+
+-- Return the directory portion of a path
+local function dirname(path)
+	if not path then
+		return nil, "argument should be a path"
+	end
+	path = path:gsub("[^/]+/*$", "")
 	if path == "" then
-		return nil
+		return nil, "no path found"
 	end
 	return path
 end
 
+-- Create a directory (mkdir -p path)
 local function mkdir_p(path)
-	if lfs.attributes(path, "mode") ~= nil then
-		return true
+	if not path or path == "" then
+		return nil, "argument should be a path"
 	end
-	local r, err = mkdir_p(dirname(path))
-	if not r then
-		return nil, err .. " (creating " .. path .. ")"
+	return os.execute("mkdir -p " .. quote(path))
+end
+
+-- XXX JL this is slow!
+-- -q does not work as expected.
+-- -R does not work, because it chroots and expects a sh inside.
+-- Its only real value would be without -f, but then we won't
+-- be able to mock the tests.
+-- Run sysrc [-f file] name=[value]
+local function sysrc_f(name, value, file)
+	if not name or not safe(name) or name == "" then
+		return
 	end
-	return lfs.mkdir(path)
+	if not value then
+		return
+	end
+	if not file or file == "" then
+		file = ""
+	else
+		file = "-f " .. quote(file) .. " "
+	end
+
+	os.execute(
+		"sysrc -q " .. file .. name .. "=" ..
+		quote(value) .. " 1> /dev/null"
+	)
 end
 
 local function sethostname(hostname)
@@ -226,8 +268,11 @@ end
 local n = {
 	warn = warnmsg,
 	err = errmsg,
+	safe = safe,
+	quote = quote,
 	dirname = dirname,
 	mkdir_p = mkdir_p,
+	sysrc_f = sysrc_f,
 	sethostname = sethostname,
 	adduser = adduser,
 	addgroup = addgroup,
