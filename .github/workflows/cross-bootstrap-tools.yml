@@ -35,10 +35,10 @@ jobs:
             # XXX the Ubuntu packaged bmake causes build errors
             bmake: ${GITHUB_WORKSPACE}/tools/build/make.py
           - os: macos-latest
-            compiler: clang-13
-            pkgs: bmake libarchive llvm@13
-            llvm-bindir: /opt/homebrew/opt/llvm@13/bin
-            llvm-ld: /opt/homebrew/opt/llvm@13/bin/ld.lld
+            compiler: clang-18
+            pkgs: bmake libarchive llvm@18
+            llvm-bindir: /opt/homebrew/opt/llvm@18/bin
+            llvm-ld: /opt/homebrew/opt/llvm@18/bin/ld.lld
             bmake: /opt/homebrew/opt/bmake/bin/bmake
           - target_arch: amd64
             target: amd64
