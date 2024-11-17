@@ -77,7 +77,7 @@
 #include <security/pam_appl.h>
 #endif
 
-#include "blacklist_client.h"
+#include "blocklist_client.h"
 #include "pathnames.h"
 #include "extern.h"
 
@@ -125,7 +125,7 @@ int	noretr = 0;		/* RETR command is disabled.	*/
 int	noguestretr = 0;	/* RETR command is disabled for anon users. */
 int	noguestmkd = 0;		/* MKD command is disabled for anon users. */
 int	noguestmod = 1;		/* anon users may not modify existing files. */
-int	use_blacklist = 0;
+int	use_blocklist = 0;
 
 off_t	file_size;
 off_t	byte_count;
@@ -292,10 +292,10 @@ main(int argc, char *argv[], char **envp)
 			break;
 
 		case 'B':
-#ifdef USE_BLACKLIST
-			use_blacklist = 1;
+#ifdef USE_BLOCKLIST
+			use_blocklist = 1;
 #else
-			syslog(LOG_WARNING, "not compiled with USE_BLACKLIST support");
+			syslog(LOG_WARNING, "not compiled with USE_BLOCKLIST support");
 #endif
 			break;
 
@@ -620,7 +620,7 @@ gotchild:
 		reply(220, "%s FTP server (%s) ready.", hostname, version);
 	else
 		reply(220, "FTP server ready.");
-	BLACKLIST_INIT();
+	BLOCKLIST_INIT();
 	for (;;)
 		(void) yyparse();
 	/* NOTREACHED */
@@ -1375,7 +1375,7 @@ skip:
 		 */
 		if (rval) {
 			reply(530, "Login incorrect.");
-			BLACKLIST_NOTIFY(BLACKLIST_AUTH_FAIL, STDIN_FILENO, "Login incorrect");
+			BLOCKLIST_NOTIFY(BLOCKLIST_AUTH_FAIL, STDIN_FILENO, "Login incorrect");
 			if (logging) {
 				syslog(LOG_NOTICE,
 				    "FTP LOGIN FAILED FROM %s",
@@ -1393,7 +1393,7 @@ skip:
 			}
 			return;
 		} else {
-			BLACKLIST_NOTIFY(BLACKLIST_AUTH_OK, STDIN_FILENO, "Login successful");
+			BLOCKLIST_NOTIFY(BLOCKLIST_AUTH_OK, STDIN_FILENO, "Login successful");
 		}
 	}
 	login_attempts = 0;		/* this time successful */

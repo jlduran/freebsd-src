@@ -251,8 +251,8 @@ DIRDEPS+= \
 	lib/libpmcstat
 .endif
 
-.if ${MK_BLACKLIST_SUPPORT} != "no"
-DIRDEPS+=	lib/libblacklist
+.if ${MK_BLOCKLIST_SUPPORT} != "no"
+DIRDEPS+=	lib/libblocklist
 .endif
 
 .if ${MK_ZFS} != "no"

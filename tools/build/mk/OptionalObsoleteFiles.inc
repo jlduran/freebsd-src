@@ -165,26 +165,26 @@ OLD_FILES+=usr/share/man/man8/bhyveload.8.gz
 OLD_DIRS+=usr/share/examples/bhyve
 .endif
 
-.if ${MK_BLACKLIST} == no
-OLD_FILES+=etc/blacklistd.conf
-OLD_FILES+=etc/rc.d/blacklistd
-OLD_FILES+=usr/include/blacklist.h
-OLD_FILES+=usr/lib/libblacklist.a
-OLD_FILES+=usr/lib/libblacklist_p.a
-OLD_FILES+=usr/lib/libblacklist.so
-OLD_LIBS+=usr/lib/libblacklist.so.0
-OLD_FILES+=usr/libexec/blacklistd-helper
-OLD_FILES+=usr/sbin/blacklistctl
-OLD_FILES+=usr/sbin/blacklistd
-OLD_FILES+=usr/share/man/man3/blacklist.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_close.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_open.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_r.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_sa.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_sa_r.3.gz
-OLD_FILES+=usr/share/man/man5/blacklistd.conf.5.gz
-OLD_FILES+=usr/share/man/man8/blacklistctl.8.gz
-OLD_FILES+=usr/share/man/man8/blacklistd.8.gz
+.if ${MK_BLOCKLIST} == no
+OLD_FILES+=etc/blocklistd.conf
+OLD_FILES+=etc/rc.d/blocklistd
+OLD_FILES+=usr/include/blocklist.h
+OLD_FILES+=usr/lib/libblocklist.a
+OLD_FILES+=usr/lib/libblocklist_p.a
+OLD_FILES+=usr/lib/libblocklist.so
+OLD_LIBS+=usr/lib/libblocklist.so.0
+OLD_FILES+=usr/libexec/blocklistd-helper
+OLD_FILES+=usr/sbin/blocklistctl
+OLD_FILES+=usr/sbin/blocklistd
+OLD_FILES+=usr/share/man/man3/blocklist.3.gz
+OLD_FILES+=usr/share/man/man3/blocklist_close.3.gz
+OLD_FILES+=usr/share/man/man3/blocklist_open.3.gz
+OLD_FILES+=usr/share/man/man3/blocklist_r.3.gz
+OLD_FILES+=usr/share/man/man3/blocklist_sa.3.gz
+OLD_FILES+=usr/share/man/man3/blocklist_sa_r.3.gz
+OLD_FILES+=usr/share/man/man5/blocklistd.conf.5.gz
+OLD_FILES+=usr/share/man/man8/blocklistctl.8.gz
+OLD_FILES+=usr/share/man/man8/blocklistd.8.gz
 .endif
 
 .if ${MK_BLUETOOTH} == no

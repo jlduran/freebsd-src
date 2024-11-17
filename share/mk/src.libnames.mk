@@ -235,9 +235,9 @@ _LIBRARIES=	\
 		zpool \
 		zutil
 
-.if ${MK_BLACKLIST} != "no"
+.if ${MK_BLOCKLIST} != "no"
 _LIBRARIES+= \
-		blacklist \
+		blocklist \
 
 .endif
 
@@ -289,8 +289,8 @@ _DP_archive=	z bz2 lzma bsdxml zstd
 _DP_avl=	spl
 _DP_bsddialog=	ncursesw tinfow
 _DP_zstd=	pthread
-.if ${MK_BLACKLIST} != "no"
-_DP_blacklist+=	pthread
+.if ${MK_BLOCKLIST} != "no"
+_DP_blocklist+=	pthread
 .endif
 _DP_crypto=	pthread
 # See comment by _DP_archive above
@@ -763,7 +763,7 @@ LIBGMOCK_MAINDIR=	${_LIB_OBJTOP}/lib/googletest/gmock_main
 LIBGTESTDIR=	${_LIB_OBJTOP}/lib/googletest/gtest
 LIBGTEST_MAINDIR=	${_LIB_OBJTOP}/lib/googletest/gtest_main
 LIBALIASDIR=	${_LIB_OBJTOP}/lib/libalias/libalias
-LIBBLACKLISTDIR=	${_LIB_OBJTOP}/lib/libblacklist
+LIBBLOCKLISTDIR=	${_LIB_OBJTOP}/lib/libblocklist
 LIBBLOCKSRUNTIMEDIR=	${_LIB_OBJTOP}/lib/libblocksruntime
 LIBBSNMPDIR=	${_LIB_OBJTOP}/lib/libbsnmp/libbsnmp
 LIBCASPERDIR=	${_LIB_OBJTOP}/lib/libcasper/libcasper

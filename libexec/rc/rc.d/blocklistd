@@ -28,19 +28,19 @@
 # 
 #
 
-# PROVIDE: blacklistd
+# PROVIDE: blocklistd
 # REQUIRE: netif pf
 
 . /etc/rc.subr
 
-name="blacklistd"
-desc="System blacklist daemon"
-rcvar="blacklistd_enable"
+name="blocklistd"
+desc="System blocklist daemon"
+rcvar="blocklistd_enable"
 command="/usr/sbin/${name}"
-required_files="/etc/blacklistd.conf"
+required_files="/etc/blocklistd.conf"
 
 # no svcj options needed
-: ${blacklistd_svcj_options:=""}
+: ${blocklistd_svcj_options:=""}
 
 load_rc_config $name
 run_rc_command "$1"

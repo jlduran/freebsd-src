@@ -11,7 +11,7 @@ CONFS=	DAEMON \
 	SERVERS \
 	adjkerntz \
 	bgfsck \
-	${_blacklistd} \
+	${_blocklistd} \
 	bridge \
 	cfumass \
 	cleanvar \
@@ -173,8 +173,8 @@ CONFS+=		automountd
 CONFS+=		autounmountd
 .endif
 
-.if ${MK_BLACKLIST} != "no"
-_blacklistd+=	blacklistd
+.if ${MK_BLOCKLIST} != "no"
+_blocklistd+=	blocklistd
 .endif
 
 .if ${MK_BLUETOOTH} != "no"

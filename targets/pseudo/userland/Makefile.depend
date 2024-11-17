@@ -802,10 +802,10 @@ DIRDEPS.powerpc= \
 	usr.sbin/nvram \
 	usr.sbin/ofwdump
 
-.if ${MK_BLACKLIST_SUPPORT} != "no"
+.if ${MK_BLOCKLIST_SUPPORT} != "no"
 DIRDEPS+= \
-	usr.sbin/blacklistctl \
-	usr.sbin/blacklistd
+	usr.sbin/blocklistctl \
+	usr.sbin/blocklistd
 .endif
 
 .if ${MK_CXGBETOOL} != "no"
