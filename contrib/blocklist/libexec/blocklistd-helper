@@ -10,9 +10,9 @@
 # $7 id
 
 pf=
-if [ -f "/etc/ipfw-blacklist.rc" ]; then
+if [ -f "/etc/ipfw-blocklist.rc" ]; then
 	pf="ipfw"
-	. /etc/ipfw-blacklist.rc
+	. /etc/ipfw-blocklist.rc
 	ipfw_offset=${ipfw_offset:-2000}
 else
 	# ipfilter NetBSD, FreeBSD, Linux
@@ -71,16 +71,16 @@ add)
 	case "$pf" in
 	ipf)
 		# N.B.:  If you reload /etc/ipf.conf then you need to stop and
-		# restart blacklistd (and make sure blacklistd_flags="-r"):
+		# restart blocklistd (and make sure blocklistd_flags="-r"):
 		#
 		#	/etc/rc.d/ipfilter reload
-		#	/etc/rc.d/blacklistd restart
+		#	/etc/rc.d/blocklistd restart
 		#
 		# XXX we assume the following rule is present in /etc/ipf.conf:
 		#
-		#	block in proto tcp/udp from any to any head blacklistd
+		#	block in proto tcp/udp from any to any head blocklistd
 		#
-		# where "blacklistd" is the default rulename (i.e. "$2")
+		# where "blocklistd" is the default rulename (i.e. "$2")
 		#
 		# This rule can come before any rule that logs connections,
 		# etc., and should be followed by final rules such as:
@@ -93,7 +93,7 @@ add)
 		#	pass out all
 		#
 		# I.e. a "pass" rule which will be the final match and override
-		# the "block".  This way the rules added by blacklistd will
+		# the "block".  This way the rules added by blocklistd will
 		# actually block packets, and prevent logging of them as
 		# connections, because they include the "quick" flag.
 		#
@@ -204,7 +204,7 @@ flush)
 		#
 		# XXX this is a slightly convoluted way to remove all the rules
 		# in the group added for "$2" (i.e. normally by default
-		# "blacklistd").
+		# "blocklistd").
 		#
 		# N.B. WARNING:  This is obviously not reentrant!
 		#

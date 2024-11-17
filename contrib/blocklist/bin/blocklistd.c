@@ -1,4 +1,4 @@
-/*	$NetBSD: blacklistd.c,v 1.4 2023/12/23 21:53:54 christos Exp $	*/
+/*	$NetBSD: blocklistd.c,v 1.4 2023/12/23 21:53:54 christos Exp $	*/
 
 /*-
  * Copyright (c) 2015 The NetBSD Foundation, Inc.
@@ -32,7 +32,7 @@
 #include "config.h"
 #endif
 #include <sys/cdefs.h>
-__RCSID("$NetBSD: blacklistd.c,v 1.4 2023/12/23 21:53:54 christos Exp $");
+__RCSID("$NetBSD: blocklistd.c,v 1.4 2023/12/23 21:53:54 christos Exp $");
 
 #include <sys/types.h>
 #include <sys/socket.h>

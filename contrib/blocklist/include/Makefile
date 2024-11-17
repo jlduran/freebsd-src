@@ -4,7 +4,7 @@
 
 NOOBJ=		# defined
 
-INCS=	blacklist.h
+INCS=	blocklist.h
 INCSDIR=	/usr/include
 
 .include <bsd.prog.mk>

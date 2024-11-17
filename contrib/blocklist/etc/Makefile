@@ -2,9 +2,9 @@
 
 SUBDIR=rc.d
 
-FILESDIR=               /usr/share/examples/blacklist
+FILESDIR=               /usr/share/examples/blocklist
 FILESMODE=    644
-FILES=	blacklistd.conf npf.conf
+FILES=	blocklistd.conf npf.conf
 
 .include <bsd.files.mk>
 .include <bsd.subdir.mk>

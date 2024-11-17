@@ -1,6 +1,6 @@
 # $NetBSD$
 
-SCRIPTS=        blacklistd-helper
+SCRIPTS=        blocklistd-helper
 SCRIPTSDIR=     /libexec
 
 .include <bsd.prog.mk>

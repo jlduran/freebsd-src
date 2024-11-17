@@ -1,6 +1,6 @@
 #	$NetBSD$
 
-SCRIPTS=blacklistd
+SCRIPTS=blocklistd
 SCRIPTSDIR=/etc/rc.d
 
 .include <bsd.prog.mk>
