@@ -137,7 +137,7 @@
 #include "sk-api.h"
 #include "srclimit.h"
 #include "dh.h"
-#include "blacklist_client.h"
+#include "blocklist_client.h"
 
 #ifdef LIBWRAP
 #include <tcpd.h>
@@ -2343,7 +2343,7 @@ main(int ac, char **av)
 		fatal_f("sshbuf_new failed");
 	auth_debug_reset();
 
-	BLACKLIST_INIT();
+	BLOCKLIST_INIT();
 
 	if (use_privsep) {
 		if (privsep_preauth(ssh) == 1)
