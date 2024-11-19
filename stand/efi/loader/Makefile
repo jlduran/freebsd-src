@@ -58,6 +58,7 @@ CFLAGS.gfx_fb.c += -DHAVE_MEMCPY -I${SRCTOP}/sys/contrib/zlib
 CWARNFLAGS.main.c+=	-Wno-format
 
 .PATH: ${.CURDIR}/../loader
+__arch=		${TARGET} # XXX Linux clean (x86_64 -> amd64, aarch64 -> arm64)
 .PATH: ${.CURDIR}/../loader/arch/${__arch}
 .include "${.CURDIR}/../loader/arch/${__arch}/Makefile.inc"
 
