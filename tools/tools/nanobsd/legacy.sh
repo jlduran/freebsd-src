@@ -102,6 +102,10 @@ create_code_slice ( ) (
 	mkdir -p ${MNT}
 	CODE_SIZE=`head -n 1 ${NANO_LOG}/_.partitioning | awk '{ print $2 }'`
 
+	if [ -n "${NANO_NOPRIV_BUILD}" ]; then
+		exit
+	fi
+
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		MD=`mdconfig -a -t swap -s ${CODE_SIZE} -x ${NANO_SECTS} \
 			-y ${NANO_HEADS}`
@@ -151,9 +155,128 @@ create_diskimage ( ) (
 
 	(
 
+	CODE_SIZE=$(head -n 1 "${NANO_LOG}/_.partitioning" | awk '{ print $2 }')
 	IMG=${NANO_DISKIMGDIR}/${NANO_IMGNAME}
 	MNT=${NANO_OBJ}/_.mnt
 	mkdir -p ${MNT}
+
+	if [ -n "${NANO_NOPRIV_BUILD}" ]; then
+		if [ -f "${NANO_WORLDDIR}/${NANO_BOOTLOADER}" ]; then
+			bootloader="-b ${NANO_WORLDDIR}/${NANO_BOOTLOADER}"
+		else
+			echo "Image will not be bootable"
+		fi
+
+		echo "Writing code image..."
+		if [ -f "${NANO_WORLDDIR}/boot/boot" ]; then
+			echo "Making bootable partition"
+			bootcode="-b ${NANO_WORLDDIR}/boot/boot"
+		else
+			echo "Partition will not be bootable"
+		fi
+		makefs -DxZ -F "${NANO_METALOG}" -N "${NANO_WORLDDIR}/etc" \
+		    -M "${CODE_SIZE}b" -o minfree=0,optimization=space,version=2 \
+		    -T "${NANO_TIMESTAMP}" -t ffs "${NANO_OBJ}/_.disk.ffs" "${NANO_WORLDDIR}"
+		mkimg -s bsd \
+		    ${bootcode} \
+		    -p freebsd-ufs:="${NANO_OBJ}/_.disk.ffs" \
+		    -o "${NANO_DISKIMGDIR}/_.disk.image"
+		diskimage="-p freebsd:=${NANO_DISKIMGDIR}/_.disk.image"
+
+		if [ "$NANO_IMAGES" -gt 1 ] && [ "$NANO_INIT_IMG2" -gt 0 ] ; then
+			echo "Duplicating to second image..."
+			for f in ${NANO_WORLDDIR}/etc/fstab ${NANO_WORLDDIR}/conf/base/etc/fstab
+			do
+				sed -i "" "s=${NANO_DRIVE}${NANO_SLICE_ROOT}=${NANO_DRIVE}${NANO_SLICE_ALTROOT}=g" "${f}"
+			done
+			makefs -DxZ -F "${NANO_METALOG}" -N "${NANO_WORLDDIR}/etc" \
+			    -M "${CODE_SIZE}b" -o minfree=0,optimization=space,version=2 \
+			    -T "${NANO_TIMESTAMP}" -t ffs "${NANO_OBJ}/_.altroot.ffs" "${NANO_WORLDDIR}"
+			for f in "${NANO_WORLDDIR}/etc/fstab" "${NANO_WORLDDIR}/conf/base/etc/fstab"
+			do
+				sed -i "" "s=${NANO_DRIVE}${NANO_SLICE_ALTROOT}=${NANO_DRIVE}${NANO_SLICE_ROOT}=g" "${f}"
+			done
+			mkimg -s bsd \
+			    ${bootcode} \
+			    -p freebsd-ufs:="${NANO_OBJ}/_.altroot.ffs" \
+			    -o "${NANO_OBJ}/_.altroot.image"
+			altroot="-p freebsd:=${NANO_OBJ}/_.altroot.image"
+		else
+			altroot="-p-"
+		fi
+		if [ "${NANO_INIT_IMG2}" -eq 0 ]; then
+			altroot="-p freebsd::${CODE_SIZE}b"
+		fi
+
+		# Create Config slice
+		if [ -n "${NANO_CFGDIR}" ] && [ -d "${NANO_CFGDIR}" ]; then
+			echo "Populating ${NANO_SLICE_CFG} from ${NANO_CFGDIR}"
+			if [ -s "${NANO_METALOG_CFG}" ]; then
+				makefs ${NANO_MAKEFS_OPTIONS} \
+				    -x -F "${NANO_METALOG_CFG}" -N "${NANO_WORLDDIR}/etc" \
+				    -s "${NANO_CONFSIZE}b" -T "${NANO_TIMESTAMP}" -t ffs \
+				    "${NANO_OBJ}/_.cfg.ffs" "${NANO_CFGDIR}"
+			else
+				mkdir -p "${NANO_OBJ}/_.cfg"
+				echo "/set type=dir uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME} mode=0755" > "${NANO_METALOG_CFG}"
+				echo "." >> "${NANO_METALOG_CFG}"
+				(
+					cd "${NANO_SLICE_CFG}"
+					mtree -bcn -Rcksum,flags,gid,nlink,size,time,uid >> "${NANO_METALOG_CFG}"
+				)
+				makefs ${NANO_MAKEFS_OPTIONS} \
+				    -F "${NANO_METALOG_CFG}" -N "${NANO_WORLDDIR}/etc" \
+				    -s "${NANO_CONFSIZE}b" -T "${NANO_TIMESTAMP}" -t ffs \
+				    "${NANO_OBJ}/_.cfg.ffs" "${NANO_OBJ}/_.cfg"
+			fi
+		else
+			mkdir -p "${NANO_OBJ}/_.cfg"
+			echo "/set type=dir uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME} mode=0755" > "${NANO_METALOG_CFG}"
+			echo "." >> "${NANO_METALOG_CFG}"
+			# FIXME: Else the cfg partition does not get properly created
+			# cfgimage="-p freebsd::${NANO_CONFSIZE}b"
+			makefs ${NANO_MAKEFS_OPTIONS} \
+			    -F "${NANO_METALOG_CFG}" -N "${NANO_WORLDDIR}/etc" \
+			    -s "${NANO_CONFSIZE}b" -T "${NANO_TIMESTAMP}" -t ffs \
+			    "${NANO_OBJ}/_.cfg.ffs" "${NANO_OBJ}/_.cfg"
+		fi
+		cfgimage="-p freebsd:=${NANO_OBJ}/_.cfg.ffs"
+
+		# Create Data slice, if any.
+		if [ -n "${NANO_SLICE_DATA}" ] &&
+		    [ "${NANO_SLICE_CFG}" = "${NANO_SLICE_DATA}" ] &&
+		    [ "${NANO_DATASIZE}" -ne 0 ]; then
+			pprint 2 "NANO_SLICE_DATA is the same as NANO_SLICE_CFG, fix."
+			exit 2
+		fi
+		if [ "${NANO_DATASIZE}" -ne 0 ] && [ -n "${NANO_SLICE_DATA}" ] ; then
+			echo "Populating ${NANO_SLICE_DATA} from ${NANO_DATADIR}"
+			if [ -n "${NANO_METALOG_DATA}" ]; then
+				makefs ${NANO_MAKEFS_OPTIONS} \
+				    -x -F "${NANO_METALOG_DATA}" -N "${NANO_WORLDDIR}/etc" \
+				    -s "${NANO_DATASIZE}b" -T "${NANO_TIMESTAMP}" -t ffs \
+				    "${NANO_OBJ}/_.data.ffs" "${NANO_OBJ}/_.data"
+			else
+				echo "/set type=dir uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME} mode=0755" > "${NANO_METALOG_DATA}"
+				echo "." >> "${NANO_METALOG_DATA}"
+				makefs ${NANO_MAKEFS_OPTIONS} \
+				    -F "${NANO_METALOG_DATA}" -N "${NANO_WORLDDIR}/etc" \
+				    -s "${NANO_DATASIZE}b" -T "${NANO_TIMESTAMP}" -t ffs \
+				    "${NANO_OBJ}/_.data.ffs" "${NANO_OBJ}/_.data"
+			fi
+			dataimage="-p freebsd:=${NANO_OBJ}/_.data.ffs"
+		fi
+
+		echo "Writing out ${NANO_IMGNAME}..."
+		mkimg -s mbr \
+		    ${bootloader} \
+		    ${diskimage} \
+		    ${altroot} \
+		    ${cfgimage} \
+		    ${dataimage} \
+		    -o ${IMG}
+		exit
+	fi
 
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		MD=`mdconfig -a -t swap -s ${NANO_MEDIASIZE} -x ${NANO_SECTS} \
