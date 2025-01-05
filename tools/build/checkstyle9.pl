@@ -36,6 +36,8 @@ my $summary_file = 0;
 my $root;
 my %debug;
 my $help = 0;
+my $annotate = 0;
+my @reported = ();
 
 sub help {
 	my ($exitcode) = @_;
@@ -1178,9 +1180,26 @@ sub report {
 	my $output = '';
 	my $do_color = $color && !$github;
 	$output .= BOLD if $do_color;
-	$output .= "::error " if $github && $level eq 'ERROR';
-	$output .= "::warning " if $github && $level eq 'WARNING';
-	$output .= $prefix;
+	if ($github) {
+		if ($level eq 'ERROR') {
+			if ($annotate) {
+				$output .= "::error::";
+				$annotate = 0;
+			} else {
+				$output .= "::error ";
+				$output .= $prefix
+			}
+		}
+		if ($level eq 'WARNING') {
+			if ($annotate) {
+				$output .= "::warning::";
+				$annotate = 0;
+			} else {
+				$output .= "::warning ";
+				$output .= $prefix
+			}
+		}
+	}
 	$output .= RED if $do_color && $level eq 'ERROR';
 	$output .= MAGENTA if $do_color && $level eq 'WARNING';
 	$output .= $level . ':' if !$github;
@@ -1198,7 +1217,7 @@ sub report_dump {
 	our @report;
 }
 sub ERROR {
- 	if (report("ERROR", $_[0])) {
+	if (report("ERROR", $_[0])) {
 		our $clean = 0;
 		our $cnt_error++;
 	}
@@ -1207,6 +1226,20 @@ sub WARN {
 	if (report("WARNING", $_[0])) {
 		our $clean = 0;
 		our $cnt_warn++;
+	}
+}
+sub ERROR_ONCE {
+	unless($_[0] ~~ @reported) {
+		push(@reported,$_[0]);
+		$annotate = 1;
+		ERROR($_[0]);
+	}
+}
+sub WARN_ONCE {
+	unless($_[0] ~~ @reported) {
+		push(@reported,$_[0]);
+		$annotate = 1;
+		WARN($_[0]);
 	}
 }
 
@@ -1461,13 +1494,21 @@ sub process {
 			$has_sob = 1;
 
 			if (!($line =~ /^\s*Signed-off-by:/)) {
-				ERROR("The correct form is \"Signed-off-by\"\n" .
+				if ($github) {
+					ERROR_ONCE("The correct form is \"Signed-off-by\"\n");
+				} else {
+					ERROR("The correct form is \"Signed-off-by\"\n" .
 					$herecurr);
+				}
 				$has_sob = 0;
 			}
 			if ($line =~ /^\s*signed-off-by:\S/i) {
-				ERROR("space required after Signed-off-by:\n" .
+				if ($github) {
+					ERROR_ONCE("space required after Signed-off-by:\n");
+				} else {
+					ERROR("space required after Signed-off-by:\n" .
 					$herecurr);
+				}
 				$has_sob = 0;
 			}
 		}
@@ -2655,7 +2696,11 @@ sub process {
 	}
 
 	if ($has_sob == 0) {
-	    WARN("Missing Signed-off-by: line");
+		if ($github) {
+			WARN_ONCE("Missing Signed-off-by: line");
+		} else {
+			WARN("Missing Signed-off-by: line");
+		}
 	}
 
 	# If we have no input at all, then there is nothing to report on
@@ -2682,10 +2727,12 @@ sub process {
 
 	print report_dump();
 	if ($summary && !($clean == 1 && $quiet == 1)) {
+		open(FH, '>>', '/tmp/github_step_file') or die $!;
 		print "$filename " if ($summary_file);
 		print "total: $cnt_error errors, $cnt_warn warnings, " .
 			"$cnt_lines lines checked\n";
 		print "\n" if ($quiet == 0);
+		close(FH);
 	}
 
 	if ($quiet == 0) {
@@ -2698,7 +2745,9 @@ sub process {
 	}
 
 	if ($clean == 1 && $quiet == 0) {
-		print "$vname has no obvious style problems and is ready for submission.\n"
+		open(FH, '>', '/tmp/github_step_file') or die $!;
+		print "$vname has no obvious style problems and is ready for submission.\n";
+		close(FH);
 	}
 
 	return ($no_warnings ? $clean : $cnt_error == 0);

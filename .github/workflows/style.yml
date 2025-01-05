@@ -34,3 +34,4 @@ jobs:
         run: |
           sha=$(git rev-parse HEAD~${{ github.event.pull_request.commits }})
           tools/build/checkstyle9.pl --github ${sha}..${{ github.event.pull_request.head.sha }}
+          cat /tmp/github_step_summary > $GITHUB_STEP_SUMMARY
