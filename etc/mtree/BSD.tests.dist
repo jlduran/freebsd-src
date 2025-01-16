@@ -959,6 +959,8 @@
         ..
         vm
             stack
+                .debug
+                ..
             ..
         ..
         vmm
