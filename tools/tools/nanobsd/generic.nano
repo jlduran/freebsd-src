@@ -1,0 +1,9 @@
+NANO_NAME=generic
+NANO_SRC=/usr/src
+NANO_KERNEL=GENERIC
+NANO_DRIVE=vtbd0
+NANO_MEDIASIZE=16000000
+NANO_OBJ="$HOME/obj"
+
+customize_cmd cust_comconsole
+customize_cmd cust_install_files
