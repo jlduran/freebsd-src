@@ -36,6 +36,7 @@ topdir=`dirname ${nanobsd_sh}`
 # Parse arguments
 
 do_clean=true
+do_root=true
 do_kernel=true
 do_installkernel=true
 do_world=true
@@ -49,7 +50,7 @@ do_prep_image=true
 . "${topdir}/legacy.sh"
 
 set +e
-args=`getopt BKXWbc:fhiIknqvw $*`
+args=`getopt BKXWbc:fhiIknqUvw $*`
 if [ $? -ne 0 ] ; then
 	usage
 	exit 2
@@ -118,6 +119,11 @@ do
 		;;
 	-v)
 		PPLEVEL=$(($PPLEVEL + 1))
+		shift
+		;;
+	-U)
+		do_root=false
+		NANO_NOPRIV_BUILD=true
 		shift
 		;;
 	-w)
@@ -213,9 +219,17 @@ else
 fi
 if $do_code ; then
 	calculate_partitioning
-	create_code_slice
+	if [ -z "${NANO_NOPRIV_BUILD}" ]; then
+		create_code_slice
+	else
+		_create_code_slice
+	fi
 	if $do_image ; then
-		create_diskimage
+		if [ -z "${NANO_NOPRIV_BUILD}" ]; then
+			create_diskimage
+		else
+			_create_diskimage
+		fi
 	else
 		pprint 2 "Skipping image build (as instructed)"
 	fi
