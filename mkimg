@@ -1,0 +1,49 @@
+usage: mkimg <options>
+    options:
+	--formats	-  list image formats
+	--schemes	-  list partition schemes
+	--version	-  show version information
+
+	-a <num>	-  mark num'th partition as active
+	-b <file>	-  file containing boot code
+	-c <num>	-  minimum capacity (in bytes) of the disk
+	-C <num>	-  maximum capacity (in bytes) of the disk
+	-f <format>
+	-o <file>	-  file to write image into
+	-p <partition>
+	-s <scheme>
+	-v		-  increase verbosity
+	-y		-  [developers] enable unit test
+	-H <num>	-  number of heads to simulate
+	-P <num>	-  physical sector size
+	-S <num>	-  logical sector size
+	-T <num>	-  number of tracks to simulate
+
+    formats:
+	vmdk	-  Virtual Machine Disk
+	vhdx	-  Virtual Hard Disk, version 2
+	vhdf	-  Fixed Virtual Hard Disk
+	vhd	-  Virtual Hard Disk
+	raw	-  Raw Disk
+	qcow2	-  QEMU Copy-On-Write, version 2
+	qcow	-  QEMU Copy-On-Write, version 1
+
+    schemes:
+	mbr	-  Master Boot Record
+	gpt	-  GUID Partition Table
+	ebr	-  Extended Boot Record
+	bsd	-  BSD disk label
+	apm	-  Apple Partition Map
+
+    partition specification:
+	<t>[/<l>]::<size>[:[+]<offset>]	-  empty partition of given size and
+					   optional relative or absolute offset
+	<t>[/<l>]:=<file>[:[+]offset]	-  partition content and size are
+					   determined by the named file and
+					   optional relative or absolute offset
+	<t>[/<l>]:-<cmd>		-  partition content and size are taken
+					   from the output of the command to run
+	-				-  unused partition entry
+	    where:
+		<t>	-  scheme neutral partition type
+		<l>	-  optional scheme-dependent partition label
