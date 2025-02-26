@@ -1257,7 +1257,6 @@ mm_answer_keyallowed(struct ssh *ssh, int sock, struct sshbuf *m)
 	} else {
 		/* Log failed attempt */
 		auth_log(ssh, 0, 0, auth_method, NULL);
-		BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "ssh");
 		free(cuser);
 		free(chost);
 	}
