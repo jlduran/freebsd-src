@@ -338,6 +338,7 @@ auth_maxtries_exceeded(struct ssh *ssh)
 {
 	Authctxt *authctxt = (Authctxt *)ssh->authctxt;
 
+	BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, authctxt->user);
 	error("maximum authentication attempts exceeded for "
 	    "%s%.100s from %.200s port %d ssh2",
 	    authctxt->valid ? "" : "invalid user ",
@@ -498,7 +499,7 @@ getpwnamallow(struct ssh *ssh, const char *user)
 	aix_restoreauthdb();
 #endif
 	if (pw == NULL) {
-		BLACKLIST_NOTIFY(ssh, BLACKLIST_BAD_USER, user);
+		BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, user);
 		logit("Invalid user %.100s from %.100s port %d",
 		    user, ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 #ifdef CUSTOM_FAILED_LOGIN
