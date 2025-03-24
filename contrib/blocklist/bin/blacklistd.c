@@ -175,6 +175,7 @@ process(bl_t bl)
 	struct dbinfo dbi;
 	struct timespec ts;
 
+	memset(&dbi, 0, sizeof(dbi));
 	if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
 		(*lfun)(LOG_ERR, "clock_gettime failed (%m)");
 		return;
