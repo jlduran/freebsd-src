@@ -45,7 +45,8 @@ extern "C" {
 #define blacklist	blocklist
 #define blacklist_r	blocklist_r
 #define blacklist_sa	blocklist_sa
-#define blacklist_sa_r	blocklist_sa_r
+int blacklist_sa_r(struct blacklist *, int, int,
+    const struct sockaddr *, socklen_t, const char *);
 
 #if defined(__cplusplus)
 }

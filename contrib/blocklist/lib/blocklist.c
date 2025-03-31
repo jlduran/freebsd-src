@@ -59,6 +59,39 @@ blocklist_sa(int action, int rfd, const struct sockaddr *sa, socklen_t salen,
 	return rv;
 }
 
+#ifdef _BLACKLIST_H
+/*
+ * Adapt the internal action after commit ddf6d71:
+ * BLACKLIST_AUTH_FAIL = BLACKLIST_BAD_USER
+ */
+int
+blacklist_sa_r(struct blocklist *bl, int action, int rfd,
+	const struct sockaddr *sa, socklen_t slen, const char *msg)
+{
+	bl_type_t internal_action;
+
+	/* internal values are not the same as user application values */
+	switch (action) {
+	case BLACKLIST_AUTH_FAIL:
+		internal_action = BL_BADUSER;
+		break;
+	case BLACKLIST_AUTH_OK:
+		internal_action = BL_DELETE;
+		break;
+	case BLACKLIST_ABUSIVE_BEHAVIOR:
+		internal_action = BL_ABUSE;
+		break;
+	case BLACKLIST_BAD_USER:
+		internal_action = BL_BADUSER;
+		break;
+	default:
+		internal_action = BL_INVALID;
+		break;
+	}
+	return bl_send(bl, internal_action, rfd, sa, slen, msg);
+}
+#endif /* _BLACKLIST_H */
+
 int
 blocklist_sa_r(struct blocklist *bl, int action, int rfd,
 	const struct sockaddr *sa, socklen_t slen, const char *msg)
