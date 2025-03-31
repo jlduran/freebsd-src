@@ -1,4 +1,4 @@
-/*	$NetBSD: bl.h,v 1.2 2024/08/02 17:11:55 christos Exp $	*/
+/*	$NetBSD: blacklist.h,v 1.4 2025/02/11 17:42:17 christos Exp $	*/
 
 /*-
  * Copyright (c) 2014 The NetBSD Foundation, Inc.
@@ -28,56 +28,36 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _BL_H
-#define _BL_H
+#ifndef _BLACKLIST_H
+#define _BLACKLIST_H
 
-#include <stdbool.h>
-#include <stdarg.h>
-#include <sys/param.h>
 #include <sys/socket.h>
-#include "blocklist.h"
+#include <syslog.h>
+#include <blocklist.h>
 
-typedef enum {
-	BL_INVALID,
-	BL_ADD,
-	BL_DELETE,
-	BL_ABUSE,
-	BL_BADUSER
-} bl_type_t;
-
-typedef struct {
-	bl_type_t bi_type;
-	int bi_fd;
-	uid_t bi_uid;
-	gid_t bi_gid;
-	socklen_t bi_slen;
-	struct sockaddr_storage bi_ss;
-	char bi_msg[1024];
-} bl_info_t;
-
-#define bi_cred bi_u._bi_cred
-
-#ifndef _PATH_BLSOCK
-#define _PATH_BLSOCK "/var/run/blocklistd.sock"
+#if defined(__cplusplus)
+extern "C" {
 #endif
 
-__BEGIN_DECLS
+#define blacklist_open	blocklist_open
+#define blacklist_open2	blocklist_open2
+#define blacklist_close	blocklist_close
+#define blacklist	blocklist
+#define blacklist_r	blocklist_r
+#define blacklist_sa	blocklist_sa
+#define blacklist_sa_r	blocklist_sa_r
 
-typedef struct blocklist *bl_t;
+#if defined(__cplusplus)
+}
+#endif
 
-#ifdef _BLACKLIST_H
-typedef struct blacklist *bl_t;
+/* action values for user applications */
+#define BLACKLIST_API_ENUM	1
+enum {
+        BLACKLIST_AUTH_OK = 0,
+        BLACKLIST_AUTH_FAIL,
+        BLACKLIST_ABUSIVE_BEHAVIOR,
+        BLACKLIST_BAD_USER
+};
+
 #endif /* _BLACKLIST_H */
-
-bl_t bl_create(bool, const char *,
-    void (*)(int, struct syslog_data *, const char *, va_list));
-void bl_destroy(bl_t);
-int bl_send(bl_t, bl_type_t, int, const struct sockaddr *, socklen_t,
-    const char *);
-int bl_getfd(bl_t);
-bl_info_t *bl_recv(bl_t);
-bool bl_isconnected(bl_t);
-
-__END_DECLS
-
-#endif /* _BL_H */

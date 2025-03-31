@@ -222,6 +222,31 @@ and
 options provide "full" Relocation Read-Only (RELRO) support.
 With full RELRO the entire GOT is made read-only after performing relocation at
 startup, avoiding GOT overwrite attacks.
+.It Va WITHOUT_BLACKLIST
+This option is being deprecated in favor of
+.Va WITHOUT_BLOCKLIST .
+Set this if you do not want to build
+.Xr blacklistd 8
+and
+.Xr blacklistctl 8 .
+When set, these options are also in effect:
+.Pp
+.Bl -inset -compact
+.It Va WITHOUT_BLACKLIST_SUPPORT
+(unless
+.Va WITH_BLACKLIST_SUPPORT
+is set explicitly)
+.El
+.It Va WITHOUT_BLACKLIST_SUPPORT
+This option is being deprecated in favor of
+.Va WITHOUT_BLOCKLIST_SUPPORT .
+Build some programs without
+.Xr libblacklist 3
+support, like
+.Xr fingerd 8 ,
+.Xr ftpd 8 ,
+and
+.Xr sshd 8 .
 .It Va WITHOUT_BLOCKLIST
 Set this if you do not want to build
 .Xr blocklistd 8

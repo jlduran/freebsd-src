@@ -52,26 +52,7 @@
 # done
 
 # XXXXXXXX: blacklist renamed to blocklist
-OLD_FILES+=etc/blacklistd.conf
-OLD_FILES+=etc/rc.d/blacklistd
-OLD_FILES+=usr/include/blacklist.h
-OLD_FILES+=usr/lib/libblacklist.a
-OLD_FILES+=usr/lib/libblacklist_p.a
-OLD_FILES+=usr/lib/libblacklist.so
-OLD_LIBS+=usr/lib/libblacklist.so.0
-OLD_FILES+=usr/libexec/blacklistd-helper
-OLD_FILES+=usr/sbin/blacklistctl
-OLD_FILES+=usr/sbin/blacklistd
-OLD_FILES+=usr/share/man/man3/blacklist.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_close.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_open.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_r.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_sa.3.gz
-OLD_FILES+=usr/share/man/man3/blacklist_sa_r.3.gz
-OLD_FILES+=usr/share/man/man5/blacklistd.conf.5.gz
-OLD_FILES+=usr/share/man/man8/blacklistctl.8.gz
-OLD_FILES+=usr/share/man/man8/blacklistd.8.gz
-OLD_FILES+=var/db/blacklistd.db
+# OLD_FILES+=usr/libexec/blacklistd-helper # XXXJL
 
 # 20250310: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_G4.pem

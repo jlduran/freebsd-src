@@ -1311,6 +1311,18 @@ conf_parse(const char *config_path)
 	DIR *dir;
 	FILE *fp;
 
+	/* blacklist */
+	static const char *old_configfile = _OLD_PATH_BLCONF;
+
+	if ((fp = fopen(old_configfile, "r")) != NULL) {
+		/*
+		 * If old_configfile is present,
+		 * use it as the configuration file.
+		 */
+		fclose(fp);
+		config_path = old_configfile;
+	}
+
 	if ((dir = opendir(config_path)) != NULL) {
 		/*
 		 * If config_path is a directory, parse the configuration files

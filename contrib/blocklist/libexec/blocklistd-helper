@@ -16,6 +16,12 @@ if [ -f "/etc/ipfw-blocklist.rc" ]; then
 	ipfw_offset=${ipfw_offset:-2000}
 fi
 
+if [ -f "/etc/ipfw-blacklist.rc" ]; then
+	pf="ipfw"
+	. /etc/ipfw-blacklist.rc
+	ipfw_offset=${ipfw_offset:-2000}
+fi
+
 if [ -z "$pf" ]; then
 	for f in npf pf ipfilter ipfw; do
 		if [ -x /etc/rc.d/$f ]; then

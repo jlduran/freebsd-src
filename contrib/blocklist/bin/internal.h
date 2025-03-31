@@ -31,6 +31,13 @@
 #ifndef _INTERNAL_H
 #define _INTERNAL_H
 
+#ifndef _OLD_PATH_BLCONF
+#define	_OLD_PATH_BLCONF	"/etc/blacklistd.conf"
+#endif
+#ifndef _OLD_PATH_BLSTATE
+#define	_OLD_PATH_BLSTATE	"/var/db/blacklistd.db"
+#endif
+
 #ifndef _PATH_BLCONF
 #define	_PATH_BLCONF	"/etc/blocklistd.conf"
 #endif

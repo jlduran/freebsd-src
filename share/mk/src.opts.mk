@@ -65,6 +65,7 @@ __DEFAULT_YES_OPTIONS = \
     AUTHPF \
     AUTOFS \
     BHYVE \
+    BLACKLIST \
     BLOCKLIST \
     BLUETOOTH \
     BOOT \
@@ -241,6 +242,7 @@ __LIBC_MALLOC_DEFAULT=	jemalloc
 # MK_* variable is set to "no".
 #
 .for var in \
+    BLACKLIST \
     BLOCKLIST \
     BZIP2 \
     INET \

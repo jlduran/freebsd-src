@@ -11,6 +11,7 @@ CONFS=	DAEMON \
 	SERVERS \
 	adjkerntz \
 	bgfsck \
+	${_blacklistd} \
 	${_blocklistd} \
 	bridge \
 	cfumass \
@@ -171,6 +172,10 @@ AUDITPACKAGE=	audit
 CONFS+=		automount
 CONFS+=		automountd
 CONFS+=		autounmountd
+.endif
+
+.if ${MK_BLACKLIST} != "no"
+_blacklistd+=	blacklistd
 .endif
 
 .if ${MK_BLOCKLIST} != "no"

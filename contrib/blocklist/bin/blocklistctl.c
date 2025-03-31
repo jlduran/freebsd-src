@@ -82,7 +82,7 @@ star(char *buf, size_t len, int val)
 int
 main(int argc, char *argv[])
 {
-	const char *dbname = _PATH_BLSTATE;
+	const char *dbname;
 	DB *db;
 	struct conf c;
 	struct dbinfo dbi;
@@ -90,6 +90,11 @@ main(int argc, char *argv[])
 	struct timespec ts;
 	int all, blocked, remain, wide, noheader;
 	int o;
+
+	if (strcmp(getprogname(), "blacklistctl") == 0) {
+		dbname = _OLD_PATH_BLSTATE;
+	} else
+		dbname = _PATH_BLSTATE;
 
 	noheader = wide = blocked = all = remain = 0;
 	lfun = dlog;

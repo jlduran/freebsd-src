@@ -76,7 +76,7 @@ __RCSID("$NetBSD: blocklistd.c,v 1.10 2025/03/26 17:09:35 christos Exp $");
 
 static const char *configfile = _PATH_BLCONF;
 static DB *state;
-static const char *dbfile = _PATH_BLSTATE;
+static const char *dbfile;
 static sig_atomic_t readconf;
 static sig_atomic_t done;
 static int vflag;
@@ -430,6 +430,11 @@ main(int argc, char *argv[])
 	size_t nblsock, maxblsock;
 
 	setprogname(argv[0]);
+
+	if (strcmp(getprogname(), "blacklistd") == 0)
+		dbfile = _OLD_PATH_BLSTATE;
+	else
+		dbfile = _PATH_BLSTATE;
 
 	spath = NULL;
 	blsock = NULL;
