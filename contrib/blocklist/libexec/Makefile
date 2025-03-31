@@ -1,4 +1,4 @@
-# $NetBSD: Makefile,v 1.1 2015/01/22 17:49:41 christos Exp $
+# $NetBSD: Makefile,v 1.1.1.1 2020/06/15 01:52:53 christos Exp $
 
 SCRIPTS=        blacklistd-helper
 SCRIPTSDIR=     /libexec
