@@ -2,11 +2,11 @@
 
 BINDIR=/sbin
 
-PROGS=blacklistd blacklistctl
-MAN.blacklistd=blacklistd.8 blacklistd.conf.5
-MAN.blacklistctl=blacklistctl.8
-SRCS.blacklistd = blacklistd.c conf.c run.c state.c support.c internal.c
-SRCS.blacklistctl = blacklistctl.c conf.c state.c support.c internal.c
+PROGS=blocklistd blocklistctl
+MAN.blocklistd=blocklistd.8 blocklistd.conf.5
+MAN.blocklistctl=blocklistctl.8
+SRCS.blocklistd = blocklistd.c conf.c run.c state.c support.c internal.c
+SRCS.blocklistctl = blocklistctl.c conf.c state.c support.c internal.c
 DBG=-g
 
 LDADD+=-lutil

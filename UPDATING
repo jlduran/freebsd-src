@@ -27,6 +27,21 @@ NOTE TO PEOPLE WHO THINK THAT FreeBSD 15.x IS SLOW:
 	world, or to merely disable the most expensive debugging functionality
 	at runtime, run "ln -s 'abort:false,junk:false' /etc/malloc.conf".)
 
+XXXXXXXX:
+	Upstream has renamed blacklist to blocklist.  All the files have
+	been renamed, the old library names were kept for backward
+	compatibility.  Utilities blacklistctl and blacklistd have been renamed
+	to blocklistctl and blocklistd respectively.  Configuration files with
+	the old name will continue to work, but will throw a warning, asking
+	the user to change to the new naming.  Firewall configurations
+	with the old naming will continue to work, but will throw a warning,
+	asking the user to change the names (e.g., anchors or sentinel files).
+	Manual pages only exist with the new naming, but are symlinked.  The
+	naming change willcalso be used to introduce two breaking changes from
+	upstream: onecthat requires that the db file be recreated; the other
+	that changescthe weights in the penalty enum, now counting each invalid
+	attempt as two towards the maximum number of allowed fails.
+
 20250314:
 	We now use LLVM's binary utilities (nm, objcopy, etc.) by default.
 	The WITHOUT_LLVM_BINUTILS src.conf(5) knob can be used to revert to

@@ -1,4 +1,4 @@
-.\" $NetBSD: blacklistd.8,v 1.8 2025/02/25 22:13:34 christos Exp $
+.\" $NetBSD: blocklistd.8,v 1.8 2025/02/25 22:13:34 christos Exp $
 .\"
 .\" Copyright (c) 2015 The NetBSD Foundation, Inc.
 .\" All rights reserved.
@@ -28,10 +28,10 @@
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
 .Dd February 25, 2025
-.Dt BLACKLISTD 8
+.Dt BLOCKLISTD 8
 .Os
 .Sh NAME
-.Nm blacklistd
+.Nm blocklistd
 .Nd block and release ports on demand to avoid DoS abuse
 .Sh SYNOPSIS
 .Nm
@@ -55,13 +55,13 @@ If no such file is specified, then it only listens to the socket path
 specified by
 .Ar sockpath
 or if that is not specified to
-.Pa /var/run/blacklistd.sock .
+.Pa /var/run/blocklistd.sock .
 Each notification contains an (action, port, protocol, address, owner) tuple
 that identifies the remote connection and the action.
 This tuple is consulted against entries from the
 .Ar configfile ,
 with the syntax specified in
-.Xr blacklistd.conf 5 .
+.Xr blocklistd.conf 5 .
 If an entry is matched, a state entry is created for that tuple.
 Each entry contains a number of tries limit and a duration.
 .Pp
@@ -81,7 +81,7 @@ directory if that also exists.
 The way
 .Nm
 does configuration entry matching is by having the client side pass the
-file descriptor associated with the connection the client wants to blacklist
+file descriptor associated with the connection the client wants to blocklist
 as well as passing socket credentials.
 .Pp
 The file descriptor is used to retrieve information (address and port)
@@ -129,7 +129,7 @@ specified by the arguments.
 The
 .Ar rulename
 argument can be set from the command line (default
-.Dv blacklistd ) .
+.Dv blocklistd ) .
 The script could print a numerical id to stdout as a handle for
 the rule that can be used later to remove that connection, but
 that is not required as all information to remove the rule is
@@ -166,7 +166,7 @@ The following options are available:
 Use
 .Ar controlprog
 to communicate with the packet filter, instead of the default, which is
-.Pa /usr/libexec/blacklistd-helper .
+.Pa /usr/libexec/blocklistd-helper .
 The following arguments are passed to the control program:
 .Bl -tag -width protocol
 .It action
@@ -200,13 +200,13 @@ The name of the configuration file to read.
 The default when
 .Fl c
 is not given is
-.Pa /etc/blacklistd.conf .
+.Pa /etc/blocklistd.conf .
 .It Fl D Ar dbfile
 The Berkeley DB file where
 .Nm
 stores its state.
 It defaults to
-.Pa /var/db/blacklistd.db .
+.Pa /var/db/blocklistd.db .
 .It Fl d
 Normally,
 .Nm
@@ -227,7 +227,7 @@ will create sockets to listen to.
 This is useful for chrooted environments.
 .It Fl R Ar rulename
 Specify the default rule name for the packet filter rules, usually
-.Dv blacklistd .
+.Dv blocklistd .
 .It Fl r
 Re-read the firewall rules from the internal database, then
 remove and re-add them.
@@ -273,19 +273,19 @@ This signal tells
 to decrease the internal debugging level by 1.
 .El
 .Sh FILES
-.Bl -tag -width /usr/libexec/blacklistd-helper -compact
-.It Pa /usr/libexec/blacklistd-helper
+.Bl -tag -width /usr/libexec/blocklistd-helper -compact
+.It Pa /usr/libexec/blocklistd-helper
 Shell script invoked to interface with the packet filter.
-.It Pa /etc/blacklistd.conf
+.It Pa /etc/blocklistd.conf
 Configuration file.
-.It Pa /var/db/blacklistd.db
+.It Pa /var/db/blocklistd.db
 Database of current connection entries.
-.It Pa /var/run/blacklistd.sock
+.It Pa /var/run/blocklistd.sock
 Socket to receive connection notifications.
 .El
 .Sh SEE ALSO
-.Xr blacklistd.conf 5 ,
-.Xr blacklistctl 8 ,
+.Xr blocklistd.conf 5 ,
+.Xr blocklistctl 8 ,
 .Xr ipf 8 ,
 .Xr ipfw 8 ,
 .Xr pfctl 8 ,

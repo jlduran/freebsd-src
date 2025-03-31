@@ -43,7 +43,7 @@ __RCSID("$NetBSD: internal.c,v 1.2 2025/02/11 17:48:30 christos Exp $");
 #include "internal.h"
 
 int debug;
-const char *rulename = "blacklistd";
+const char *rulename = "blocklistd";
 const char *controlprog = _PATH_BLCONTROL;
 struct confset lconf, rconf;
 struct ifaddrs *ifas;

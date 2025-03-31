@@ -1,5 +1,5 @@
 Build some programs without
-.Xr libblacklist 3
+.Xr libblocklist 3
 support, like
 .Xr fingerd 8 ,
 .Xr ftpd 8 ,

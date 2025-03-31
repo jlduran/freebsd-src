@@ -46,17 +46,17 @@
 #include "log.h"
 #include "misc.h"
 #include "servconf.h"
-#include <blacklist.h>
-#include "blacklist_client.h"
+#include <blocklist.h>
+#include "blocklist_client.h"
 
-static struct blacklist *blstate = NULL;
+static struct blocklist *blstate = NULL;
 extern struct ssh *the_active_state;
 
 /* import */
 extern ServerOptions options;
 
 /* internal definition from bl.h */
-struct blacklist *bl_create(bool, char *, void (*)(int, const char *, va_list));
+struct blocklist *bl_create(bool, char *, void (*)(int, const char *, va_list));
 
 /* impedance match vsyslog() to sshd's internal logging levels */
 void
@@ -81,14 +81,14 @@ im_log(int priority, const char *message, va_list args)
 }
 
 void
-blacklist_init(void)
+blocklist_init(void)
 {
-	if (options.use_blacklist)
+	if (options.use_blocklist)
 		blstate = bl_create(false, NULL, im_log);
 }
 
 void
-blacklist_notify(struct ssh *ssh, int action, const char *msg)
+blocklist_notify(struct ssh *ssh, int action, const char *msg)
 {
 	if (ssh == NULL)
 		ssh = the_active_state;
@@ -97,10 +97,10 @@ blacklist_notify(struct ssh *ssh, int action, const char *msg)
 	if (blstate == NULL)
 		return;
 	if (ssh_packet_connection_is_on_socket(ssh))
-		(void)blacklist_r(blstate, action,
+		(void)blocklist_r(blstate, action,
 		    ssh_packet_get_connection_in(ssh), msg);
 	if (action == 0) {
-		blacklist_close(blstate);
+		blocklist_close(blstate);
 		blstate = NULL;
 	}
 }

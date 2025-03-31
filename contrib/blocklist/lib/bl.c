@@ -74,7 +74,7 @@ typedef struct {
 	char bl_data[];
 } bl_message_t;
 
-struct blacklist {
+struct blocklist {
 #ifdef _REENTRANT
 	pthread_mutex_t b_mutex;
 # define BL_INIT(b)	pthread_mutex_init(&b->b_mutex, NULL)
@@ -216,7 +216,7 @@ bl_init(bl_t b, bool srv)
 			BL_UNLOCK(b);
 			return -1;
 		}
-		bl_log(b, LOG_DEBUG, "Connected to blacklist server", __func__);
+		bl_log(b, LOG_DEBUG, "Connected to blocklist server", __func__);
 	}
 
 	if (srv) {

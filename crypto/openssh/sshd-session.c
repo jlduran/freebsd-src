@@ -110,7 +110,7 @@
 #include "srclimit.h"
 #include "dh.h"
 
-#include "blacklist_client.h"
+#include "blocklist_client.h"
 
 /* Re-exec fds */
 #define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
@@ -205,7 +205,7 @@ static void do_ssh2_kex(struct ssh *);
 static void
 grace_alarm_handler(int sig)
 {
-	BLACKLIST_NOTIFY(the_active_state, BLACKLIST_AUTH_FAIL,
+	BLOCKLIST_NOTIFY(the_active_state, BLOCKLIST_AUTH_FAIL,
 	    "Grace period expired");
 	/*
 	 * Try to kill any processes that we have spawned, E.g. authorized
@@ -1223,7 +1223,7 @@ main(int ac, char **av)
 	ssh_signal(SIGCHLD, SIG_DFL);
 	ssh_signal(SIGINT, SIG_DFL);
 
-	BLACKLIST_INIT();
+	BLOCKLIST_INIT();
 
 	/*
 	 * Register our connection.  This turns encryption off because we do
@@ -1302,7 +1302,7 @@ main(int ac, char **av)
 
 	if ((r = kex_exchange_identification(ssh, -1,
 	    options.version_addendum)) != 0) {
-		BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "Banner exchange");
+		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL, "Banner exchange");
 		sshpkt_fatal(ssh, r, "banner exchange");
 	}
 
@@ -1523,7 +1523,7 @@ cleanup_exit(int i)
 #endif
 	/* Override default fatal exit value when auth was attempted */
 	if (i == 255 && auth_attempted) {
-		BLACKLIST_NOTIFY(the_active_state, BLACKLIST_AUTH_FAIL,
+		BLOCKLIST_NOTIFY(the_active_state, BLOCKLIST_AUTH_FAIL,
 		    "Fatal exit");
 		_exit(EXIT_AUTH_ATTEMPTED);
 	}

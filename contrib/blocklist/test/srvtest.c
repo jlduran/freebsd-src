@@ -50,7 +50,7 @@ __RCSID("$NetBSD: srvtest.c,v 1.2 2025/02/11 17:43:16 christos Exp $");
 #include <poll.h>
 #include <err.h>
 
-#include "blacklist.h"
+#include "blocklist.h"
 #ifdef BLDEBUG
 #include "bl.h"
 static void *b;
@@ -73,9 +73,9 @@ process_tcp(int afd)
 	buffer[sizeof(buffer) - 1] = '\0';
 	printf("%s: sending %d %s\n", getprogname(), afd, buffer);
 #ifdef BLDEBUG
-	blacklist_r(b, 1, afd, buffer);
+	blocklist_r(b, 1, afd, buffer);
 #else
-	blacklist(1, afd, buffer);
+	blocklist(1, afd, buffer);
 #endif
 	exit(0);
 }
@@ -97,7 +97,7 @@ process_udp(int afd)
 		err(1, "recvfrom");
 	buffer[sizeof(buffer) - 1] = '\0';
 	printf("%s: sending %d %s\n", getprogname(), afd, buffer);
-	blacklist_sa(1, afd, (void *)&ss, slen, buffer);
+	blocklist_sa(1, afd, (void *)&ss, slen, buffer);
 	exit(0);
 }
 static int
