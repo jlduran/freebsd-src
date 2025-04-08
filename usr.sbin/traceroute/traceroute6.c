@@ -275,6 +275,8 @@
 #include <netipsec/ipsec.h>
 #endif
 
+#include "main.h"
+#include "traceroute6.h"
 #include "as.h"
 
 #define DUMMY_PORT 10010
@@ -284,27 +286,25 @@
 static u_char	packet[512];		/* last inbound (icmp) packet */
 static char 	*outpacket;		/* last output packet */
 
-int	main(int, char *[]);
-int	wait_for_reply(int, struct msghdr *);
+static int	wait_for_reply(int, struct msghdr *);
 #if defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
-int	setpolicy(int so, char *policy);
+static int	setpolicy(int so, char *policy);
 #endif
-void	send_probe(int, u_long);
-void	*get_uphdr(struct ip6_hdr *, u_char *);
-void	capdns_open(void);
-int	get_hoplim(struct msghdr *);
-double	deltaT(struct timeval *, struct timeval *);
-const char *pr_type(int);
-int	packet_ok(struct msghdr *, int, int, u_char *, u_char *, u_char *);
-void	print(struct msghdr *, int);
-const char *inetname(struct sockaddr *);
-u_int32_t sctp_crc32c(void *, u_int32_t);
-u_int16_t in_cksum(u_int16_t *addr, int);
-u_int16_t udp_cksum(struct sockaddr_in6 *, struct sockaddr_in6 *,
+static void	send_probe(int, u_long);
+static void	*get_uphdr(struct ip6_hdr *, u_char *);
+static void	capdns_open(void);
+static int	get_hoplim(struct msghdr *);
+static double	deltaT(struct timeval *, struct timeval *);
+static const char *pr_type(int);
+static int	packet_ok(struct msghdr *, int, int, u_char *, u_char *, u_char *);
+static void	print(struct msghdr *, int);
+static const char *inetname(struct sockaddr *);
+static u_int32_t sctp_crc32c(void *, u_int32_t);
+static u_int16_t in_cksum(u_int16_t *addr, int);
+static u_int16_t udp_cksum(struct sockaddr_in6 *, struct sockaddr_in6 *,
     void *, u_int32_t);
-u_int16_t tcp_chksum(struct sockaddr_in6 *, struct sockaddr_in6 *,
+static u_int16_t tcp_chksum(struct sockaddr_in6 *, struct sockaddr_in6 *,
     void *, u_int32_t);
-void	usage(void);
 
 static int rcvsock;			/* receive (icmp) socket file descriptor */
 static int sndsock;			/* send (raw/udp) socket file descriptor */
@@ -345,7 +345,7 @@ static char *as_server = NULL;
 static void *asn;
 
 int
-main(int argc, char *argv[])
+traceroute6(int argc, char **argv)
 {
 	int mib[4] = { CTL_NET, PF_INET6, IPPROTO_IPV6, IPV6CTL_DEFHLIM };
 	char hbuf[NI_MAXHOST], src0[NI_MAXHOST], *ep;
@@ -402,8 +402,12 @@ main(int argc, char *argv[])
 	seq = 0;
 	ident = htons(getpid() & 0xffff); /* same as ping6 */
 
-	while ((ch = getopt(argc, argv, "aA:dEf:g:Ilm:nNp:q:rs:St:TUvw:")) != -1)
+	while ((ch = getopt(argc, argv, TRACEROUTE6OPTS)) != -1)
 		switch (ch) {
+		case '6':
+			if (strcmp(getprogname(), "traceroute6") == 0)
+				usage();
+			break;
 		case 'a':
 			as_path = 1;
 			break;
@@ -1813,14 +1817,4 @@ tcp_chksum(struct sockaddr_in6 *src, struct sockaddr_in6 *dst,
 	sum[0] = in_cksum(payload, len);
 
 	return (~in_cksum(sum, sizeof(sum)));
-}
-
-void
-usage(void)
-{
-	fprintf(stderr,
-"Usage: traceroute6 [-adEIlnNrSTUv] [-A as_server] [-f firsthop] [-g gateway]\n"
-"\t[-m hoplimit] [-p port] [-q probes] [-s src] [-t tclass]\n"
-"\t[-w waittime] target [datalen]\n");
-	exit(1);
 }

@@ -246,6 +246,7 @@
 #define ICMP_UNREACH_PRECEDENCE_CUTOFF	15	/* precedence cutoff */
 #endif
 
+#include "main.h"
 #include "findsaddr.h"
 #include "ifaddrlist.h"
 #include "as.h"
@@ -369,7 +370,6 @@ void	send_probe(int, int);
 struct outproto *setproto(char *);
 int	str2val(const char *, const char *, int, int);
 void	tvsub(struct timeval *, struct timeval *);
-void usage(void);
 int	wait_for_reply(int, struct sockaddr_in *, const struct timeval *);
 void pkt_compare(const u_char *, int, const u_char *, int);
 
@@ -473,7 +473,7 @@ struct	outproto *proto = &protos[0];
 const char *ip_hdr_key = "vhtslen id  off tlprsum srcip   dstip   opts";
 
 int
-main(int argc, char **argv)
+traceroute(int argc, char **argv)
 {
 	register int op, code, n;
 	register char *cp;
@@ -569,8 +569,11 @@ main(int argc, char **argv)
 		prog = argv[0];
 
 	opterr = 0;
-	while ((op = getopt(argc, argv, "aA:eEdDFInrSvxf:g:i:M:m:P:p:q:s:t:w:z:")) != EOF)
+	while ((op = getopt(argc, argv, TRACEROUTEOPTS)) != EOF)
 		switch (op) {
+		case '4':
+			/* This option is processed in main(). */
+			break;
 		case 'a':
 			as_path = 1;
 			break;
@@ -2063,16 +2066,4 @@ pkt_compare(const u_char *a, int la, const u_char *b, int lb) {
 	for (; i < lb; i++)
 		Printf("%02x", (unsigned int)b[i]);
 	Printf("\n");
-}
-
-
-void
-usage(void)
-{
-	Fprintf(stderr,
-	    "Usage: %s [-adDeEFInrSvx] [-A as_server] [-f first_ttl] [-g gateway]\n"
-	    "\t[-i iface] [-m max_ttl] [-M first_ttl] [-p port] [-P proto]\n"
-	    "\t[-q nprobes] [-s src_addr] [-t tos] [-w waittime]\n"
-	    "\t[-z pausemsecs] host [packetlen]\n", prog);
-	exit(1);
 }
