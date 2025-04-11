@@ -50,7 +50,7 @@ do_prep_image=true
 . "${topdir}/legacy.sh"
 
 set +e
-args=`getopt BKXWbc:fhiIknpquUvw $*`
+args=`getopt BIKUWXbc:fhiknpquvw $*`
 if [ $? -ne 0 ] ; then
 	usage
 	exit 2
@@ -80,12 +80,18 @@ do
 		do_installkernel=false
 		shift
 		;;
-	-X)
-		do_native_xtools=true
+	-U)
+		# Default option
+		#do_root=false
+		#NANO_NOPRIV_BUILD=true
 		shift
 		;;
 	-W)
 		do_installworld=false
+		shift
+		;;
+	-X)
+		do_native_xtools=true
 		shift
 		;;
 	-b)
@@ -137,12 +143,6 @@ do
 	-u)
 		do_root=true
 		NANO_NOPRIV_BUILD=
-		shift
-		;;
-	-U)
-		# Default option
-		#do_root=false
-		#NANO_NOPRIV_BUILD=true
 		shift
 		;;
 	-w)
