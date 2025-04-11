@@ -36,7 +36,7 @@ topdir=`dirname ${nanobsd_sh}`
 # Parse arguments
 
 do_clean=true
-do_root=true
+do_root=false
 do_kernel=true
 do_installkernel=true
 do_world=true
@@ -50,7 +50,7 @@ do_prep_image=true
 . "${topdir}/legacy.sh"
 
 set +e
-args=`getopt BKXWbc:fhiIknpqUvw $*`
+args=`getopt BKXWbc:fhiIknpquUvw $*`
 if [ $? -ne 0 ] ; then
 	usage
 	exit 2
@@ -134,9 +134,15 @@ do
 		PPLEVEL=$(($PPLEVEL + 1))
 		shift
 		;;
+	-u)
+		do_root=true
+		NANO_NOPRIV_BUILD=
+		shift
+		;;
 	-U)
-		do_root=false
-		NANO_NOPRIV_BUILD=true
+		# Default option
+		#do_root=false
+		#NANO_NOPRIV_BUILD=true
 		shift
 		;;
 	-w)
