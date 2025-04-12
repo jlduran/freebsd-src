@@ -4,6 +4,8 @@
 
 SSHDIR=		${SRCTOP}/crypto/openssh
 
+SKSRCS=	ssh-sk-client.c
+
 CFLAGS+= -I${SSHDIR} -include ssh_namespace.h
 
 .if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
