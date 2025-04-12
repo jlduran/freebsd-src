@@ -12,9 +12,6 @@ PACKAGE=	ssh
 SRCS=	ssh.c readconf.c clientloop.c sshtty.c \
 	sshconnect.c sshconnect2.c mux.c $(SKSRCS)
 
-# gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
-SRCS+=	gss-genr.c
-
 LIBADD=	ssh
 
 .if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"

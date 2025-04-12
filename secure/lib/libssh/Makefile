@@ -16,8 +16,6 @@ LIBOPENSSH_SRCS=\
 	krl.c \
 	bitmap.c
 
-# gss-genr.c should be in $SRCS but causes linking problems, so it is
-# compiled directly into sshd instead.
 SRCS=	${LIBOPENSSH_SRCS} \
 	authfd.c authfile.c \
 	canohost.c channels.c cipher.c cipher-aes.c cipher-aesctr.c \
@@ -28,7 +26,7 @@ SRCS=	${LIBOPENSSH_SRCS} \
 	atomicio.c dispatch.c mac.c misc.c utf8.c \
 	monitor_fdpass.c rijndael.c ssh-dss.c ssh-ecdsa.c ssh-ecdsa-sk.c \
 	ssh-ed25519-sk.c ssh-rsa.c dh.c \
-	msg.c dns.c entropy.c umac.c umac128.c \
+	msg.c dns.c entropy.c gss-genr.c umac.c umac128.c \
 	ssh-pkcs11.c smult_curve25519_ref.c \
 	poly1305.c chacha.c cipher-chachapoly.c cipher-chachapoly-libcrypto.c \
 	ssh-ed25519.c digest-openssl.c digest-libc.c \
@@ -48,6 +46,10 @@ SRCS+=	bcrypt_pbkdf.c blowfish.c bsd-misc.c bsd-signal.c explicit_bzero.c \
 	mktemp.c \
 	openssl-compat.c port-net.c \
 	recallocarray.c strtonum.c timingsafe_bcmp.c vis.c xcrypt.c
+
+.if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
+LIBADD+=	gssapi krb5
+.endif
 
 .if ${MK_LDNS} == "no"
 SRCS+=	getrrsetbyname.c

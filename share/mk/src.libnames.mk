@@ -306,6 +306,9 @@ _DP_archive+=	md
 _DP_sqlite3=	pthread
 _DP_ssl=	crypto
 _DP_ssh=	crypto crypt z
+.if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
+_DP_ssh+=	gssapi krb5
+.endif
 .if ${MK_LDNS} != "no"
 _DP_ssh+=	ldns
 .endif

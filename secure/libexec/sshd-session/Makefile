@@ -18,9 +18,6 @@ SRCS=	sshd-session.c auth-rhosts.c auth-passwd.c \
 	sandbox-solaris.c uidswap.c $(SKSRCS)
 PACKAGE=	ssh
 
-# gss-genr.c really belongs in libssh; see src/secure/lib/libssh/Makefile
-SRCS+=	gss-genr.c
-
 MAN=
 
 # pam should always happen before ssh here for static linking
