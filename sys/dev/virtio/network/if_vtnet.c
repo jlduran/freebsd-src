@@ -2008,6 +2008,8 @@ vtnet_rxq_input(struct vtnet_rxq *rxq, struct mbuf *m,
 	struct vtnet_softc *sc;
 	if_t ifp;
 
+	VTNET_RXQ_LOCK_ASSERT(rxq);
+
 	sc = rxq->vtnrx_sc;
 	ifp = sc->vtnet_ifp;
 
@@ -2056,7 +2058,9 @@ vtnet_rxq_input(struct vtnet_rxq *rxq, struct mbuf *m,
 	}
 #endif
 
+	VTNET_RXQ_UNLOCK(rxq);
 	if_input(ifp, m);
+	VTNET_RXQ_LOCK(rxq);
 }
 
 static int
