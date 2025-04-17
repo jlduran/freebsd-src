@@ -2247,6 +2247,10 @@ Contains configuration data for
 .Xr sshd 8 .
 This file should be writable by root only, but it is recommended
 (though not necessary) that it be world-readable.
+.It Pa /etc/ssh/sshd_config.d/*.conf
+These files are included at the start of the system-wide configuration file,
+so options set there will override those in
+.Pa /etc/ssh/sshd_config .
 .El
 .Sh SEE ALSO
 .Xr sftp-server 8 ,
