@@ -34,7 +34,7 @@ extra_commands="configtest keygen reload"
 sshd_keygen_alg()
 {
 	local alg=$1
-	local ALG="$(echo $alg | tr a-z A-Z)"
+	local ALG="$(startmsg $alg | tr a-z A-Z)"
 	local keyfile
 
 	if ! checkyesno "sshd_${alg}_enable" ; then
@@ -60,7 +60,7 @@ sshd_keygen_alg()
 		return 1
 	fi
 
-	echo "Generating $ALG host key."
+	startmsg "Generating $ALG host key."
 	/usr/bin/ssh-keygen -q -t $alg -f "$keyfile" -N ""
 	/usr/bin/ssh-keygen -l -f "$keyfile.pub"
 }
@@ -75,7 +75,7 @@ sshd_keygen()
 
 sshd_configtest()
 {
-	echo "Performing sanity check on ${name} configuration."
+	startmsg "Performing sanity check on ${name} configuration."
 	eval ${command} ${sshd_flags} -t
 }
 

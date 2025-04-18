@@ -19,7 +19,7 @@ _netoptions_initdone=
 netoptions_init()
 {
 	if [ -z "${_netoptions_initdone}" ]; then
-		echo -n 'Additional TCP/IP options:'
+		startmsg -n 'Additional TCP/IP options:'
 		_netoptions_initdone=yes
 	fi
 }
@@ -31,7 +31,7 @@ netoptions_start()
 	for _af in inet inet6; do
 		afexists ${_af} && eval netoptions_${_af}
 	done
-	[ -n "${_netoptions_initdone}" ] && echo '.'
+	[ -n "${_netoptions_initdone}" ] && startmsg '.'
 }
 
 netoptions_inet()
@@ -39,7 +39,7 @@ netoptions_inet()
 	case ${log_in_vain} in
 	[12])
 		netoptions_init
-		echo -n " log_in_vain=${log_in_vain}"
+		startmsg -n " log_in_vain=${log_in_vain}"
 		${SYSCTL} net.inet.tcp.log_in_vain=${log_in_vain} >/dev/null
 		${SYSCTL} net.inet.udp.log_in_vain=${log_in_vain} >/dev/null
 		;;
@@ -53,7 +53,7 @@ netoptions_inet()
 		${SYSCTL} net.inet.tcp.rfc1323=1 >/dev/null
 	else
 		netoptions_init
-		echo -n " rfc1323 extensions=${tcp_extensions}"
+		startmsg -n " rfc1323 extensions=${tcp_extensions}"
 		${SYSCTL} net.inet.tcp.rfc1323=0 >/dev/null
 	fi
 
@@ -61,13 +61,13 @@ netoptions_inet()
 		${SYSCTL} net.inet.tcp.always_keepalive=1 >/dev/null
 	else
 		netoptions_init
-		echo -n " TCP keepalive=${tcp_keepalive}"
+		startmsg -n " TCP keepalive=${tcp_keepalive}"
 		${SYSCTL} net.inet.tcp.always_keepalive=0 >/dev/null
 	fi
 
 	if checkyesno tcp_drop_synfin; then
 		netoptions_init
-		echo -n " drop SYN+FIN packets=${tcp_drop_synfin}"
+		startmsg -n " drop SYN+FIN packets=${tcp_drop_synfin}"
 		${SYSCTL} net.inet.tcp.drop_synfin=1 >/dev/null
 	else
 		${SYSCTL} net.inet.tcp.drop_synfin=0 >/dev/null
@@ -76,7 +76,7 @@ netoptions_inet()
 	case ${ip_portrange_first} in
 	[0-9]*)
 		netoptions_init
-		echo -n " ip_portrange_first=$ip_portrange_first"
+		startmsg -n " ip_portrange_first=$ip_portrange_first"
 		${SYSCTL} net.inet.ip.portrange.first=$ip_portrange_first >/dev/null
 		;;
 	esac
@@ -84,7 +84,7 @@ netoptions_inet()
 	case ${ip_portrange_last} in
 	[0-9]*)
 		netoptions_init
-		echo -n " ip_portrange_last=$ip_portrange_last"
+		startmsg -n " ip_portrange_last=$ip_portrange_last"
 		${SYSCTL} net.inet.ip.portrange.last=$ip_portrange_last >/dev/null
 		;;
 	esac
@@ -94,7 +94,7 @@ netoptions_inet6()
 {
 	if checkyesno ipv6_ipv4mapping; then
 		netoptions_init
-		echo -n " ipv4-mapped-ipv6=${ipv6_ipv4mapping}"
+		startmsg -n " ipv4-mapped-ipv6=${ipv6_ipv4mapping}"
 		${SYSCTL} net.inet6.ip6.v6only=0 >/dev/null
 	else
 		${SYSCTL} net.inet6.ip6.v6only=1 >/dev/null
@@ -102,7 +102,7 @@ netoptions_inet6()
 
 	if checkyesno ipv6_privacy; then
 		netoptions_init
-		echo -n " IPv6 Privacy Addresses"
+		startmsg -n " IPv6 Privacy Addresses"
 		${SYSCTL} net.inet6.ip6.use_tempaddr=1 >/dev/null
 		${SYSCTL} net.inet6.ip6.prefer_tempaddr=1 >/dev/null
 	fi
@@ -114,7 +114,7 @@ netoptions_inet6()
 	;;
 	*)	
 		netoptions_init
-		echo -n " IPv6 CPE WANIF=${ipv6_cpe_wanif}"
+		startmsg -n " IPv6 CPE WANIF=${ipv6_cpe_wanif}"
 		${SYSCTL} net.inet6.ip6.no_radr=1 >/dev/null
 		${SYSCTL} net.inet6.ip6.rfc6204w3=1 >/dev/null
 	;;
