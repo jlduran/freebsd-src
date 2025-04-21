@@ -175,6 +175,7 @@ process(bl_t bl)
 	struct dbinfo dbi;
 	struct timespec ts;
 
+	memset(&dbi, 0, sizeof(dbi));
 	if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
 		(*lfun)(LOG_ERR, "clock_gettime failed (%m)");
 		return;
@@ -188,10 +189,11 @@ process(bl_t bl)
 	if (getremoteaddress(bi, &rss, &rsl) == -1)
 		goto out;
 
-	if (debug) {
+	if (true || bi->bi_msg[0]) {
 		sockaddr_snprintf(rbuf, sizeof(rbuf), "%a:%p", (void *)&rss);
-		(*lfun)(LOG_DEBUG, "processing type=%d fd=%d remote=%s msg=%s"
-		    " uid=%lu gid=%lu", bi->bi_type, bi->bi_fd, rbuf,
+		(*lfun)(bi->bi_msg[0] ? LOG_INFO : LOG_INFO,
+		    "processing type=%d fd=%d remote=%s msg=%s uid=%lu gid=%lu",
+		    bi->bi_type, bi->bi_fd, rbuf,
 		    bi->bi_msg, (unsigned long)bi->bi_uid,
 		    (unsigned long)bi->bi_gid);
 	}
