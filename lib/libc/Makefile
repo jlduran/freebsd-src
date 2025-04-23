@@ -96,6 +96,7 @@ MDASM=
 MIASM=
 NOASM=
 
+LIBC_ARCH=	${TARGET_ARCH} # XXX Linux clean (x86_64 -> amd64, aarch64 -> arm64)
 .include "${LIBC_SRCTOP}/${LIBC_ARCH}/Makefile.inc"
 .include "${LIBC_SRCTOP}/csu/Makefile.inc"
 .include "${LIBC_SRCTOP}/db/Makefile.inc"
