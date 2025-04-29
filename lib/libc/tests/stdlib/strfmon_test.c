@@ -29,6 +29,7 @@
 #include <locale.h>
 #include <monetary.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <atf-c.h>
 
@@ -208,6 +209,55 @@ ATF_TC_BODY(strfmon_international_currency_code, tc)
 	}
 }
 
+ATF_TC_WITHOUT_HEAD(strfmon_plus_or_parenthesis);
+ATF_TC_BODY(strfmon_plus_or_parenthesis, tc)
+{
+	const struct {
+		const char *format;
+		const char *locale;
+		const char *expected;
+	} tests[] = {
+	    { "%+n", "en_US.UTF-8", "[$123.45] [-$123.45]" },
+	    { "%+i", "en_US.UTF-8", "[USD123.45] [-USD123.45]" },
+	    { "%(n", "C", "[123.45] [(123.45)]" },
+	    { "%(i", "C", "[123.45] [(123.45)]" },
+	    { "%(n", "en_US.UTF-8", "[$123.45] [($123.45)]" },
+	    { "%(i", "en_US.UTF-8", "[USD123.45] [(USD123.45)]" },
+	    { "%n", "C", "[123.45] [(123.45)]" },
+	    { "%i", "C", "[123.45] [(123.45)]" },
+	    { "%n", "en_US.UTF-8", "[$123.45] [-$123.45]" },
+	    { "%i", "en_US.UTF-8", "[USD123.45] [-USD123.45]" },
+	};
+	size_t i;
+	char actual[100], format[50];
+
+	// XXX remove?
+	if (setlocale(LC_MONETARY, "C") == NULL)
+		atf_tc_skip("unable to setlocale(): %s",
+		    tests[i].locale);
+
+	ATF_CHECK_ERRNO(EINVAL, strfmon(actual, sizeof(actual) - 1,
+	    "[%+n] [%+n]", 123.45, -123.45));
+
+	ATF_CHECK_ERRNO(EINVAL, strfmon(actual, sizeof(actual) - 1,
+	    "[%+i] [%+i]", 123.45, -123.45));
+
+	for (i = 0; i < nitems(tests); ++i) {
+		if (setlocale(LC_MONETARY, tests[i].locale) == NULL)
+			atf_tc_skip("unable to setlocale(): %s",
+			    tests[i].locale);
+
+		snprintf(format, sizeof(format), "[%s] [%s]",
+		    tests[i].format, tests[i].format);
+		strfmon(actual, sizeof(actual) - 1, format,
+		    123.45, -123.45);
+		ATF_CHECK_STREQ_MSG(tests[i].expected, actual,
+		    "[%s] %s", tests[i].format, tests[i].locale);
+	}
+
+	// If a sign's placement cannot be determined from these locale values because a value that needs to be used would be returned by localeconv() as 0 or {CHAR_MAX}, the sign shall be placed as if the relevant value was 1.
+}
+
 ATF_TC(strfmon_l);
 ATF_TC_HEAD(strfmon_l, tc)
 {
@@ -247,6 +297,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, strfmon_cs_precedes_0);
 	ATF_TP_ADD_TC(tp, strfmon_cs_precedes_1);
 	ATF_TP_ADD_TC(tp, strfmon_international_currency_code);
+	ATF_TP_ADD_TC(tp, strfmon_plus_or_parenthesis);
 	ATF_TP_ADD_TC(tp, strfmon_l);
 	return (atf_no_error());
 }

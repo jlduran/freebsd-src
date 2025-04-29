@@ -173,6 +173,9 @@ literal:
 			case '+':	/* use locale defined signs */
 				if (flags & SIGN_POSN_USED)
 					goto format_error;
+				if ((lc->positive_sign[0] == '\0') &&
+				    (lc->negative_sign[0] == '\0'))
+					goto format_error;
 				flags |= (SIGN_POSN_USED | LOCALE_POSN);
 				continue;
 			case '(':	/* enclose negatives with () */
