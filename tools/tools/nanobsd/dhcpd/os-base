@@ -99,10 +99,10 @@ customize_cmd hack_nsswitch_conf
 save_build ( )
 {
 	VERSION_FILE=${NANO_WORLDDIR}/etc/version
-	if [ "${SVNREVISION}" = "${REVISION}" ]; then
+	if [ "${GITREV}" = "${REVISION}" ]; then
 		echo "${NANO_NAME}" > "${VERSION_FILE}"
 	else
-		echo "${NANO_NAME} (${SVNREVISION})" > "${VERSION_FILE}"
+		echo "${NANO_NAME} (${GITREV})" > "${VERSION_FILE}"
 	fi
 }
 customize_cmd save_build
