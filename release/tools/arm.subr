@@ -71,11 +71,11 @@ arm_create_disk() {
 	arm_create_partitions
 
 	if [ "${PART_SCHEME}" = "GPT" ]; then
-		chroot ${CHROOTDIR} gpart add -t efi -l efi -a 512k -s ${FAT_SIZE} ${mddev}
+		chroot ${CHROOTDIR} gpart add -t efi -l efiboot0 -a 512k -s ${FAT_SIZE} ${mddev}
 		chroot ${CHROOTDIR} gpart add -t freebsd-ufs -l rootfs -a 64k ${mddev}
 	fi
 	if [ "${PART_SCHEME}" = "MBR" ]; then
-		chroot ${CHROOTDIR} gpart add -t '!12' -a 512k -s ${FAT_SIZE} ${mddev}
+		chroot ${CHROOTDIR} gpart add -t fat32lba -a 512k -s ${FAT_SIZE} ${mddev}
 		chroot ${CHROOTDIR} gpart set -a active -i 1 ${mddev}
 		chroot ${CHROOTDIR} gpart add -t freebsd ${mddev}
 		chroot ${CHROOTDIR} gpart create -s bsd ${mddev}${BSDLABEL_SUFFIX}
@@ -83,7 +83,7 @@ arm_create_disk() {
 	fi
 
 	# Create the EFI and UFS filesystems
-	chroot ${CHROOTDIR} newfs_msdos -L efi -F ${FAT_TYPE} /dev/${mddev}${EFIPART_SUFFIX}
+	chroot ${CHROOTDIR} newfs_msdos -L EFISYS -F ${FAT_TYPE} /dev/${mddev}${EFIPART_SUFFIX}
 	chroot ${CHROOTDIR} newfs -U -L rootfs /dev/${mddev}${ROOTFSPART_SUFFIX}
 
 	return 0
@@ -199,7 +199,7 @@ arm_install_base() {
 		> ${CHROOTDIR}/${DESTDIR}/etc/fstab
 	echo "/dev/ufs/rootfs		/		ufs	rw		1	1" \
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
-	echo "/dev/msdosfs/EFI		/boot/efi	msdosfs	rw,noatime	0	0" \
+	echo "/dev/msdosfs/EFISYS	/boot/efi	msdosfs	rw,noatime	0	0" \
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
 	echo "tmpfs			/tmp		tmpfs	rw,mode=1777	0	0" \
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
