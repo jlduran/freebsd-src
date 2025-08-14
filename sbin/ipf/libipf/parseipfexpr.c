@@ -269,6 +269,7 @@ parseipfexpr(char *line, char **errorptr)
 parseerror:
 	if (errorptr != NULL)
 		*errorptr = error;
+	free(error);
 	if (oplist != NULL)
 		free(oplist);
 	if (temp != NULL)
