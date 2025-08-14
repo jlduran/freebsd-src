@@ -21,10 +21,10 @@ mountlate_start()
 	# Mount "late" filesystems.
 	#
 	err=0
-	echo -n 'Mounting late filesystems:'
+	startmsg -n 'Mounting late filesystems:'
 	mount -a -L
 	err=$?
-	echo '.'
+	startmsg '.'
 
 	case ${err} in
 	0)
