@@ -50,11 +50,16 @@
 
 /*
  * Defines for the names of the limits.
- * XXX: we should convert all string constats to this to avoid typos.
+ * XXX: we should convert all string constants to this to avoid typos.
  */
+#define	LIMIT_NV_ADDR2NAME		"addr2name"
 #define	LIMIT_NV_BIND			"bind"
 #define	LIMIT_NV_CONNECT		"connect"
-#define	LIMIT_NV_ADDR2NAME		"addr2name"
+#define	LIMIT_NV_GETADDRINFO		"getaddrinfo"
+#define	LIMIT_NV_GETHOSTBYADDR		"gethostbyaddr"
+#define	LIMIT_NV_GETHOSTBYNAME		"gethostbyname"
+#define	LIMIT_NV_GETNAMEINFO		"getnameinfo"
+#define	LIMIT_NV_MODE			"mode"
 #define	LIMIT_NV_NAME2ADDR		"name2addr"
 
 struct cap_net_limit {
@@ -200,7 +205,7 @@ cap_gethostbyname2(cap_channel_t *chan, const char *name, int af)
 	nvlist_t *nvl;
 
 	nvl = nvlist_create(0);
-	nvlist_add_string(nvl, "cmd", "gethostbyname");
+	nvlist_add_string(nvl, "cmd", LIMIT_NV_GETHOSTBYNAME);
 	nvlist_add_number(nvl, "family", (uint64_t)af);
 	nvlist_add_string(nvl, "name", name);
 	nvl = cap_xfer_nvlist(chan, nvl);
@@ -227,7 +232,7 @@ cap_gethostbyaddr(cap_channel_t *chan, const void *addr, socklen_t len,
 	nvlist_t *nvl;
 
 	nvl = nvlist_create(0);
-	nvlist_add_string(nvl, "cmd", "gethostbyaddr");
+	nvlist_add_string(nvl, "cmd", LIMIT_NV_GETHOSTBYADDR);
 	nvlist_add_binary(nvl, "addr", addr, (size_t)len);
 	nvlist_add_number(nvl, "family", (uint64_t)af);
 	nvl = cap_xfer_nvlist(chan, nvl);
@@ -291,7 +296,7 @@ cap_getaddrinfo(cap_channel_t *chan, const char *hostname, const char *servname,
 	int error, serrno, n;
 
 	nvl = nvlist_create(0);
-	nvlist_add_string(nvl, "cmd", "getaddrinfo");
+	nvlist_add_string(nvl, "cmd", LIMIT_NV_GETADDRINFO);
 	if (hostname != NULL)
 		nvlist_add_string(nvl, "hostname", hostname);
 	if (servname != NULL)
@@ -355,7 +360,7 @@ cap_getnameinfo(cap_channel_t *chan, const struct sockaddr *sa, socklen_t salen,
 	int error, serrno;
 
 	nvl = nvlist_create(0);
-	nvlist_add_string(nvl, "cmd", "getnameinfo");
+	nvlist_add_string(nvl, "cmd", LIMIT_NV_GETNAMEINFO);
 	nvlist_add_number(nvl, "hostlen", (uint64_t)hostlen);
 	nvlist_add_number(nvl, "servlen", (uint64_t)servlen);
 	nvlist_add_binary(nvl, "sa", sa, (size_t)salen);
@@ -415,7 +420,7 @@ cap_net_limit(cap_net_limit_t *limit)
 	cap_channel_t *chan;
 
 	lnvl = nvlist_create(0);
-	nvlist_add_number(lnvl, "mode", limit->cnl_mode);
+	nvlist_add_number(lnvl, LIMIT_NV_MODE, limit->cnl_mode);
 
 	pack_limit(lnvl, LIMIT_NV_ADDR2NAME, limit->cnl_addr2name);
 	pack_limit(lnvl, LIMIT_NV_NAME2ADDR, limit->cnl_name2addr);
@@ -611,7 +616,7 @@ net_allowed_mode(const nvlist_t *limits, uint64_t mode)
 	if (limits == NULL)
 		return (true);
 
-	return ((nvlist_get_number(limits, "mode") & mode) == mode);
+	return ((nvlist_get_number(limits, LIMIT_NV_MODE) & mode) == mode);
 }
 
 static bool
@@ -1348,7 +1353,7 @@ net_limit(const nvlist_t *oldlimits, const nvlist_t *newlimits)
 
 	cookie = NULL;
 	while ((name = nvlist_next(newlimits, NULL, &cookie)) != NULL) {
-		if (strcmp(name, "mode") == 0) {
+		if (strcmp(name, LIMIT_NV_MODE) == 0) {
 			if (cnvlist_type(cookie) != NV_TYPE_NUMBER) {
 				return (NO_RECOVERY);
 			}
@@ -1419,17 +1424,17 @@ net_command(const char *cmd, const nvlist_t *limits, nvlist_t *nvlin,
     nvlist_t *nvlout)
 {
 
-	if (strcmp(cmd, "bind") == 0)
+	if (strcmp(cmd, LIMIT_NV_BIND) == 0)
 		return (net_bind(limits, nvlin, nvlout));
-	else if (strcmp(cmd, "connect") == 0)
+	else if (strcmp(cmd, LIMIT_NV_CONNECT) == 0)
 		return (net_connect(limits, nvlin, nvlout));
-	else if (strcmp(cmd, "gethostbyname") == 0)
+	else if (strcmp(cmd, LIMIT_NV_GETHOSTBYNAME) == 0)
 		return (net_gethostbyname(limits, nvlin, nvlout));
-	else if (strcmp(cmd, "gethostbyaddr") == 0)
+	else if (strcmp(cmd, LIMIT_NV_GETHOSTBYADDR) == 0)
 		return (net_gethostbyaddr(limits, nvlin, nvlout));
-	else if (strcmp(cmd, "getnameinfo") == 0)
+	else if (strcmp(cmd, LIMIT_NV_GETNAMEINFO) == 0)
 		return (net_getnameinfo(limits, nvlin, nvlout));
-	else if (strcmp(cmd, "getaddrinfo") == 0)
+	else if (strcmp(cmd, LIMIT_NV_GETADDRINFO) == 0)
 		return (net_getaddrinfo(limits, nvlin, nvlout));
 
 	return (EINVAL);
