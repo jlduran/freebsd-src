@@ -80,6 +80,7 @@
 #include "auth-options.h"
 #include "serverloop.h"
 #include "ssherr.h"
+#include "blacklist_client.h"
 
 extern ServerOptions options;
 
@@ -266,6 +267,8 @@ process_input(struct ssh *ssh, int connection_in)
 		if (errno == EAGAIN || errno == EINTR || errno == EWOULDBLOCK)
 			return 0;
 		if (errno == EPIPE) {
+			BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL,
+			    "Connection closed");
 			logit("Connection closed by %.100s port %d",
 			    ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 			return -1;
