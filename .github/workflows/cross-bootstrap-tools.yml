@@ -49,6 +49,7 @@ jobs:
         run: |
           brew update --quiet || true
           brew install ${{ matrix.pkgs }} || true
+          echo "MK_OPENSSL=no" >> $GITHUB_ENV
       - name: create environment
         run: |
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
