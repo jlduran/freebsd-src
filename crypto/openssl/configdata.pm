@@ -37,6 +37,7 @@ our %config = (
     "RANLIB" => "ranlib",
     "RC" => "windres",
     "RCFLAGS" => [],
+    "SRC_DIR" => `git rev-parse --show-toplevel`,
     "afalgeng" => "",
     "api" => "30500",
     "b32" => "0",
@@ -35913,8 +35914,8 @@ unless (caller) {
     use File::Copy;
     use Pod::Usage;
 
-    use lib '/usr/home/ngie/git/freebsd-src/crypto/openssl/util/perl';
-    use OpenSSL::fallback '/usr/home/ngie/git/freebsd-src/crypto/openssl/external/perl/MODULES.txt';
+    use lib "${SRC_DIR}/crypto/openssl/util/perl";
+    use OpenSSL::fallback "${SRC_DIR}/crypto/openssl/external/perl/MODULES.txt";
 
     my $here = dirname($0);
 
@@ -35941,7 +35942,7 @@ unless (caller) {
             );
 
         use lib '.';
-        use lib '/usr/home/ngie/git/freebsd-src/crypto/openssl/Configurations';
+        use lib "${SRC_DIR}/crypto/openssl/Configurations";
         use gentemplate;
 
         open my $buildfile_template_fh, ">$buildfile_template"
@@ -35958,8 +35959,8 @@ unless (caller) {
 
         my $prepend = <<'_____';
 use File::Spec::Functions;
-use lib '/usr/home/ngie/git/freebsd-src/crypto/openssl/util/perl';
-use lib '/usr/home/ngie/git/freebsd-src/crypto/openssl/Configurations';
+use lib "${SRC_DIR}/crypto/openssl/util/perl";
+use lib "${SRC_DIR}/crypto/openssl/Configurations";
 use lib '.';
 use platform;
 _____
