@@ -1,4 +1,4 @@
-/*	$NetBSD: internal.h,v 1.14 2016/04/04 15:52:56 christos Exp $	*/
+/*	$NetBSD: internal.h,v 1.1.1.1 2020/06/15 01:52:53 christos Exp $	*/
 
 /*-
  * Copyright (c) 2015 The NetBSD Foundation, Inc.
