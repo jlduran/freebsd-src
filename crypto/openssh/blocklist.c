@@ -50,6 +50,7 @@
 #include "blocklist_client.h"
 
 static struct blocklist *blstate = NULL;
+extern struct ssh *the_active_state;
 
 /* import */
 extern ServerOptions options;
@@ -57,7 +58,7 @@ extern ServerOptions options;
 /* internal definition from bl.h */
 struct blocklist *bl_create(bool, char *, void (*)(int, const char *, va_list));
 
-/* impedence match vsyslog() to sshd's internal logging levels */
+/* impedance match vsyslog() to sshd's internal logging levels */
 void
 im_log(int priority, const char *message, va_list args)
 {
@@ -82,7 +83,6 @@ im_log(int priority, const char *message, va_list args)
 void
 blocklist_init(void)
 {
-
 	if (options.use_blocklist)
 		blstate = bl_create(false, NULL, im_log);
 }
@@ -90,8 +90,23 @@ blocklist_init(void)
 void
 blocklist_notify(struct ssh *ssh, int action, const char *msg)
 {
+	int fd;
 
-	if (blstate != NULL && ssh_packet_connection_is_on_socket(ssh))
-		(void)blocklist_r(blstate, action,
-		ssh_packet_get_connection_in(ssh), msg);
+	if (blstate == NULL)
+		blocklist_init();
+	if (blstate == NULL)
+		return;
+	if (ssh == NULL) {
+		if (the_active_state == NULL)
+			return;
+		else
+			ssh = the_active_state;
+	}
+	fd = ssh_packet_connection_is_on_socket(ssh) ?
+	    ssh_packet_get_connection_in(ssh) : 3; /* XXX: 3? */
+	(void)blocklist_r(blstate, action, fd, msg);
+	if (action == BLOCKLIST_AUTH_OK) {
+		blocklist_close(blstate);
+		blstate = NULL;
+	}
 }

@@ -57,5 +57,4 @@ void blocklist_notify(struct ssh *, int, const char *);
 
 #endif
 
-
 #endif /* BLOCKLIST_CLIENT_H */
