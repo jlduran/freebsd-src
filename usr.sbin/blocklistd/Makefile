@@ -3,19 +3,17 @@ BLOCKLIST_DIR=${SRCTOP}/contrib/blocklist
 
 PACKAGE=	blocklist
 
-CONFS=	blacklistd.conf
-PROG=	blacklistd
-SRCS=	blacklistd.c conf.c run.c state.c support.c old_internal.c \
+CONFS=	blocklistd.conf
+PROG=	blocklistd
+SRCS=	blocklistd.c conf.c run.c state.c support.c internal.c \
 	sockaddr_snprintf.c pidfile.c strtoi.c popenve.c vsyslog_r.c
 MAN=	blocklistd.8 blocklistd.conf.5
-MLINKS=	blocklistd.8 blacklistd.8 \
-	blocklistd.conf.5 blacklistd.conf.5
 
-LDFLAGS+=-L${LIBBLACKLISTDIR}
+LDFLAGS+=-L${LIBBLOCKLISTDIR}
 LIBADD+= blocklist util
 
 CFLAGS+=-I${BLOCKLIST_DIR}/include -I${BLOCKLIST_DIR}/port \
-	-D_PATH_BLCONTROL=\"/usr/libexec/blacklistd-helper\" \
+	-D_PATH_BLCONTROL=\"/usr/libexec/blocklistd-helper\" \
 	-DHAVE_CONFIG_H -DHAVE_DB_H -DHAVE_LIBUTIL_H \
 	-DHAVE_CLOCK_GETTIME -DHAVE_FGETLN -DHAVE_FPARSELN \
 	-DHAVE_GETPROGNAME -DHAVE_STRLCAT -DHAVE_STRLCPY \
