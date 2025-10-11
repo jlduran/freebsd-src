@@ -35,7 +35,7 @@
 #define	_PATH_BLCONF	"/etc/blocklistd.conf"
 #endif
 #ifndef _PATH_BLCONTROL
-#define	_PATH_BLCONTROL	"/libexec/blocklistd-helper"
+#define	_PATH_BLCONTROL	"/usr/libexec/blocklistd-helper"
 #endif
 #ifndef _PATH_BLSTATE
 #define	_PATH_BLSTATE	"/var/db/blocklistd.db"
