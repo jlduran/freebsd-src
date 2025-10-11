@@ -13,6 +13,7 @@ LDFLAGS+=-L${LIBBLACKLISTDIR}
 LIBADD+= blocklist util
 
 CFLAGS+=-I${BLOCKLIST_DIR}/include -I${BLOCKLIST_DIR}/port \
+	-D_PATH_BLCONF=\"/etc/blacklistd.conf\" \
 	-D_PATH_BLCONTROL=\"/usr/libexec/blacklistd-helper\" \
 	-DHAVE_CONFIG_H -DHAVE_DB_H -DHAVE_LIBUTIL_H \
 	-DHAVE_CLOCK_GETTIME -DHAVE_FGETLN -DHAVE_FPARSELN \

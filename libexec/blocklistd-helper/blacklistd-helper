@@ -9,16 +9,12 @@
 # $6 port
 # $7 id
 
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-echo "@  WARNING: blacklist has been renamed to blocklist        @"
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-
 pf=
 if [ -f "/etc/ipfw-blacklist.rc" ]; then
-	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-	echo "@  WARNING: rename /etc/ipfw-blacklist.rc to               @"
-	echo "@                  /etc/ipfw-blocklist.rc                  @"
-	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" > &2
+	echo "@  WARNING: rename /etc/ipfw-blacklist.rc to               @" > &2
+	echo "@                  /etc/ipfw-blocklist.rc                  @" > &2
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" > &2
 
 	pf="ipfw"
 	. /etc/ipfw-blacklist.rc
@@ -26,11 +22,6 @@ if [ -f "/etc/ipfw-blacklist.rc" ]; then
 fi
 
 if [ -z "$pf" ]; then
-	# XXX check first if there is an anchor named blacklist
-	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-	echo "@  WARNING: rename the blacklist anchor to blocklist       @"
-	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-
 	for f in npf pf ipfilter ipfw; do
 		if [ -x /etc/rc.d/$f ]; then
 			if /etc/rc.d/$f status >/dev/null 2>&1; then
@@ -78,6 +69,22 @@ case "$4" in
 		addr=${4#::ffff:}
 	fi;;
 esac
+
+if [ "$pf" = "pf" ]; then
+	for anchor in $(/sbin/pfctl -s Anchors 2> /dev/null); do
+		if [ "$anchor" = "blacklistd" ]; then
+			echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" >&2
+			echo "@  WARNING: rename the blacklist anchor to blocklist       @" >&2
+			echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" >&2
+		fi
+	done
+fi
+
+if [ "$pf" = "ipfilter" ]; then
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" >&2
+	echo "@  WARNING: blacklist has been renamed to blocklist        @" >&2
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" >&2
+fi
 
 case "$1" in
 add)

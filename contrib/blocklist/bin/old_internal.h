@@ -31,14 +31,12 @@
 #ifndef _OLD_INTERNAL_H
 #define _OLD_INTERNAL_H
 
-#ifdef _PATH_BLCONF
-#undef	_PATH_BLCONF
-#endif
+#ifndef _PATH_BLCONF
 #define	_PATH_BLCONF	"/etc/blacklistd.conf"
-#ifdef _PATH_BLCONTROL
-#undef	_PATH_BLCONTROL
 #endif
-#define	_PATH_BLCONTROL	"/libexec/blacklistd-helper"
+#ifndef _PATH_BLCONTROL
+#define	_PATH_BLCONTROL	"/usr/libexec/blacklistd-helper"
+#endif
 #ifndef _PATH_BLSTATE
 /* We want the new name, the old one would be incompatible after 24932b6 */
 #define	_PATH_BLSTATE	"/var/db/blocklistd.db"
