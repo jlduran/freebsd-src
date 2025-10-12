@@ -11,10 +11,10 @@
 
 pf=
 if [ -f "/etc/ipfw-blacklist.rc" ]; then
-	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" > &2
-	echo "@  WARNING: rename /etc/ipfw-blacklist.rc to               @" > &2
-	echo "@                  /etc/ipfw-blocklist.rc                  @" > &2
-	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" > &2
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" >&2
+	echo "@  WARNING: rename /etc/ipfw-blacklist.rc to               @" >&2
+	echo "@                  /etc/ipfw-blocklist.rc                  @" >&2
+	echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" >&2
 
 	pf="ipfw"
 	. /etc/ipfw-blacklist.rc
