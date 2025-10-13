@@ -38,8 +38,7 @@
 #define	_PATH_BLCONTROL	"/usr/libexec/blacklistd-helper"
 #endif
 #ifndef _PATH_BLSTATE
-/* We want the new name, the old one would be incompatible after 24932b6 */
-#define	_PATH_BLSTATE	"/var/db/blocklistd.db"
+#define	_PATH_BLSTATE	"/var/db/blacklistd.db"
 #endif
 
 extern struct confset rconf, lconf;
