@@ -9,7 +9,7 @@ SRCS=	blacklistctl.c conf.c state.c support.c old_internal.c \
 MAN=	blacklistctl.8
 
 LDFLAGS+=-L${LIBBLACKLISTDIR}
-LIBADD+= blocklist util
+LIBADD+= blacklist util
 
 CFLAGS+=-I${BLOCKLIST_DIR}/include -I${BLOCKLIST_DIR}/port \
 	-D_PATH_BLCONF=\"/etc/blacklistd.conf\" \
