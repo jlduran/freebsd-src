@@ -84,7 +84,7 @@ void
 blocklist_init(void)
 {
 	if (options.use_blocklist)
-		blstate = bl_create(false, NULL, im_log);
+		blstate = blocklist_open2(im_log);
 }
 
 void
