@@ -217,8 +217,6 @@ mm_is_monitor(void)
 static void
 grace_alarm_handler(int sig)
 {
-	BLOCKLIST_NOTIFY(the_active_state, BLOCKLIST_AUTH_FAIL,
-	    "Grace period expired");
 	/*
 	 * Try to kill any processes that we have spawned, E.g. authorized
 	 * keys command helpers or privsep children.
@@ -1281,10 +1279,8 @@ main(int ac, char **av)
 	}
 
 	if ((r = kex_exchange_identification(ssh, -1,
-	    options.version_addendum)) != 0) {
-		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL, "Banner exchange");
-		sshpkt_fatal(ssh, r, "banner exchange");
-	}
+	    options.version_addendum)) != 0)
+		bl_sshpkt_fatal(ssh, r, "banner exchange");
 
 	ssh_packet_set_nonblocking(ssh);
 
@@ -1429,10 +1425,7 @@ cleanup_exit(int i)
 		audit_event(the_active_state, SSH_CONNECTION_ABANDON);
 #endif
 	/* Override default fatal exit value when auth was attempted */
-	if (i == 255 && auth_attempted) {
-		BLOCKLIST_NOTIFY(the_active_state, BLOCKLIST_AUTH_FAIL,
-		    "Fatal exit");
+	if (i == 255 && auth_attempted)
 		_exit(EXIT_AUTH_ATTEMPTED);
-	}
 	_exit(i);
 }
