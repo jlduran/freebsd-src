@@ -49,6 +49,10 @@
 #include <blocklist.h>
 #include "blocklist_client.h"
 
+#ifndef MSGBUFSIZ
+#define MSGBUFSIZ 1024
+#endif
+
 static struct blocklist *blstate = NULL;
 
 /* import */
@@ -82,7 +86,6 @@ im_log(int priority, const char *message, va_list args)
 void
 blocklist_init(void)
 {
-
 	if (options.use_blocklist)
 		blstate = bl_create(false, NULL, im_log);
 }
@@ -90,8 +93,32 @@ blocklist_init(void)
 void
 blocklist_notify(struct ssh *ssh, int action, const char *msg)
 {
-
 	if (blstate != NULL && ssh_packet_connection_is_on_socket(ssh))
 		(void)blocklist_r(blstate, action,
 		ssh_packet_get_connection_in(ssh), msg);
+}
+
+void
+blocklist_notify2(int action, const char *fmt, ...)
+{
+	int fd;
+	char fmtbuf[MSGBUFSIZ];
+	va_list args;
+
+	if (blstate == NULL)
+		blocklist_init();
+	if (blstate == NULL)
+		return;
+	if (the_active_state == NULL)
+		return;
+	fd = ssh_packet_connection_is_on_socket(the_active_state) ?
+		ssh_packet_get_connection_in(the_active_state) : 3; /* XXX: 3? */
+	va_start(args, fmt);
+	vsnprintf(fmtbuf, sizeof(fmtbuf) - 1, fmt, args);
+	va_end(args);
+	(void)blocklist_r(blstate, action, fd, fmtbuf);
+	if (action == BLOCKLIST_AUTH_OK) {
+		blocklist_close(blstate);
+		blstate = NULL;
+	}
 }
