@@ -70,6 +70,9 @@ for feature in $FEATURES; do
 		;;
 	read_msgbuf)
 		echo security.bsd.unprivileged_read_msgbuf=0 >> $BSDINSTALL_TMPETC/sysctl.conf.hardening
+		echo 'dmesg_umask="066"' >> $BSDINSTALL_TMPETC/rc.conf.hardening
+		sed "s|^/var/log/messages\t\t\t644|/var/log/messages\t\t\t600|" \
+		    $BSDINSTALL_CHROOT/etc/newsyslog.conf > $BSDINSTALL_TMPETC/newsyslog.conf.hardening
 		;;
 	proc_debug)
 		echo security.bsd.unprivileged_proc_debug=0 >> $BSDINSTALL_TMPETC/sysctl.conf.hardening

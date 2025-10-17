@@ -34,6 +34,12 @@ rm $BSDINSTALL_TMPETC/rc.conf.*
 cat $BSDINSTALL_CHROOT/etc/sysctl.conf $BSDINSTALL_TMPETC/sysctl.conf.* >> $BSDINSTALL_TMPETC/sysctl.conf
 rm $BSDINSTALL_TMPETC/sysctl.conf.*
 
+if [ -f $BSDINSTALL_TMPETC/newsyslog.conf.hardening  ]; then
+	cat $BSDINSTALL_TMPETC/newsyslog.conf.hardening > $BSDINSTALL_TMPETC/newsyslog.conf
+	rm -f $BSDINSTALL_TMPETC/newsyslog.conf.hardening
+	chmod 0600 $BSDINSTALL_CHROOT/var/log/messages
+fi
+
 if [ -f $BSDINSTALL_TMPETC/ttys.hardening ]; then
 	cat $BSDINSTALL_TMPETC/ttys.hardening > $BSDINSTALL_TMPETC/ttys
 	rm $BSDINSTALL_TMPETC/ttys.hardening
