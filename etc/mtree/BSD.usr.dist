@@ -39,35 +39,35 @@
         ..
     ..
     lib
-        clang
-            19
-                include
-                    cuda_wrappers
-                        bits
+        clang           tags=package=clang
+            19              tags=package=clang
+                include         tags=package=clang,dev
+                    cuda_wrappers   tags=package=clang,dev
+                        bits            tags=package=clang,dev
                         ..
                     ..
-                    fuzzer
+                    fuzzer          tags=package=clang,dev
                     ..
-                    hlsl
+                    hlsl            tags=package=clang,dev
                     ..
-                    openmp_wrappers
+                    openmp_wrappers tags=package=clang,dev
                     ..
-                    orc_rt
+                    orc_rt          tags=package=clang,dev
                     ..
-                    ppc_wrappers
+                    ppc_wrappers    tags=package=clang,dev
                     ..
-                    profile
+                    profile         tags=package=clang,dev
                     ..
-                    sanitizer
+                    sanitizer       tags=package=clang,dev
                     ..
-                    xray
-                    ..
-                ..
-                lib
-                    freebsd
+                    xray            tags=package=clang,dev
                     ..
                 ..
-                share
+                lib             tags=package=clang
+                    freebsd         tags=package=clang
+                    ..
+                ..
+                share           tags=package=clang
                 ..
             ..
         ..
