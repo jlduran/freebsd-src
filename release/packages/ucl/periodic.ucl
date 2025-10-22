@@ -20,4 +20,7 @@ deps {
 	"cron" {
 		version = "${VERSION}"
 	}
+	"geom" {
+		version = "${VERSION}"
+	}
 }
