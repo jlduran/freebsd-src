@@ -56,6 +56,10 @@ void blocklist_notify2(int, const char *, ...);
 	blocklist_notify2(BLOCKLIST_AUTH_FAIL, __VA_ARGS__);				\
 	sshlog(__FILE__, __func__, __LINE__, 0, SYSLOG_LEVEL_INFO, NULL, __VA_ARGS__);	\
 }
+#define bl_logdie(...) {									\
+	blocklist_notify2(BLOCKLIST_AUTH_FAIL, __VA_ARGS__);					\
+	sshlogdie(__FILE__, __func__, __LINE__, 0, SYSLOG_LEVEL_ERROR, NULL, __VA_ARGS__);	\
+}
 #define bl_error(...) {									\
 	blocklist_notify2(BLOCKLIST_AUTH_FAIL, __VA_ARGS__);				\
 	sshlog(__FILE__, __func__, __LINE__, 0, SYSLOG_LEVEL_ERROR, NULL, __VA_ARGS__);	\
@@ -78,6 +82,7 @@ void blocklist_notify2(int, const char *, ...);
 #define BLOCKLIST_INIT()
 #define BLOCKLIST_NOTIFY(ssh,x,msg)
 #define bl_logit(...) sshlog(__FILE__, __func__, __LINE__, 0, SYSLOG_LEVEL_INFO, NULL, __VA_ARGS__)
+#define bl_logdie(...) sshlogdie(__FILE__, __func__, __LINE__, 0, SYSLOG_LEVEL_ERROR, NULL, __VA_ARGS__)
 #define bl_error(...) sshlog(__FILE__, __func__, __LINE__, 0, SYSLOG_LEVEL_ERROR, NULL, __VA_ARGS__)
 #define bl_fatal_f(...) sshfatal(__FILE__, __func__, __LINE__, 1, SYSLOG_LEVEL_FATAL, NULL, __VA_ARGS__)
 #define bl_ssh_packet_disconnect(ssh, ...) ssh_packet_disconect(ssh, ...)

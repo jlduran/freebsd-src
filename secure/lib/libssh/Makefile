@@ -61,6 +61,13 @@ SRCS+=	getrrsetbyname-ldns.c
 LIBADD+=	ldns
 .endif
 
+.if ${MK_BLOCKLIST_SUPPORT} != "no"
+CFLAGS+= -DUSE_BLOCKLIST=1 -I${SRCTOP}/contrib/blocklist/include
+SRCS+=	blocklist.c
+LIBADD+= blocklist
+LDFLAGS+=-L${LIBBLOCKLISTDIR}
+.endif
+
 .if defined(LOCALBASE)
 CFLAGS+= -D_PATH_SSH_ASKPASS_DEFAULT='"${LOCALBASE}/bin/ssh-askpass"'
 .endif

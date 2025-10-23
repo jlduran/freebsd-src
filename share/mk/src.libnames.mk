@@ -342,6 +342,9 @@ _DP_ssh=	crypto crypt z
 .if ${MK_LDNS} != "no"
 _DP_ssh+=	ldns
 .endif
+.if ${MK_BLOCKLIST} != "no"
+_DP_ssh+=	blocklist
+.endif
 _DP_edit=	tinfow
 .if ${MK_OPENSSL} != "no"
 _DP_bsnmp=	crypto
