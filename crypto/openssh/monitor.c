@@ -354,25 +354,16 @@ monitor_child_preauth(struct ssh *ssh, struct monitor *pmonitor)
 				    auth_method, auth_submethod);
 			}
 		}
-		if (authctxt->failures > options.max_authtries) {
-			BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL,
-			    "Too many authentication attempts");
+		if (authctxt->failures > options.max_authtries)
 			/* Shouldn't happen */
-			fatal_f("privsep child made too many authentication "
+			bl_fatal_f("privsep child made too many authentication "
 			    "attempts");
-		}
 	}
 
-	if (!authctxt->valid) {
-		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL,
-		    "Authenticated invalid user");
-		fatal_f("authenticated invalid user");
-	}
-	if (strcmp(auth_method, "unknown") == 0) {
-		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL,
-		    "Authentication method name unknown");
-		fatal_f("authentication method name unknown");
-	}
+	if (!authctxt->valid)
+		bl_fatal_f("authenticated invalid user");
+	if (strcmp(auth_method, "unknown") == 0)
+		bl_fatal_f("authentication method name unknown");
 
 	debug_f("user %s authenticated by privileged process", authctxt->user);
 	auth_attempted = 0;
