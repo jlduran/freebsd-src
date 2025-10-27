@@ -29,8 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _PFCTL_IOCTL_H_
-#define _PFCTL_IOCTL_H_
+#ifndef _LIBPFCTL_H_
+#define _LIBPFCTL_H_
 
 #include <netpfil/pf/pf.h>
 
