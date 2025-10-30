@@ -47,7 +47,6 @@
 #include "misc.h"
 #include "servconf.h"
 #include <blocklist.h>
-#include "blocklist_client.h"
 
 #ifndef MSGBUFSIZ
 #define MSGBUFSIZ 1024
