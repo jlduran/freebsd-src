@@ -322,7 +322,7 @@ input_userauth_request(int type, u_int32_t seq, struct ssh *ssh)
 			    "no authentication methods enabled");
 	} else if (strcmp(user, authctxt->user) != 0 ||
 	    strcmp(service, authctxt->service) != 0) {
-		ssh_packet_disconnect(ssh, "Change of username or service "
+		bl_ssh_packet_disconnect(ssh, "Change of username or service "
 		    "not allowed: (%s,%s) -> (%s,%s)",
 		    authctxt->user, authctxt->service, user, service);
 	}
