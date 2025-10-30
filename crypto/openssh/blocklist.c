@@ -40,19 +40,20 @@
 #include <stdlib.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <blocklist.h>
 
 #include "ssh.h"
 #include "packet.h"
 #include "log.h"
 #include "misc.h"
 #include "servconf.h"
-#include <blocklist.h>
 
 #ifndef MSGBUFSIZ
 #define MSGBUFSIZ 1024
 #endif
 
 static struct blocklist *blstate = NULL;
+extern struct ssh *the_active_state;
 
 /* import */
 extern ServerOptions options;

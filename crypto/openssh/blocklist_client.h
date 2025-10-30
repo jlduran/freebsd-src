@@ -44,7 +44,6 @@ enum {
 #endif
 
 #ifdef USE_BLOCKLIST
-extern struct ssh *the_active_state;
 
 void blocklist_init(void);
 void blocklist_notify(struct ssh *, int, const char *);
