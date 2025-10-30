@@ -285,17 +285,18 @@ auth_log(struct ssh *ssh, int authenticated, int partial,
 		authmsg = "Postponed";
 	else if (partial)
 		authmsg = "Partial";
-	else {
+	else
 		authmsg = authenticated ? "Accepted" : "Failed";
-		if (authenticated)
-			BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_OK,
-			    "Authenticated");
-	}
 
 	if ((extra = format_method_key(authctxt)) == NULL) {
 		if (authctxt->auth_method_info != NULL)
 			extra = xstrdup(authctxt->auth_method_info);
 	}
+
+	if (authenticated)
+		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_OK, "Accepted");
+	else
+		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL, "Failed");
 
 	do_log2(level, "%s %s%s%s for %s%.100s from %.200s port %d ssh2%s%s",
 	    authmsg,
