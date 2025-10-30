@@ -85,7 +85,6 @@
 #include "misc.h"
 #include "servconf.h"
 #include "monitor.h"
-#include "blocklist_client.h"
 
 #ifdef GSSAPI
 #include "ssh-gss.h"

@@ -75,7 +75,6 @@
 #include "monitor_wrap.h"
 #include "ssherr.h"
 #include "channels.h"
-#include "blocklist_client.h"
 
 /* import */
 extern ServerOptions options;

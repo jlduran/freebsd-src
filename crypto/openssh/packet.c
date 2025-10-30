@@ -96,7 +96,6 @@
 #include "packet.h"
 #include "ssherr.h"
 #include "sshbuf.h"
-#include "blocklist_client.h"
 
 #ifdef PACKET_DEBUG
 #define DBG(x) x

@@ -58,7 +58,6 @@
 #include "monitor_wrap.h"
 #include "digest.h"
 #include "kex.h"
-#include "blocklist_client.h"
 
 /* import */
 extern ServerOptions options;

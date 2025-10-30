@@ -101,7 +101,6 @@
 #endif
 #include "monitor_wrap.h"
 #include "srclimit.h"
-#include "blocklist_client.h"
 
 extern ServerOptions options;
 extern struct sshbuf *loginmsg;
