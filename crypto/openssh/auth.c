@@ -75,7 +75,6 @@
 #include "monitor_wrap.h"
 #include "ssherr.h"
 #include "channels.h"
-#include "blocklist_client.h"
 
 /* import */
 extern ServerOptions options;
@@ -109,7 +108,7 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 		return 0;
 
 	if (!options.use_pam && platform_locked_account(pw)) {
-		logit("User %.100s not allowed because account is locked",
+		bl_logit("User %.100s not allowed because account is locked",
 		    pw->pw_name);
 		return 0;
 	}
@@ -124,14 +123,14 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 		    _PATH_BSHELL : pw->pw_shell); /* empty = /bin/sh */
 
 		if (stat(shell, &st) == -1) {
-			logit("User %.100s not allowed because shell %.100s "
+			bl_logit("User %.100s not allowed because shell %.100s "
 			    "does not exist", pw->pw_name, shell);
 			free(shell);
 			return 0;
 		}
 		if (S_ISREG(st.st_mode) == 0 ||
 		    (st.st_mode & (S_IXOTH|S_IXUSR|S_IXGRP)) == 0) {
-			logit("User %.100s not allowed because shell %.100s "
+			bl_logit("User %.100s not allowed because shell %.100s "
 			    "is not executable", pw->pw_name, shell);
 			free(shell);
 			return 0;
@@ -154,7 +153,7 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 				fatal("Invalid DenyUsers pattern \"%.100s\"",
 				    options.deny_users[i]);
 			} else if (r != 0) {
-				logit("User %.100s from %.100s not allowed "
+				bl_logit("User %.100s from %.100s not allowed "
 				    "because listed in DenyUsers",
 				    pw->pw_name, hostname);
 				return 0;
@@ -174,7 +173,7 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 		}
 		/* i < options.num_allow_users iff we break for loop */
 		if (i >= options.num_allow_users) {
-			logit("User %.100s from %.100s not allowed because "
+			bl_logit("User %.100s from %.100s not allowed because "
 			    "not listed in AllowUsers", pw->pw_name, hostname);
 			return 0;
 		}
@@ -182,7 +181,7 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 	if (options.num_deny_groups > 0 || options.num_allow_groups > 0) {
 		/* Get the user's group access list (primary and supplementary) */
 		if (ga_init(pw->pw_name, pw->pw_gid) == 0) {
-			logit("User %.100s from %.100s not allowed because "
+			bl_logit("User %.100s from %.100s not allowed because "
 			    "not in any group", pw->pw_name, hostname);
 			return 0;
 		}
@@ -192,7 +191,7 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 			if (ga_match(options.deny_groups,
 			    options.num_deny_groups)) {
 				ga_free();
-				logit("User %.100s from %.100s not allowed "
+				bl_logit("User %.100s from %.100s not allowed "
 				    "because a group is listed in DenyGroups",
 				    pw->pw_name, hostname);
 				return 0;
@@ -205,7 +204,7 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 			if (!ga_match(options.allow_groups,
 			    options.num_allow_groups)) {
 				ga_free();
-				logit("User %.100s from %.100s not allowed "
+				bl_logit("User %.100s from %.100s not allowed "
 				    "because none of user's groups are listed "
 				    "in AllowGroups", pw->pw_name, hostname);
 				return 0;
@@ -286,17 +285,18 @@ auth_log(struct ssh *ssh, int authenticated, int partial,
 		authmsg = "Postponed";
 	else if (partial)
 		authmsg = "Partial";
-	else {
+	else
 		authmsg = authenticated ? "Accepted" : "Failed";
-		if (authenticated)
-			BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_OK,
-			    "Authenticated");
-	}
 
 	if ((extra = format_method_key(authctxt)) == NULL) {
 		if (authctxt->auth_method_info != NULL)
 			extra = xstrdup(authctxt->auth_method_info);
 	}
+
+	if (authenticated)
+		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_OK, "Accepted");
+	else
+		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL, "Failed");
 
 	do_log2(level, "%s %s%s%s for %s%.100s from %.200s port %d ssh2%s%s",
 	    authmsg,
@@ -339,8 +339,7 @@ auth_maxtries_exceeded(struct ssh *ssh)
 {
 	Authctxt *authctxt = (Authctxt *)ssh->authctxt;
 
-	BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL, "Maximum attempts exceeded");
-	error("maximum authentication attempts exceeded for "
+	bl_error("maximum authentication attempts exceeded for "
 	    "%s%.100s from %.200s port %d ssh2",
 	    authctxt->valid ? "" : "invalid user ",
 	    authctxt->user,
@@ -372,7 +371,7 @@ auth_root_allowed(struct ssh *ssh, const char *method)
 		}
 		break;
 	}
-	logit("ROOT LOGIN REFUSED FROM %.200s port %d",
+	bl_logit("ROOT LOGIN REFUSED FROM %.200s port %d",
 	    ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 	return 0;
 }
@@ -500,8 +499,7 @@ getpwnamallow(struct ssh *ssh, const char *user)
 	aix_restoreauthdb();
 #endif
 	if (pw == NULL) {
-		BLOCKLIST_NOTIFY(ssh, BLOCKLIST_AUTH_FAIL, "Invalid user");
-		logit("Invalid user %.100s from %.100s port %d",
+		bl_logit("Invalid user %.100s from %.100s port %d",
 		    user, ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 #ifdef CUSTOM_FAILED_LOGIN
 		record_failed_login(ssh, user,

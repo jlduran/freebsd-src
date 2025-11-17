@@ -101,7 +101,6 @@
 #endif
 #include "monitor_wrap.h"
 #include "srclimit.h"
-#include "blocklist_client.h"
 
 extern ServerOptions options;
 extern struct sshbuf *loginmsg;
@@ -937,9 +936,7 @@ sshpam_query(void *ctx, char **name, char **info,
 				sshbuf_free(buffer);
 				return (0);
 			}
-			BLOCKLIST_NOTIFY(NULL, BLOCKLIST_AUTH_FAIL,
-			    "PAM illegal user");
-			error("PAM: %s for %s%.100s from %.100s", msg,
+			bl_error("PAM: %s for %s%.100s from %.100s", msg,
 			    sshpam_authctxt->valid ? "" : "illegal user ",
 			    sshpam_authctxt->user, sshpam_rhost);
 			/* FALLTHROUGH */
