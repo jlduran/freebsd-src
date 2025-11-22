@@ -5,7 +5,7 @@ PACKAGE=	blocklist
 
 PROG=	blacklistctl
 SRCS=	blacklistctl.c conf.c state.c support.c old_internal.c \
-	sockaddr_snprintf.c pidfile.c strtoi.c popenve.c
+	sockaddr_snprintf.c strtoi.c
 MAN=	blacklistctl.8
 
 LDFLAGS+=-L${LIBBLACKLISTDIR}
