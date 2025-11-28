@@ -175,9 +175,10 @@ ATF_TC_BODY(strfmon_international_currency_code, tc)
 		const char *locale;
 		const char *expected;
 	} tests[] = {
-	    { "en_US.UTF-8", "[USD 123.45]" },
-	    { "de_DE.UTF-8", "[123,45 EUR]" },
-	    { "C", "[123.45]" },
+	    { "en_US.UTF-8", "[USD 1,234,567.89] [$1,234,567.89]" },
+	    { "de_DE.UTF-8", "[1.234.567,89 EUR] [1.234.567,89 \u20ac]" },
+	    { "hi_IN.UTF-8", "[INR12,34,567.89] [\u20b912,34,567.89]" },
+	    { "C", "[1234567.89] [1234567.89]" },
 	};
 	size_t i;
 	char actual[100];
@@ -186,7 +187,8 @@ ATF_TC_BODY(strfmon_international_currency_code, tc)
 		if (setlocale(LC_MONETARY, tests[i].locale) == NULL)
 			atf_tc_skip("unable to setlocale()");
 
-		strfmon(actual, sizeof(actual) - 1, "[%i]", 123.45);
+		strfmon(actual, sizeof(actual) - 1, "[%i] [%n]", 1234567.89,
+		    1234567.89);
 		ATF_CHECK_STREQ(tests[i].expected, actual);
 	}
 }
