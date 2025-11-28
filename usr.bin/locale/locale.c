@@ -622,10 +622,6 @@ format_grouping(char *binary)
 	size_t roff;
 	int len;
 
-	/*
-	 * XXX This check will need to be modified if/when localeconv() is
-	 * fixed (PR172215).
-	 */
 	if (*binary == CHAR_MAX)
 		return (binary);
 

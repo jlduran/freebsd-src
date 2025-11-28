@@ -53,7 +53,7 @@ static const struct lc_monetary_T _C_monetary_locale = {
 	empty,		/* currency_symbol */
 	empty,		/* mon_decimal_point */
 	empty,		/* mon_thousands_sep */
-	numempty,	/* mon_grouping */
+	empty,		/* mon_grouping [C99 7.11.2.1] */
 	empty,		/* positive_sign */
 	empty,		/* negative_sign */
 	numempty,	/* int_frac_digits */
