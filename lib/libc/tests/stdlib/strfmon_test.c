@@ -175,7 +175,7 @@ ATF_TC_BODY(strfmon_international_currency_code, tc)
 		const char *locale;
 		const char *expected;
 	} tests[] = {
-	    { "en_US.UTF-8", "[USD123.45]" },
+	    { "en_US.UTF-8", "[USD 123.45]" },
 	    { "de_DE.UTF-8", "[123,45 EUR]" },
 	    { "C", "[123.45]" },
 	};
@@ -200,15 +200,15 @@ ATF_TC_BODY(strfmon_plus_or_parenthesis, tc)
 		const char *expected;
 	} tests[] = {
 	    { "%+n", "en_US.UTF-8", "[$123.45] [-$123.45]" },
-	    { "%+i", "en_US.UTF-8", "[USD123.45] [-USD123.45]" },
+	    { "%+i", "en_US.UTF-8", "[USD 123.45] [-USD 123.45]" },
 	    { "%(n", "C", "[123.45] [(123.45)]" },
 	    { "%(i", "C", "[123.45] [(123.45)]" },
 	    { "%(n", "en_US.UTF-8", "[$123.45] [($123.45)]" },
-	    { "%(i", "en_US.UTF-8", "[USD123.45] [(USD123.45)]" },
+	    { "%(i", "en_US.UTF-8", "[USD 123.45] [(USD 123.45)]" },
 	    { "%n", "C", "[123.45] [-123.45]" },
 	    { "%i", "C", "[123.45] [-123.45]" },
 	    { "%n", "en_US.UTF-8", "[$123.45] [-$123.45]" },
-	    { "%i", "en_US.UTF-8", "[USD123.45] [-USD123.45]" },
+	    { "%i", "en_US.UTF-8", "[USD 123.45] [-USD 123.45]" },
 	};
 	size_t i;
 	char actual[100], format[50];
