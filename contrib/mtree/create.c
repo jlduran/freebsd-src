@@ -83,6 +83,7 @@ static gid_t gid;
 static uid_t uid;
 static mode_t mode;
 static u_long flags;
+static bool padded = false;
 
 #ifdef __FreeBSD__
 #define	FTS_CONST const
@@ -195,9 +196,6 @@ statf(FILE *fp, int indent, FTSENT *p)
 
 	if (offset > (INDENTNAMELEN + indent))
 		offset = MAXLINELEN;
-	else
-		offset += fprintf(fp, "%*s",
-		    (INDENTNAMELEN + indent) - offset, "");
 
 	if (!S_ISREG(p->fts_statp->st_mode) && (flavor == F_NETBSD6 || !dflag))
 		output(fp, indent, &offset, "type=%s",
@@ -312,6 +310,7 @@ statf(FILE *fp, int indent, FTSENT *p)
 	}
 #endif
 	putchar('\n');
+	padded = false;
 }
 
 /* XXX
@@ -475,5 +474,12 @@ output(FILE *fp, int indent, int *offset, const char *fmt, ...)
 		fprintf(fp, " \\\n%*s", INDENTNAMELEN + indent, "");
 		*offset = INDENTNAMELEN + indent;
 	}
+
+	if (!padded) {
+		*offset += fprintf(fp, "%*s",
+		    (INDENTNAMELEN + indent) - *offset, "");
+		padded = true;
+	}
+
 	*offset += fprintf(fp, " %s", buf) + 1;
 }
