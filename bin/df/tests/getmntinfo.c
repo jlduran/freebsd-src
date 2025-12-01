@@ -1,0 +1,193 @@
+/*
+ * Copyright (c) 2007 The NetBSD Foundation, Inc.
+ * All rights reserved.
+ * Copyright (c) 2026 Jose Luis Duran <jlduran@FreeBSD.org>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/*
+ * Adapted from contrib/netbsd-tests/bin/df/getmntinfo.c
+ * $NetBSD: getmntinfo.c,v 1.1 2012/03/17 16:33:11 jruoho Exp $
+ */
+
+#include <sys/param.h>
+#include <sys/ucred.h>
+#include <sys/mount.h>
+
+#include <err.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define	KB		* 1024
+#define	MB		* 1024 KB
+#define	GB		* 1024 MB
+
+static struct statfs *getnewstatfs(void);
+static void other_variants(const struct statfs *, const int *, int,
+    const int *, int);
+static void setup_filer(void);
+static void setup_ld0g(void);
+static void setup_strpct(void);
+
+static struct statfs *allstatfs;
+static int sftotal, sfused;
+
+struct statfs *
+getnewstatfs(void)
+{
+	if (sftotal == sfused) {
+		sftotal = sftotal ? sftotal * 2 : 1;
+		allstatfs = realloc(allstatfs,
+		    sftotal * sizeof(struct statfs));
+		if (allstatfs == NULL)
+			err(EXIT_FAILURE, "realloc");
+	}
+
+	return (&allstatfs[sfused++]);
+}
+
+void
+other_variants(const struct statfs *tmpl, const int *minfree, int minfreecnt,
+    const int *consumed, int consumedcnt)
+{
+	int64_t total, used;
+	struct statfs *sf;
+	int i, j;
+
+	for (i = 0; i < minfreecnt; i++)
+		for (j = 0; j < consumedcnt; j++) {
+			sf = getnewstatfs();
+			*sf = *tmpl;
+			total = (int64_t)(u_long)sf->f_blocks * sf->f_bsize;
+			used =  (total * consumed[j]) / 100;
+			sf->f_bfree = (total - used) / sf->f_bsize;
+			sf->f_bavail = (total * (100 - minfree[i]) / 100 -
+			    used) / (int)sf->f_bsize;
+		}
+}
+
+/*
+ * Parameter taken from:
+ * http://mail-index.NetBSD.org/tech-userlevel/2004/03/24/0001.html
+ */
+void
+setup_filer(void)
+{
+	static const struct statfs tmpl = {
+#define	BSIZE	512
+#define	TOTAL	1147ULL GB
+#define	USED	132ULL MB
+		.f_bsize = BSIZE,
+		.f_blocks = TOTAL / BSIZE,
+		.f_bfree = (TOTAL - USED) / BSIZE,
+		.f_bavail = (TOTAL - USED) / BSIZE,
+		.f_mntfromname = "filer:/",
+		.f_mntonname = "/filer",
+#undef USED
+#undef TOTAL
+#undef BSIZE
+	};
+	static const int minfree[] = { 0, 5, 10, 15, };
+	static const int consumed[] = { 0, 20, 60, 95, 100 };
+
+	*getnewstatfs() = tmpl;
+	other_variants(&tmpl, minfree, nitems(minfree),
+	    consumed, nitems(consumed));
+}
+
+/*
+ * Parameter taken from:
+ * http://mail-index.NetBSD.org/current-users/2004/03/01/0038.html
+ */
+void
+setup_ld0g(void)
+{
+	static const struct statfs tmpl = {
+#define	BSIZE	4096			/* Guess */
+#define	TOTAL	1308726116ULL KB
+#define	USED	17901268ULL KB
+#define	AVAIL	1225388540ULL KB
+		.f_bsize = BSIZE,
+		.f_blocks = TOTAL / BSIZE,
+		.f_bfree = (TOTAL - USED) / BSIZE,
+		.f_bavail = AVAIL / BSIZE,
+		.f_mntfromname = "/dev/ld0g",
+		.f_mntonname = "/anon-root",
+#undef AVAIL
+#undef USED
+#undef TOTAL
+#undef BSIZE
+	};
+	static const int minfree[] = { 0, 5, 10, 15, };
+	static const int consumed[] = { 0, 20, 60, 95, 100 };
+
+	*getnewstatfs() = tmpl;
+	other_variants(&tmpl, minfree, nitems(minfree),
+	    consumed, nitems(consumed));
+}
+
+/*
+ * Test of NetBSD's strpct(3) with huge number.
+ */
+void
+setup_strpct(void)
+{
+	static const struct statfs tmpl = {
+#define	BSIZE	4096			/* Guess */
+#define	TOTAL	0x4ffffffffULL KB
+#define	USED	(TOTAL / 2)
+#define	AVAIL	(TOTAL / 2)
+		.f_bsize = BSIZE,
+		.f_blocks = TOTAL / BSIZE,
+		.f_bfree = (TOTAL - USED) / BSIZE,
+		.f_bavail = AVAIL / BSIZE,
+		.f_mntfromname = "/dev/strpct",
+		.f_mntonname = "/strpct",
+#undef AVAIL
+#undef USED
+#undef TOTAL
+#undef BSIZE
+	};
+
+	*getnewstatfs() = tmpl;
+}
+
+/*
+ * Parameter taken from:
+ * http://www.netbsd.org/cgi-bin/query-pr-single.pl?number=23600
+ */
+static void
+setup_gnats_pr23600(void)
+{
+	static const struct statfs tmpl = {
+#define	BSIZE	512
+#define	TOTAL	20971376ULL
+#define	USED	5719864ULL
+#define	AVAIL	15251512ULL
+		.f_bsize = BSIZE,
+		.f_blocks = TOTAL,
+		.f_bfree = TOTAL - USED,
+		.f_bavail = AVAIL,
+		.f_mntfromname = "/dev/wd0e",
+		.f_mntonname = "/mount/windows/C",
+#undef AVAIL
+#undef USED
+#undef TOTAL
+#undef BSIZE
+	};
+
+	*getnewstatfs() = tmpl;
+}
+
+int
+getmntinfo(struct statfs **mntbufp, __unused int mode)
+{
+	setup_filer();
+	setup_ld0g();
+	setup_strpct();
+	setup_gnats_pr23600();
+
+	*mntbufp = allstatfs;
+	return (sfused);
+}
