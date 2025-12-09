@@ -246,6 +246,10 @@ noparent:		mtree_err("no parent node");
 				 * duplicate "." entry; always replace
 				 */
 			replacenode(root, centry);
+		} else if (strcmp(centry->name, last->name) == 0) {
+			centry->parent = last;
+			addchild(last, centry);
+			last = centry;
 		} else if (last->type == F_DIR && !(last->flags & F_DONE)) {
 				/*
 				 * new relative child in current dir;
