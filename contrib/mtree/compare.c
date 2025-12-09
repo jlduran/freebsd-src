@@ -300,7 +300,7 @@ typeerr:		LABEL;
 				    flavor == F_FREEBSD9 ? "" : ")");
 		}
 		else
-			printf(")\n");
+			printf("%s\n", flavor == F_FREEBSD9 ? "" : ")");
 		tab = "\t";
 	skip:	;
 	}
