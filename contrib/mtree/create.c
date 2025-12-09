@@ -122,7 +122,7 @@ cwalk(FILE *fp)
 
 	if ((t = fts_open(argv, ftsoptions, dcmp)) == NULL)
 		mtree_err("fts_open: %s", strerror(errno));
-	while (errno = 0, (p = fts_read(t)) != NULL) {
+	while ((p = fts_read(t)) != NULL) {
 		if (jflag)
 			indent = p->fts_level * 4;
 		if (check_excludes(p->fts_name, p->fts_path)) {

@@ -90,7 +90,7 @@ vwalk(void)
 		mtree_err("fts_open: %s", strerror(errno));
 	level = root;
 	specdepth = rval = 0;
-	while (errno = 0, (p = fts_read(t)) != NULL) {
+	while ((p = fts_read(t)) != NULL) {
 		if (check_excludes(p->fts_name, p->fts_path)) {
 			fts_set(t, p, FTS_SKIP);
 			continue;
