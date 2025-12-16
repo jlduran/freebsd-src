@@ -84,7 +84,8 @@ imax(int a, int b)
 	return (a > b ? a : b);
 }
 
-static int	  aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Tflag;
+static int	  aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag,
+		  Pflag = 0, Tflag;
 static int	  thousands;
 static int	  skipvfs_l, skipvfs_t;
 static const char **vfslist_l, **vfslist_t;
@@ -125,6 +126,7 @@ main(int argc, char *argv[])
 		case 'b':
 				/* FALLTHROUGH */
 		case 'P':
+			Pflag = 1;
 			/*
 			 * POSIX specifically discusses the behavior of
 			 * both -k and -P. It states that the blocksize should
@@ -462,7 +464,7 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 	static int headerlen, timesthrough = 0;
 	static const char *header;
 	int64_t used, availblks, inodes;
-	const char *format;
+	const char *availheader, *format;
 
 	if (++timesthrough == 1) {
 		mwp->mntfrom = imax(mwp->mntfrom, (int)strlen("Filesystem"));
@@ -483,14 +485,15 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 			mwp->total = imax(mwp->total, headerlen);
 		}
 		mwp->used = imax(mwp->used, (int)strlen("Used"));
-		mwp->avail = imax(mwp->avail, (int)strlen("Avail"));
+		availheader = Pflag ? "Available" : "Avail";
+		mwp->avail = imax(mwp->avail, (int)strlen(availheader));
 
 		xo_emit("{T:/%-*s}", mwp->mntfrom, "Filesystem");
 		if (Tflag)
 			xo_emit("  {T:/%-*s}", mwp->fstype, "Type");
 		xo_emit(" {T:/%*s} {T:/%*s} {T:/%*s} {T:Capacity}",
 			mwp->total, header,
-			mwp->used, "Used", mwp->avail, "Avail");
+			mwp->used, "Used", mwp->avail, availheader);
 		if (iflag) {
 			mwp->iused = imax(hflag ? 0 : mwp->iused,
 			    (int)strlen("  iused"));
