@@ -1,6 +1,7 @@
 PACKAGE=	tests
 
-ATF_TESTS_SH=	t_df
+ATF_TESTS_SH=	df_test
+ATF_TESTS_SH+=	t_df
 
 PROGS+=		h_df
 BINDIR.h_df=	${TESTSDIR}
