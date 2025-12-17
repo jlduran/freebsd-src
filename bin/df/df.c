@@ -76,6 +76,7 @@ static char	 *makenetvfslist(void);
 static void	  prthuman(const struct statfs *, int64_t);
 static void	  prthumanval(const char *, int64_t);
 static intmax_t	  fsbtoblk(int64_t, uint64_t, u_long);
+static int	  percent(int64_t , int64_t);
 static void	  prtstat(struct statfs *, struct maxwidths *);
 static size_t	  regetmntinfo(struct statfs **, long);
 static void	  update_maxwidths(struct maxwidths *, const struct statfs *);
@@ -451,6 +452,15 @@ fsbtoblk(int64_t num, uint64_t fsbs, u_long bs)
 }
 
 /*
+ * Calculate the percentage as an integer, rounded up to the next highest value.
+ */
+static int
+percent(int64_t used, int64_t avail)
+{
+	return (avail == 0 ? 100 : ((used * 100 + avail - 1) / avail));
+}
+
+/*
  * Print out status about a file system.
  */
 static void
@@ -528,8 +538,7 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 		    mwp->avail, fsbtoblk(sfsp->f_bavail,
 		    sfsp->f_bsize, blocksize));
 	}
-	xo_emit(" {:used-percent/%5.0f}{U:%%}",
-	    availblks == 0 ? 100.0 : (double)used / (double)availblks * 100.0);
+	xo_emit(" {:used-percent/%5d}{U:%%}", percent(used, availblks));
 	if (iflag) {
 		inodes = sfsp->f_files;
 		used = inodes - sfsp->f_ffree;
@@ -548,8 +557,8 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 		if (inodes == 0)
 			xo_emit(" {:inodes-used-percent/    -}{U:} ");
 		else {
-			xo_emit(" {:inodes-used-percent/%4.0f}{U:%%} ",
-				(double)used / (double)inodes * 100.0);
+			xo_emit(" {:inodes-used-percent/%4d}{U:%%} ",
+			    percent(used, inodes));
 		}
 	} else
 		xo_emit("  ");
