@@ -530,8 +530,13 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 		    mwp->avail, fsbtoblk(sfsp->f_bavail,
 		    sfsp->f_bsize, blocksize));
 	}
+	/*
+	 * The percentage value shall be expressed as a positive integer,
+	 * with any fractional result causing it to be rounded to the next
+	 * highest integer.
+	 */
 	xo_emit(" {:used-percent/%5.0f}{U:%%}",
-	    availblks == 0 ? 100.0 : (double)used / (double)availblks * 100.0);
+	    availblks == 0 ? 100.0 : (double)((used * 100 + availblks - 1) / availblks));
 	if (iflag) {
 		inodes = sfsp->f_files;
 		used = inodes - sfsp->f_ffree;
@@ -551,7 +556,7 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 			xo_emit(" {:inodes-used-percent/    -}{U:} ");
 		else {
 			xo_emit(" {:inodes-used-percent/%4.0f}{U:%%} ",
-				(double)used / (double)inodes * 100.0);
+			    inodes == 0 ? 100.0 : (double)((used * 100 + inodes - 1) / inodes));
 		}
 	} else
 		xo_emit("  ");
