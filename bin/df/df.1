@@ -26,7 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 16, 2025
+.Dd January 3, 2026
 .Dt DF 1
 .Os
 .Sh NAME
@@ -208,7 +208,7 @@ Filesystem   Type        Size    Used   Avail Capacity  Mounted on
 devfs        devfs       1.0K    1.0K      0B   100%    /dev
 /dev/ada0p1  ufs         1.8T    168G    1.5T    10%    /data
 linsysfs     linsysfs    4.0K    4.0K      0B   100%    /compat/linux/sys
-/dev/da0     msdosfs     7.6G    424M    7.2G     5%    /mnt/usb
+/dev/da0     msdosfs     7.6G    424M    7.2G     6%    /mnt/usb
 .Ed
 .Pp
 Show previously collected data including inode statistics except for devfs or
@@ -220,13 +220,10 @@ prefix affects all the file systems in the list and the
 option can be specified only once:
 .Bd -literal -offset indent
 $ df -i -n -t nodevfs,linsysfs
-Filesystem   1K-blocks      Used      Avail Capacity iused     ifree %iused
-Mounted on
+Filesystem   1K-blocks      Used      Avail Capacity iused     ifree %iused  Mounted on
 /dev/ada1p2  223235736 159618992   45757888    78% 1657590  27234568    6%   /
-/dev/ada0p1 1892163184 176319420 1564470712    10% 1319710 243300576    1%
-/data
-/dev/da0       7989888    433664    7556224     5%       0         0  100%
-/mnt/usb
+/dev/ada0p1 1892163184 176319420 1564470712    11% 1319710 243300576    1%   /data
+/dev/da0       7989888    433664    7556224     6%       0         0     -   /mnt/usb
 .Ed
 .Pp
 Show human readable information for the file system containing the file
@@ -264,8 +261,8 @@ each file or directory name or disk label
 .Xr getmntinfo 3 ,
 .Xr libxo 3 ,
 .Xr localeconv 3 ,
-.Xr xo_options 7 ,
 .Xr fstab 5 ,
+.Xr xo_options 7 ,
 .Xr mount 8 ,
 .Xr pstat 8 ,
 .Xr quot 8 ,
