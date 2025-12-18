@@ -396,16 +396,20 @@ statd(FILE *fp, FTS *t, FTSENT *parent, uid_t *puid, gid_t *pgid, mode_t *pmode,
 	 * output a new one.  So first we check to see if anything changed.
 	 * Note that we always output a /set record for the first directory.
 	 */
-	if (((keys & (F_UNAME | F_UID)) && (*puid != saveuid)) ||
+	if ((keys & F_TYPE) ||
+	    ((keys & (F_UNAME | F_UID)) && (*puid != saveuid)) ||
 	    ((keys & (F_GNAME | F_GID)) && (*pgid != savegid)) ||
-	    ((keys & F_MODE) && (*pmode != savemode)) || 
+	    ((keys & F_MODE) && (*pmode != savemode)) ||
 	    ((keys & F_FLAGS) && (*pflags != saveflags)) ||
 	    first) {
 		first = 0;
-		if (flavor != F_NETBSD6 && dflag)
-			fprintf(fp, "/set type=dir");
-		else
-			fprintf(fp, "/set type=file");
+		fprintf(fp, "/set");
+		if (keys & F_TYPE) {
+			if (flavor != F_NETBSD6 && dflag)
+				fprintf(fp, " type=dir");
+			else
+				fprintf(fp, " type=file");
+		}
 		if (keys & (F_UID | F_UNAME)) {
 			if (keys & F_UNAME &&
 			    (name = user_from_uid(saveuid, 1)) != NULL)
