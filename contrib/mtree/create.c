@@ -83,6 +83,7 @@ static gid_t gid;
 static uid_t uid;
 static mode_t mode;
 static u_long flags;
+static bool padded = false;
 
 static void	output(FILE *, int, int *, const char *, ...)
     __printflike(4, 5);
@@ -232,9 +233,6 @@ statf(FILE *fp, int indent, FTSENT *p)
 
 	if (offset > (INDENTNAMELEN + indent))
 		offset = MAXLINELEN;
-	else
-		offset += fprintf(fp, "%*s",
-		    (INDENTNAMELEN + indent) - offset, "");
 
 	if (keys & F_TYPE &&
 	    !S_ISREG(p->fts_statp->st_mode) && (flavor == F_NETBSD6 || !dflag))
@@ -310,6 +308,7 @@ statf(FILE *fp, int indent, FTSENT *p)
 	}
 #endif
 	putchar('\n');
+	padded = false;
 }
 
 /* XXX
@@ -456,5 +455,12 @@ output(FILE *fp, int indent, int *offset, const char *fmt, ...)
 		fprintf(fp, " \\\n%*s", INDENTNAMELEN + indent, "");
 		*offset = INDENTNAMELEN + indent;
 	}
+
+	if (!padded) {
+		*offset += fprintf(fp, "%*s",
+		    (INDENTNAMELEN + indent) - *offset, "");
+		padded = true;
+	}
+
 	*offset += fprintf(fp, " %s", buf) + 1;
 }
