@@ -279,7 +279,7 @@ ffs_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 		/* create image */
 	TIMER_START(start);
 	if (ffs_create_image(image, fsopts) == -1)
-		errx(1, "Image file `%s' not created.", image);
+		errx(EXIT_FAILURE, "Image file `%s' not created.", image);
 	TIMER_RESULTS(start, "ffs_create_image");
 
 	fsopts->curinode = UFS_ROOTINO;
@@ -291,7 +291,7 @@ ffs_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 	printf("Populating `%s'\n", image);
 	TIMER_START(start);
 	if (! ffs_populate_dir(dir, root, fsopts))
-		errx(1, "Image file `%s' not populated.", image);
+		errx(EXIT_FAILURE, "Image file `%s' not populated.", image);
 	TIMER_RESULTS(start, "ffs_populate_dir");
 
 		/* ensure no outstanding buffers remain */
@@ -309,7 +309,7 @@ ffs_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 		/* write out superblock; image is now complete */
 	ffs_write_superblock(fsopts->superblock, fsopts);
 	if (close(fsopts->fd) == -1)
-		err(1, "Closing `%s'", image);
+		err(EXIT_FAILURE, "Closing `%s'", image);
 	fsopts->fd = -1;
 	printf("Image `%s' complete\n", image);
 }
@@ -369,11 +369,11 @@ ffs_validate(const char *dir, fsnode *root, fsinfo_t *fsopts)
 
 	if (fsopts->maxsize > 0 &&
 	    roundup(fsopts->minsize, ffs_opts->bsize) > fsopts->maxsize)
-		errx(1, "`%s' minsize of %lld rounded up to ffs bsize of %d "
-		    "exceeds maxsize %lld.  Lower bsize, or round the minimum "
+		errx(EXIT_FAILURE, "`%s' minsize of %jd rounded up to ffs bsize of %d "
+		    "exceeds maxsize %jd.  Lower bsize, or round the minimum "
 		    "and maximum sizes to bsize.", dir,
-		    (long long)fsopts->minsize, ffs_opts->bsize,
-		    (long long)fsopts->maxsize);
+		    (intmax_t)fsopts->minsize, ffs_opts->bsize,
+		    (intmax_t)fsopts->maxsize);
 
 		/* calculate size of tree */
 	ffs_size_dir(root, fsopts);
@@ -444,8 +444,8 @@ ffs_validate(const char *dir, fsnode *root, fsinfo_t *fsopts)
 	}
 		/* now check calculated sizes vs requested sizes */
 	if (fsopts->maxsize > 0 && fsopts->size > fsopts->maxsize) {
-		errx(1, "`%s' size of %lld is larger than the maxsize of %lld.",
-		    dir, (long long)fsopts->size, (long long)fsopts->maxsize);
+		errx(EXIT_FAILURE, "`%s' size of %jd is larger than the maxsize of %jd.",
+		    dir, (intmax_t)fsopts->size, (intmax_t)fsopts->maxsize);
 	}
 }
 
@@ -916,7 +916,7 @@ ffs_populate_dir(const char *dir, fsnode *root, fsinfo_t *fsopts)
 			    root, fsopts);
 
 		if (debug & DEBUG_FS_POPULATE_NODE) {
-			printf("ffs_populate_dir: writing ino %d, %s",
+			printf("ffs_populate_dir: writing ino %lu, %s",
 			    cur->inode->ino, inode_type(cur->type));
 			if (cur->inode->nlink > 1)
 				printf(", nlink %d", cur->inode->nlink);

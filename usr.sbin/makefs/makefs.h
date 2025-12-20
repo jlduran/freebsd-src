@@ -54,7 +54,7 @@
  *	a component of the tree; contains a filename, a pointer to
  *	fsinode, optional symlink name, and tree pointers
  *
- * fsinode - 
+ * fsinode -
  *	equivalent to an inode, containing target file system inode number,
  *	refcount (nlink), and stat buffer
  *
@@ -86,7 +86,7 @@ enum fi_flags {
 };
 
 typedef struct {
-	uint32_t	 ino;		/* inode number used on target fs */
+	uint64_t	 ino;		/* inode number used on target fs */
 	uint32_t	 nlink;		/* number of links to this entry */
 	enum fi_flags	 flags;		/* flags used by fs specific code */
 	void		*param;		/* for use by individual fs impls */
@@ -184,7 +184,6 @@ typedef struct makefs_fsinfo {
 void		apply_specfile(const char *, const char *, fsnode *, int);
 void		dump_fsnodes(fsnode *);
 const char *	inode_type(mode_t);
-fsnode *	read_mtree(const char *, fsnode *);
 int		set_option(const option_t *, const char *, char *, size_t);
 int		set_option_var(const option_t *, const char *, const char *,
     char *, size_t);
@@ -319,7 +318,5 @@ extern	struct stat stampst;
 
 struct fs;
 void   ffs_fragacct_swap(struct fs *, int, uint32_t [], int, int);
-
-fsinode *link_check(fsinode *);
 
 #endif	/* _MAKEFS_H */

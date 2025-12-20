@@ -10,7 +10,6 @@ SRCS=	cd9660.c \
 	ffs.c \
 	makefs.c \
 	msdos.c \
-	mtree.c \
 	walk.c
 MAN=	makefs.8
 

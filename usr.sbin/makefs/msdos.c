@@ -116,7 +116,7 @@ msdos_parse_opts(const char *option, fsinfo_t *fsopts)
 	assert(msdos_opt != NULL);
 
 	if (debug & DEBUG_FS_PARSE_OPTS)
-		printf("msdos_parse_opts: got `%s'\n", option);
+		printf("%s: got `%s'\n", __func__, option);
 
 	rv = set_option(msdos_options, option, NULL, 0);
 	if (rv == -1)
@@ -163,7 +163,7 @@ msdos_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 	} else if (fsopts->sectorsize == -1) {
 		fsopts->sectorsize = msdos_opt->options.bytes_per_sector;
 	} else if (fsopts->sectorsize != msdos_opt->options.bytes_per_sector) {
-		err(1, "inconsistent sectorsize -S %u"
+		err(EXIT_FAILURE, "inconsistent sectorsize -S %u"
 		    "!= -o bytes_per_sector %u",
 		    fsopts->sectorsize, msdos_opt->options.bytes_per_sector);
 	}
@@ -172,17 +172,17 @@ msdos_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 	printf("Creating `%s'\n", image);
 	TIMER_START(start);
 	if (mkfs_msdos(image, NULL, &msdos_opt->options) == -1)
-		return;
+		errx(EXIT_FAILURE, "Image file `%s' not created.", image);
 	TIMER_RESULTS(start, "mkfs_msdos");
 
 	fsopts->fd = open(image, O_RDWR);
 	vp.fs = fsopts;
 
 	if ((pmp = m_msdosfs_mount(&vp)) == NULL)
-		err(1, "msdosfs_mount");
+		err(EXIT_FAILURE, "msdosfs_mount");
 
 	if (msdosfs_root(pmp, &rootvp) != 0)
-		err(1, "msdosfs_root");
+		err(EXIT_FAILURE, "msdosfs_root");
 
 	if (debug & DEBUG_FS_MAKEFS)
 		printf("msdos_makefs: image %s directory %s root %p\n",
@@ -192,11 +192,11 @@ msdos_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 	printf("Populating `%s'\n", image);
 	TIMER_START(start);
 	if (msdos_populate_dir(dir, VTODE(&rootvp), root, root, fsopts) == -1)
-		errx(1, "Image file `%s' not created.", image);
+		errx(EXIT_FAILURE, "Image file `%s' not populated.", image);
 	TIMER_RESULTS(start, "msdos_populate_dir");
 
 	if (msdosfs_fsiflush(pmp) != 0)
-		errx(1, "Unable to update FSInfo block.");
+		errx(EXIT_FAILURE, "Unable to update FSInfo block.");
 	if (debug & DEBUG_FS_MAKEFS)
 		putchar('\n');
 
@@ -208,7 +208,7 @@ msdos_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 }
 
 static int
-msdos_populate_dir(const char *path, struct denode *dir, fsnode *root,
+msdos_populate_dir(const char __unused *path, struct denode *dir, fsnode *root,
     fsnode *parent, fsinfo_t *fsopts)
 {
 	fsnode *cur;
@@ -219,8 +219,8 @@ msdos_populate_dir(const char *path, struct denode *dir, fsnode *root,
 	assert(fsopts != NULL);
 
 	for (cur = root->next; cur != NULL; cur = cur->next) {
-		if ((size_t)snprintf(pbuf, sizeof(pbuf), "%s/%s", path,
-		    cur->name) >= sizeof(pbuf)) {
+		if ((size_t)snprintf(pbuf, sizeof(pbuf), "%s/%s/%s",
+		    cur->root, cur->path, cur->name) >= sizeof(pbuf)) {
 			warnx("path %s too long", pbuf);
 			return -1;
 		}

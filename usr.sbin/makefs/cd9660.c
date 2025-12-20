@@ -397,7 +397,7 @@ cd9660_parse_opts(const char *option, fsinfo_t *fsopts)
 	case 'B':
 		if (buf[0] == '\0') {
 			warnx("The Boot Image parameter requires a valid boot"
-			    "information string");
+			    " information string");
 			rv = 0;
 		} else
 			rv = cd9660_add_boot_disk(diskStructure, buf);
@@ -619,7 +619,7 @@ cd9660_makefs(const char *image, const char *dir, fsnode *root,
 		printf("%s: done ret = %d\n", __func__, ret);
 
 	if (ret == 0)	/* cd9660_write_image() failed */
-		exit(1);
+		exit(EXIT_FAILURE);
 }
 
 /* Generic function pointer - implement later */
@@ -1036,7 +1036,7 @@ cd9660_rename_filename(iso9660_disk *diskStructure, cd9660node *iter, int num,
 		printf("Rename_filename called\n");
 
 	assert(1 <= diskStructure->isoLevel && diskStructure->isoLevel <= 2);
-	/* TODO : A LOT of chanes regarding 8.3 filenames */
+	/* TODO : A LOT of changes regarding 8.3 filenames */
 	if (diskStructure->isoLevel == 1)
 		maxlength = 8;
 	else if (diskStructure->isoLevel == 2)
@@ -1147,7 +1147,7 @@ cd9660_copy_filenames(iso9660_disk *diskStructure, cd9660node *node)
 
 	if (TAILQ_FIRST(&node->cn_children)->isoDirRecord == NULL) {
 		debug_print_tree(diskStructure, diskStructure->rootNode, 0);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	TAILQ_FOREACH(cn, &node->cn_children, cn_next_child) {

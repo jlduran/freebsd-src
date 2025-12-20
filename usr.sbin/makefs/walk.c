@@ -49,15 +49,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <util.h>
 
 #include "makefs.h"
 #include "mtree.h"
-#include "extern.h"
 
 static	void	 apply_specdir(const char *, NODE *, fsnode *, int);
 static	void	 apply_specentry(const char *, NODE *, fsnode *);
 static	fsnode	*create_fsnode(const char *, const char *, const char *,
 			       struct stat *);
+static	fsinode	*link_check(fsinode *);
 
 static int
 cmp(const void *_a, const void *_b)
@@ -129,11 +130,11 @@ walk_dir(const char *root, const char *dir, fsnode *parent, fsnode *join)
 
 	len = snprintf(path, sizeof(path), "%s/%s", root, dir);
 	if (len >= sizeof(path))
-		errx(1, "Pathname too long.");
+		errx(EXIT_FAILURE, "Pathname too long.");
 	if (debug & DEBUG_WALK_DIR)
-		printf("walk_dir: %s %p\n", path, parent);
+		printf("%s: %s %p\n", __func__, path, parent);
 	if ((dirp = opendir(path)) == NULL)
-		err(1, "Can't opendir `%s'", path);
+		err(EXIT_FAILURE, "Can't opendir `%s'", path);
 	rp = path + strlen(root) + 1;
 	if (join != NULL) {
 		first = cur = join;
@@ -159,16 +160,18 @@ walk_dir(const char *root, const char *dir, fsnode *parent, fsnode *join)
 				dot = 0;
 			}
 		if (debug & DEBUG_WALK_DIR_NODE)
-			printf("scanning %s/%s/%s\n", root, dir, name);
+			printf("%s: scanning %s/%s/%s\n",
+			    __func__, root, dir, name);
 		if ((size_t)snprintf(path + len, sizeof(path) - len, "/%s",
 		    name) >= sizeof(path) - len)
-			errx(1, "Pathname too long.");
+			errx(EXIT_FAILURE, "Pathname too long.");
 		if (lstat(path, &stbuf) == -1)
-			err(1, "Can't lstat `%s'", path);
+			err(EXIT_FAILURE, "Can't lstat `%s'", path);
 #ifdef S_ISSOCK
 		if (S_ISSOCK(stbuf.st_mode & S_IFMT)) {
 			if (debug & DEBUG_WALK_DIR_NODE)
-				printf("  skipping socket %s\n", path);
+				printf("%s: skipping socket %s\n", __func__,
+				     path);
 			continue;
 		}
 #endif
@@ -190,7 +193,7 @@ walk_dir(const char *root, const char *dir, fsnode *parent, fsnode *join)
 					    cur->child);
 					continue;
 				}
-				errx(1, "Can't merge %s `%s' with existing %s",
+				errx(EXIT_FAILURE, "Can't merge %s `%s' with existing %s",
 				    inode_type(stbuf.st_mode), path,
 				    inode_type(cur->type));
 			}
@@ -213,24 +216,25 @@ walk_dir(const char *root, const char *dir, fsnode *parent, fsnode *join)
 				cur->inode = curino;
 				cur->inode->nlink++;
 				if (debug & DEBUG_WALK_DIR_LINKCHECK)
-					printf("link_check: found [%llu, %llu]\n",
-					    (unsigned long long)curino->st.st_dev,
-					    (unsigned long long)curino->st.st_ino);
+					printf("%s: link check found [%ju, %ju]\n",
+					    __func__,
+					    (uintmax_t)curino->st.st_dev,
+					    (uintmax_t)curino->st.st_ino);
 			}
 		}
 		if (S_ISLNK(cur->type)) {
 			char	slink[PATH_MAX+1];
-			int	llen;
+			ssize_t	llen;
 
 			llen = readlink(path, slink, sizeof(slink) - 1);
 			if (llen == -1)
-				err(1, "Readlink `%s'", path);
+				err(EXIT_FAILURE, "Readlink `%s'", path);
 			slink[llen] = '\0';
 			cur->symlink = estrdup(slink);
 		}
 	}
 	if (closedir(dirp) == -1)
-		err(1, "Can't closedir `%s/%s'", root, dir);
+		err(EXIT_FAILURE, "Can't closedir `%s/%s'", root, dir);
 	return (sort_dir(first));
 }
 
@@ -319,20 +323,21 @@ apply_specfile(const char *specfile, const char *dir, fsnode *parent, int specon
 	assert(parent != NULL);
 
 	if (debug & DEBUG_APPLY_SPECFILE)
-		printf("apply_specfile: %s, %s %p\n", specfile, dir, parent);
+		printf("%s: %s, %s %p\n", __func__, specfile, dir, parent);
 
 				/* read in the specfile */
 	if ((fp = fopen(specfile, "r")) == NULL)
-		err(1, "Can't open `%s'", specfile);
+		err(EXIT_FAILURE, "Can't open `%s'", specfile);
 	TIMER_START(start);
 	root = spec(fp);
 	TIMER_RESULTS(start, "spec");
 	if (fclose(fp) == EOF)
-		err(1, "Can't close `%s'", specfile);
+		err(EXIT_FAILURE, "Can't close `%s'", specfile);
 
 				/* perform some sanity checks */
 	if (root == NULL)
-		errx(1, "Specfile `%s' did not contain a tree", specfile);
+		errx(EXIT_FAILURE,
+		    "Specfile `%s' did not contain a tree", specfile);
 	assert(strcmp(root->name, ".") == 0);
 	assert(root->type == F_DIR);
 
@@ -353,13 +358,13 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 	assert(dirnode != NULL);
 
 	if (debug & DEBUG_APPLY_SPECFILE)
-		printf("apply_specdir: %s %p %p\n", dir, specnode, dirnode);
+		printf("%s: %s %p %p\n", __func__, dir, specnode, dirnode);
 
 	if (specnode->type != F_DIR)
-		errx(1, "Specfile node `%s/%s' is not a directory",
+		errx(EXIT_FAILURE, "Specfile node `%s/%s' is not a directory",
 		    dir, specnode->name);
 	if (dirnode->type != S_IFDIR)
-		errx(1, "Directory node `%s/%s' is not a directory",
+		errx(EXIT_FAILURE, "Directory node `%s/%s' is not a directory",
 		    dir, dirnode->name);
 
 	apply_specentry(dir, specnode, dirnode);
@@ -381,7 +386,9 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 			}
 			if (curnode == NULL) {
 				if (debug & DEBUG_APPLY_SPECONLY) {
-					printf("apply_specdir: trimming %s/%s %p\n", dir, curfsnode->name, curfsnode);
+					printf("%s: trimming %s/%s %p\n",
+					    __func__, dir, curfsnode->name,
+					    curfsnode);
 				}
 				free_fsnodes(curfsnode);
 			}
@@ -392,21 +399,20 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 	for (curnode = specnode->child; curnode != NULL;
 	    curnode = curnode->next) {
 		if (debug & DEBUG_APPLY_SPECENTRY)
-			printf("apply_specdir:  spec %s\n",
-			    curnode->name);
+			printf("%s:  spec %s\n", __func__, curnode->name);
 		for (curfsnode = dirnode->next; curfsnode != NULL;
 		    curfsnode = curfsnode->next) {
 #if 0	/* too verbose for now */
 			if (debug & DEBUG_APPLY_SPECENTRY)
-				printf("apply_specdir:  dirent %s\n",
+				printf("%s: dirent %s\n", __func__,
 				    curfsnode->name);
 #endif
 			if (strcmp(curnode->name, curfsnode->name) == 0)
 				break;
 		}
-		if ((size_t)snprintf(path, sizeof(path), "%s/%s", dir,
-		    curnode->name) >= sizeof(path))
-			errx(1, "Pathname too long.");
+		if ((size_t)snprintf(path, sizeof(path), "%s/%s",
+		    dir, curnode->name) >= sizeof(path))
+			errx(EXIT_FAILURE, "Pathname too long.");
 		if (curfsnode == NULL) {	/* need new entry */
 			struct stat	stbuf;
 
@@ -421,7 +427,8 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 					/* check that enough info is provided */
 #define NODETEST(t, m)							\
 			if (!(t))					\
-				errx(1, "`%s': %s not provided", path, m)
+				errx(EXIT_FAILURE,			\
+				    "`%s': %s not provided", path, m)
 			NODETEST(curnode->flags & F_TYPE, "type");
 			NODETEST(curnode->flags & F_MODE, "mode");
 				/* XXX: require F_TIME ? */
@@ -429,14 +436,13 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 			    curnode->flags & F_GNAME, "group");
 			NODETEST(curnode->flags & F_UID ||
 			    curnode->flags & F_UNAME, "user");
-/*			if (curnode->type == F_BLOCK || curnode->type == F_CHAR)
+			if (curnode->type == F_BLOCK || curnode->type == F_CHAR)
 				NODETEST(curnode->flags & F_DEV,
-				    "device number");*/
+				    "device number");
 #undef NODETEST
 
 			if (debug & DEBUG_APPLY_SPECFILE)
-				printf("apply_specdir: adding %s\n",
-				    curnode->name);
+				printf("%s: adding %s\n", __func__, curnode->name);
 					/* build minimal fsnode */
 			memset(&stbuf, 0, sizeof(stbuf));
 			stbuf.st_mode = nodetoino(curnode->type);
@@ -469,7 +475,8 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 		apply_specentry(dir, curnode, curfsnode);
 		if (curnode->type == F_DIR) {
 			if (curfsnode->type != S_IFDIR)
-				errx(1, "`%s' is not a directory", path);
+				errx(EXIT_FAILURE,
+				    "`%s' is not a directory", path);
 			assert (curfsnode->child != NULL);
 			apply_specdir(path, curnode, curfsnode->child, speconly);
 		}
@@ -484,12 +491,13 @@ apply_specentry(const char *dir, NODE *specnode, fsnode *dirnode)
 	assert(dirnode != NULL);
 
 	if (nodetoino(specnode->type) != dirnode->type)
-		errx(1, "`%s/%s' type mismatch: specfile %s, tree %s",
+		errx(EXIT_FAILURE,
+		    "`%s/%s' type mismatch: specfile %s, tree %s",
 		    dir, specnode->name, inode_type(nodetoino(specnode->type)),
 		    inode_type(dirnode->type));
 
 	if (debug & DEBUG_APPLY_SPECENTRY)
-		printf("apply_specentry: %s/%s\n", dir, dirnode->name);
+		printf("%s: %s/%s\n", dir, __func__, dirnode->name);
 
 #define ASEPRINT(t, b, o, n) \
 		if (debug & DEBUG_APPLY_SPECENTRY) \
@@ -509,9 +517,9 @@ apply_specentry(const char *dir, NODE *specnode, fsnode *dirnode)
 	}
 		/* XXX: ignoring F_NLINK for now */
 	if (specnode->flags & F_SIZE) {
-		ASEPRINT("size", "%lld",
-		    (long long)dirnode->inode->st.st_size,
-		    (long long)specnode->st_size);
+		ASEPRINT("size", "%jd",
+		    (intmax_t)dirnode->inode->st.st_size,
+		    (intmax_t)specnode->st_size);
 		dirnode->inode->st.st_size = specnode->st_size;
 	}
 	if (specnode->flags & F_SLINK) {
@@ -545,12 +553,12 @@ apply_specentry(const char *dir, NODE *specnode, fsnode *dirnode)
 		    (unsigned long)specnode->st_flags);
 		FSINODE_ST_FLAGS(*dirnode->inode) = specnode->st_flags;
 	}
-/*	if (specnode->flags & F_DEV) {
-		ASEPRINT("rdev", "%#llx",
-		    (unsigned long long)dirnode->inode->st.st_rdev,
-		    (unsigned long long)specnode->st_rdev);
+	if (specnode->flags & F_DEV) {
+		ASEPRINT("rdev", "%#jx",
+		    (uintmax_t)dirnode->inode->st.st_rdev,
+		    (uintmax_t)specnode->st_rdev);
 		dirnode->inode->st.st_rdev = specnode->st_rdev;
-	}*/
+	}
 #undef ASEPRINT
 
 	dirnode->flags |= FSNODE_F_HASSPEC;
@@ -567,14 +575,14 @@ dump_fsnodes(fsnode *root)
 	fsnode	*cur;
 	char	path[MAXPATHLEN + 1];
 
-	printf("dump_fsnodes: %s %p\n", root->path, root);
+	printf("%s: %s %p\n", __func__, root->path, root);
 	for (cur = root; cur != NULL; cur = cur->next) {
 		if (snprintf(path, sizeof(path), "%s/%s", cur->path,
 		    cur->name) >= (int)sizeof(path))
-			errx(1, "Pathname too long.");
+			errx(EXIT_FAILURE, "Pathname too long.");
 
 		if (debug & DEBUG_DUMP_FSNODES_VERBOSE)
-			printf("cur=%8p parent=%8p first=%8p ",
+			printf("%s: cur=%8p parent=%8p first=%8p ", __func__,
 			    cur, cur->parent, cur->first);
 		printf("%7s: %s", inode_type(cur->type), path);
 		if (S_ISLNK(cur->type)) {
@@ -592,7 +600,7 @@ dump_fsnodes(fsnode *root)
 			dump_fsnodes(cur->child);
 		}
 	}
-	printf("dump_fsnodes: finished %s/%s\n", root->path, root->name);
+	printf("%s: finished %s/%s\n", __func__, root->path, root->name);
 }
 
 
@@ -604,22 +612,9 @@ dump_fsnodes(fsnode *root)
 const char *
 inode_type(mode_t mode)
 {
-	if (S_ISREG(mode))
-		return ("file");
 	if (S_ISLNK(mode))
-		return ("symlink");
-	if (S_ISDIR(mode))
-		return ("dir");
-	if (S_ISFIFO(mode))
-		return ("fifo");
-	if (S_ISSOCK(mode))
-		return ("socket");
-	/* XXX should not happen but handle them */
-	if (S_ISCHR(mode))
-		return ("char");
-	if (S_ISBLK(mode))
-		return ("block");
-	return ("unknown");
+		return ("symlink");	/* inotype() returns "link"...  */
+	return (inotype(mode));
 }
 
 
@@ -628,26 +623,26 @@ inode_type(mode_t mode)
  *	return pointer to fsinode matching `entry's st_ino & st_dev if it exists,
  *	otherwise add `entry' to table and return NULL
  */
-/* This was borrowed from du.c and tweaked to keep an fsnode 
+/* This was borrowed from du.c and tweaked to keep an fsnode
  * pointer instead. -- dbj@netbsd.org
  */
-fsinode *
+static fsinode *
 link_check(fsinode *entry)
 {
 	static struct entry {
 		fsinode *data;
 	} *htable;
-	static int htshift;  /* log(allocated size) */
-	static int htmask;   /* allocated size - 1 */
-	static int htused;   /* 2*number of insertions */
-	int h, h2;
+	static size_t htshift;  /* log(allocated size) */
+	static size_t htmask;   /* allocated size - 1 */
+	static size_t htused;   /* 2*number of insertions */
+	size_t h, h2;
 	uint64_t tmp;
 	/* this constant is (1<<64)/((1+sqrt(5))/2)
 	 * aka (word size)/(golden ratio)
 	 */
 	const uint64_t HTCONST = 11400714819323198485ULL;
-	const int HTBITS = 64;
-	
+	const size_t HTBITS = 64;
+
 	/* Never store zero in hashtable */
 	assert(entry);
 
@@ -667,7 +662,7 @@ link_check(fsinode *entry)
 		htable = ecalloc(htmask+1, sizeof(*htable));
 		/* populate newly allocated hashtable */
 		if (ohtable) {
-			int i;
+			size_t i;
 			for (i = 0; i <= htmask>>1; i++)
 				if (ohtable[i].data)
 					link_check(ohtable[i].data);
@@ -682,7 +677,7 @@ link_check(fsinode *entry)
 	tmp *= HTCONST;
 	h  = tmp >> (HTBITS - htshift);
 	h2 = 1 | ( tmp >> (HTBITS - (htshift<<1) - 1)); /* must be odd */
-	
+
 	/* open address hashtable search with double hash probing */
 	while (htable[h].data) {
 		if ((htable[h].data->st.st_ino == entry->st.st_ino) &&

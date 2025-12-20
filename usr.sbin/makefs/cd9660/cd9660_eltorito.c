@@ -553,7 +553,7 @@ cd9660_write_mbr_partition_entry(FILE *fd, int idx, off_t sector_start,
 	uint32_t lba;
 
 	if (fseeko(fd, (off_t)(idx) * 16 + 0x1be, SEEK_SET) == -1)
-		err(1, "fseeko");
+		err(EXIT_FAILURE, "fseeko");
 
 	val = 0x80; /* Bootable */
 	fwrite(&val, sizeof(val), 1, fd);
@@ -592,7 +592,7 @@ cd9660_write_apm_partition_entry(FILE *fd, int idx, int total_partitions,
 	    APPLE_PS_WRITABLE;
 
 	if (fseeko(fd, (off_t)(idx + 1) * sector_size, SEEK_SET) == -1)
-		err(1, "fseeko");
+		err(EXIT_FAILURE, "fseeko");
 
 	/* Signature */
 	apm16 = htobe16(0x504d);
@@ -638,7 +638,7 @@ cd9660_write_boot(iso9660_disk *diskStructure, FILE *fd)
 	/* write boot catalog */
 	if (fseeko(fd, (off_t)diskStructure->boot_catalog_sector *
 	    diskStructure->sectorSize, SEEK_SET) == -1)
-		err(1, "fseeko");
+		err(EXIT_FAILURE, "fseeko");
 
 	if (diskStructure->verbose_level > 0) {
 		printf("Writing boot catalog to sector %" PRId64 "\n",

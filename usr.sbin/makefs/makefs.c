@@ -109,11 +109,11 @@ main(int argc, char *argv[])
 	 * consistent.
 	 */
 	if (setlocale(LC_COLLATE, "C") == NULL)
-		err(1, "setlocale");
+		err(EXIT_FAILURE, "setlocale");
 
 	debug = 0;
 	if ((fstype = get_fstype(DEFAULT_FSTYPE)) == NULL)
-		errx(1, "Unknown default fs type `%s'.", DEFAULT_FSTYPE);
+		errx(EXIT_FAILURE, "Unknown default fs type `%s'.", DEFAULT_FSTYPE);
 
 		/* set default fsoptions */
 	(void)memset(&fsoptions, 0, sizeof(fsoptions));
@@ -132,7 +132,7 @@ main(int argc, char *argv[])
 	start_time.tv_nsec = start.tv_usec * 1000;
 #endif
 	if (ch == -1)
-		err(1, "Unable to get system time");
+		err(EXIT_FAILURE, "Unable to get system time");
 
 
 	while ((ch = getopt(argc, argv, "B:b:Dd:f:F:M:m:N:O:o:pR:s:S:t:T:xZ")) != -1) {
@@ -204,7 +204,7 @@ main(int argc, char *argv[])
 
 		case 'N':
 			if (! setup_getid(optarg))
-				errx(1,
+				errx(EXIT_FAILURE,
 			    "Unable to use user and group databases in `%s'",
 				    optarg);
 			break;
@@ -225,7 +225,7 @@ main(int argc, char *argv[])
 
 			while ((p = strsep(&optarg, ",")) != NULL) {
 				if (*p == '\0')
-					errx(1, "Empty option");
+					errx(EXIT_FAILURE, "Empty option");
 				if (! fstype->parse_options(p, &fsoptions))
 					usage(fstype, &fsoptions);
 			}
@@ -259,13 +259,13 @@ main(int argc, char *argv[])
 				fstype->cleanup_options(&fsoptions);
 			fsoptions.fs_specific = NULL;
 			if ((fstype = get_fstype(optarg)) == NULL)
-				errx(1, "Unknown fs type `%s'.", optarg);
+				errx(EXIT_FAILURE, "Unknown fs type `%s'.", optarg);
 			fstype->prepare_options(&fsoptions);
 			break;
 
 		case 'T':
 			if (get_tstamp(optarg, &stampst) == -1)
-				errx(1, "Cannot get timestamp from `%s'",
+				errx(EXIT_FAILURE, "Cannot get timestamp from `%s'",
 				    optarg);
 			break;
 
@@ -278,6 +278,7 @@ main(int argc, char *argv[])
 			fsoptions.sparse = 1;
 			break;
 
+		case '?':
 		default:
 			usage(fstype, &fsoptions);
 			/* NOTREACHED */
@@ -298,14 +299,14 @@ main(int argc, char *argv[])
 
 	/* -x must be accompanied by -F */
 	if (fsoptions.onlyspec != 0 && specfile == NULL)
-		errx(1, "-x requires -F mtree-specfile.");
+		errx(EXIT_FAILURE, "-x requires -F mtree-specfile.");
 
 	/* Accept '-' as meaning "read from standard input". */
 	if (strcmp(argv[1], "-") == 0)
 		sb.st_mode = S_IFREG;
 	else {
 		if (stat(argv[1], &sb) == -1)
-			err(1, "Can't stat `%s'", argv[1]);
+			err(EXIT_FAILURE, "Can't stat `%s'", argv[1]);
 	}
 
 	switch (sb.st_mode & S_IFMT) {
@@ -318,20 +319,20 @@ main(int argc, char *argv[])
 	case S_IFREG:		/* read the manifest file */
 		subtree = ".";
 		TIMER_START(start);
-		root = read_mtree(argv[1], NULL);
+		// root = read_mtree(argv[1], NULL); // XXX 484b5c257d32ad2e6b00aa536e8806bae740f1d4
 		TIMER_RESULTS(start, "manifest");
 		break;
 	default:
-		errx(1, "%s: not a file or directory", argv[1]);
+		errx(EXIT_FAILURE, "%s: not a file or directory", argv[1]);
 		/* NOTREACHED */
 	}
 
 	/* append extra directory */
 	for (i = 2; i < argc; i++) {
 		if (stat(argv[i], &sb) == -1)
-			err(1, "Can't stat `%s'", argv[i]);
+			err(EXIT_FAILURE, "Can't stat `%s'", argv[i]);
 		if (!S_ISDIR(sb.st_mode))
-			errx(1, "%s: not a directory", argv[i]);
+			errx(EXIT_FAILURE, "%s: not a directory", argv[i]);
 		TIMER_START(start);
 		root = walk_dir(argv[i], ".", NULL, root);
 		TIMER_RESULTS(start, "walk_dir2");
@@ -356,7 +357,7 @@ main(int argc, char *argv[])
 
 	free_fsnodes(root);
 
-	exit(0);
+	exit(EXIT_SUCCESS);
 	/* NOTREACHED */
 }
 
@@ -457,7 +458,7 @@ static fstype_t *
 get_fstype(const char *type)
 {
 	int i;
-	
+
 	for (i = 0; fstypes[i].type != NULL; i++)
 		if (strcmp(fstypes[i].type, type) == 0)
 			return (&fstypes[i]);
@@ -526,5 +527,5 @@ usage(fstype_t *fstype, fsinfo_t *fsoptions)
 			    o[i].letter ? ',' : ' ',
 			    o[i].name, o[i].desc);
 	}
-	exit(1);
+	exit(EXIT_FAILURE);
 }

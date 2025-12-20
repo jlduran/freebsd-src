@@ -64,27 +64,27 @@ bread(struct m_vnode *vp, daddr_t blkno, int size, struct ucred *u1 __unused,
 	assert (bpp != NULL);
 
 	if (debug & DEBUG_BUF_BREAD)
-		printf("%s: blkno %lld size %d\n", __func__, (long long)blkno,
-		    size);
+		printf("%s: blkno %jd size %d\n", __func__,
+		    (intmax_t)blkno, size);
 	*bpp = getblk(vp, blkno, size, 0, 0, 0);
 	offset = (off_t)(*bpp)->b_blkno * fs->sectorsize + fs->offset;
 	if (debug & DEBUG_BUF_BREAD)
-		printf("%s: blkno %lld offset %lld bcount %ld\n", __func__,
-		    (long long)(*bpp)->b_blkno, (long long) offset,
+		printf("%s: blkno %jd offset %jd bcount %ld\n", __func__,
+		    (intmax_t)(*bpp)->b_blkno, (intmax_t) offset,
 		    (*bpp)->b_bcount);
 	if (lseek((*bpp)->b_fs->fd, offset, SEEK_SET) == -1)
-		err(1, "%s: lseek %lld (%lld)", __func__,
-		    (long long)(*bpp)->b_blkno, (long long)offset);
+		err(EXIT_FAILURE, "%s: lseek %jd (%jd)", __func__,
+		    (intmax_t)(*bpp)->b_blkno, (intmax_t)offset);
 	rv = read((*bpp)->b_fs->fd, (*bpp)->b_data, (size_t)(*bpp)->b_bcount);
 	if (debug & DEBUG_BUF_BREAD)
-		printf("%s: read %ld (%lld) returned %d\n", __func__,
-		    (*bpp)->b_bcount, (long long)offset, (int)rv);
+		printf("%s: read %ld (%jd) returned %d\n", __func__,
+		    (*bpp)->b_bcount, (intmax_t)offset, (int)rv);
 	if (rv == -1)				/* read error */
-		err(1, "%s: read %ld (%lld) returned %d", __func__,
-		    (*bpp)->b_bcount, (long long)offset, (int)rv);
+		err(EXIT_FAILURE, "%s: read %ld (%jd) returned %d", __func__,
+		    (*bpp)->b_bcount, (intmax_t)offset, (int)rv);
 	else if (rv != (*bpp)->b_bcount)	/* short read */
-		err(1, "%s: read %ld (%lld) returned %d", __func__,
-		    (*bpp)->b_bcount, (long long)offset, (int)rv);
+		err(EXIT_FAILURE, "%s: read %ld (%jd) returned %d", __func__,
+		    (*bpp)->b_bcount, (intmax_t)offset, (int)rv);
 	else
 		return (0);
 }
@@ -132,8 +132,8 @@ bwrite(struct m_buf *bp)
 	offset = (off_t)bp->b_blkno * fs->sectorsize + fs->offset;
 	bytes = (size_t)bp->b_bcount;
 	if (debug & DEBUG_BUF_BWRITE)
-		printf("%s: blkno %lld offset %lld bcount %zu\n", __func__,
-		    (long long)bp->b_blkno, (long long) offset, bytes);
+		printf("%s: blkno %jd offset %jd bcount %zu\n", __func__,
+		    (intmax_t)bp->b_blkno, (intmax_t) offset, bytes);
 	if (lseek(bp->b_fs->fd, offset, SEEK_SET) == -1) {
 		brelse(bp);
 		return (errno);
@@ -141,8 +141,8 @@ bwrite(struct m_buf *bp)
 	rv = write(bp->b_fs->fd, bp->b_data, bytes);
 	e = errno;
 	if (debug & DEBUG_BUF_BWRITE)
-		printf("%s: write %ld (offset %lld) returned %lld\n", __func__,
-		    bp->b_bcount, (long long)offset, (long long)rv);
+		printf("%s: write %ld (offset %jd) returned %jd\n", __func__,
+		    bp->b_bcount, (intmax_t)offset, (intmax_t)rv);
 	brelse(bp);
 	if (rv == (ssize_t)bytes)
 		return (0);
@@ -167,8 +167,8 @@ bcleanup(void)
 
 	printf("%s: unflushed buffers:\n", __func__);
 	TAILQ_FOREACH(bp, &buftail, b_tailq) {
-		printf("\tlblkno %10lld  blkno %10lld  count %6ld  bufsize %6ld\n",
-		    (long long)bp->b_lblkno, (long long)bp->b_blkno,
+		printf("\tlblkno %10jd blkno %10jd count %6ld  bufsize %6ld\n",
+		    (intmax_t)bp->b_lblkno, (intmax_t)bp->b_blkno,
 		    bp->b_bcount, bp->b_bufsize);
 	}
 	printf("%s: done\n", __func__);
@@ -183,7 +183,7 @@ getblk(struct m_vnode *vp, daddr_t blkno, int size, int u1 __unused,
 	void *n;
 
 	if (debug & DEBUG_BUF_GETBLK)
-		printf("%s: blkno %lld size %d\n", __func__, (long long)blkno,
+		printf("%s: blkno %jd size %d\n", __func__, (intmax_t)blkno,
 		    size);
 
 	bp = NULL;

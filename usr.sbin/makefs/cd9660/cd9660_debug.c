@@ -197,7 +197,7 @@ debug_dump_to_xml_path_table(FILE *fd, off_t sector, int size, int mode)
 	int n = 0;
 
 	if (fseeko(fd, CD9660_SECTOR_SIZE * sector, SEEK_SET) == -1)
-		err(1, "fseeko");
+		err(EXIT_FAILURE, "fseeko");
 
 	while (t < size) {
 		/* Read fixed data first */
@@ -233,7 +233,7 @@ debug_dump_to_xml(FILE *fd)
 	sector = 16;
 	do {
 		if (fseeko(fd, CD9660_SECTOR_SIZE * sector, SEEK_SET) == -1)
-			err(1, "fseeko");
+			err(EXIT_FAILURE, "fseeko");
 		fread(buf, 1, CD9660_SECTOR_SIZE, fd);
 		t = (int)((unsigned char)buf[0]);
 		switch (t) {

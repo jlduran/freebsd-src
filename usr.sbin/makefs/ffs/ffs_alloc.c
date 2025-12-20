@@ -46,6 +46,7 @@
 
 #include <errno.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "makefs.h"
 
@@ -94,7 +95,7 @@ ffs_alloc(struct inode *ip, daddr_t lbn __unused, daddr_t bpref, int size,
 	
 	*bnp = 0;
 	if (size > fs->fs_bsize || fragoff(fs, size) != 0) {
-		errx(1, "ffs_alloc: bad size: bsize %d size %d",
+		errx(EXIT_FAILURE, "%s: bad size: bsize %d size %d", __func__,
 		    fs->fs_bsize, size);
 	}
 	if (size == fs->fs_bsize && fs->fs_cstotal.cs_nbfree == 0)
@@ -122,7 +123,7 @@ nospace:
  * Select the desired position for the next block in a file.  The file is
  * logically divided into sections. The first section is composed of the
  * direct blocks. Each additional section contains fs_maxbpg blocks.
- * 
+ *
  * If no blocks have been allocated in the first section, the policy is to
  * request a block in the same cylinder group as the inode that describes
  * the file. If no blocks have been allocated in any other section, the
@@ -136,7 +137,7 @@ nospace:
  * indirect block, the information on the previous allocation is unavailable;
  * here a best guess is made based upon the logical block number being
  * allocated.
- * 
+ *
  * If a section is already partially allocated, the policy is to
  * contiguously allocate fs_maxcontig blocks.  The end of one of these
  * contiguous blocks and the beginning of the next is physically separated
@@ -324,7 +325,7 @@ ffs_alloccg(struct inode *ip, int cg, daddr_t bpref, int size)
 			break;
 	if (allocsiz == fs->fs_frag) {
 		/*
-		 * no fragments were available, so a block will be 
+		 * no fragments were available, so a block will be
 		 * allocated, and hacked up
 		 */
 		if (cgp->cg_cs.cs_nbfree == 0) {
@@ -416,7 +417,7 @@ gotit:
  * Free a block or fragment.
  *
  * The specified block or fragment is placed back in the
- * free map. If a fragment is deallocated, a possible 
+ * free map. If a fragment is deallocated, a possible
  * block reassembly is checked.
  */
 void
@@ -431,12 +432,12 @@ ffs_blkfree(struct inode *ip, daddr_t bno, long size)
 
 	if (size > fs->fs_bsize || fragoff(fs, size) != 0 ||
 	    fragnum(fs, bno) + numfrags(fs, size) > fs->fs_frag) {
-		errx(1, "blkfree: bad size: bno %lld bsize %d size %ld",
-		    (long long)bno, fs->fs_bsize, size);
+		errx(EXIT_FAILURE, "%s: bad size: bno %jd bsize %d "
+		    "size %ld", __func__, (intmax_t)bno, fs->fs_bsize, size);
 	}
 	cg = dtog(fs, bno);
 	if (bno >= fs->fs_size) {
-		warnx("bad block %lld, ino %ju", (long long)bno,
+		warnx("bad block %jd, ino %ju", (intmax_t)bno,
 		    (uintmax_t)ip->i_number);
 		return;
 	}
@@ -454,8 +455,8 @@ ffs_blkfree(struct inode *ip, daddr_t bno, long size)
 	if (size == fs->fs_bsize) {
 		fragno = fragstoblks(fs, cgbno);
 		if (!ffs_isfreeblock(fs, cg_blksfree_swap(cgp, needswap), fragno)) {
-			errx(1, "blkfree: freeing free block %lld",
-			    (long long)bno);
+			errx(EXIT_FAILURE, "%s: freeing free block %jd",
+			    __func__, (intmax_t)bno);
 		}
 		ffs_setblock(fs, cg_blksfree_swap(cgp, needswap), fragno);
 		ffs_clusteracct(fs, cgp, fragno, 1);
@@ -475,8 +476,9 @@ ffs_blkfree(struct inode *ip, daddr_t bno, long size)
 		frags = numfrags(fs, size);
 		for (i = 0; i < frags; i++) {
 			if (isset(cg_blksfree_swap(cgp, needswap), cgbno + i)) {
-				errx(1, "blkfree: freeing free frag: block %lld",
-				    (long long)(cgbno + i));
+				errx(EXIT_FAILURE, "%s: freeing free frag: "
+				    "block %jd", __func__,
+				    (intmax_t)(cgbno + i));
 			}
 			setbit(cg_blksfree_swap(cgp, needswap), cgbno + i);
 		}
@@ -555,11 +557,11 @@ ffs_mapsearch(struct fs *fs, struct cg *cgp, daddr_t bpref, int allocsiz)
 			(const u_char *)fragtbl[fs->fs_frag],
 			(1 << (allocsiz - 1 + (fs->fs_frag % NBBY))));
 		if (loc == 0) {
-			errx(1,
-    "ffs_alloccg: map corrupted: start %d len %d offset %d %ld",
-				ostart, olen,
-				ufs_rw32(cgp->cg_freeoff, needswap),
-				(long)cg_blksfree_swap(cgp, needswap) - (long)cgp);
+			errx(EXIT_FAILURE,
+			    "%s: map corrupted: start %d len %d offset %d %ld",
+			    __func__, ostart, olen,
+			    ufs_rw32(cgp->cg_freeoff, needswap),
+			    (long)cg_blksfree_swap(cgp, needswap) - (long)cgp);
 			/* NOTREACHED */
 		}
 	}
@@ -581,7 +583,8 @@ ffs_mapsearch(struct fs *fs, struct cg *cgp, daddr_t bpref, int allocsiz)
 			subfield <<= 1;
 		}
 	}
-	errx(1, "ffs_alloccg: block not in map: bno %lld", (long long)bno);
+	errx(EXIT_FAILURE, "%s: block not in map: bno %jd", __func__,
+	    (intmax_t)bno);
 	return (-1);
 }
 
