@@ -670,7 +670,7 @@ initcg(uint32_t cylno, time_t utime, const fsinfo_t *fsopts)
 			acg.cg_old_ncyl = sblock.fs_old_cpg;
 		acg.cg_old_time = acg.cg_time;
 		acg.cg_time = 0;
-		acg.cg_old_niblk = acg.cg_niblk;
+		acg.cg_old_niblk = acg.cg_old_niblk; // XXX sblock.fs_ipg;
 		acg.cg_niblk = 0;
 		acg.cg_initediblk = 0;
 		acg.cg_old_btotoff = start;
