@@ -557,7 +557,8 @@ eval std_${NANO_ARCH}
 
 : ${NANO_ENDIAN:=little}	# make -V something to figure it out?
 : ${NANO_LAYOUT:=std-embedded}
-: ${NANO_MAKEFS_UFS:=makefs -t ffs -B ${NANO_ENDIAN}}
+: ${NANO_MAKEFS_UFS:="makefs -B ${NANO_ENDIAN} \
+    -o bsize=4096,fsize=512,density=8192,optimization=space,version=2"}
 : ${NANO_DISK_SCHEME:=mbr}  	# No others really supported ATM (well, gpt)
 case ${NANO_LAYOUT} in
 std-embedded)

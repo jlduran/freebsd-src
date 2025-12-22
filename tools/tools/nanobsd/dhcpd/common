@@ -93,8 +93,9 @@ buildenv()
 	env __MAKE_CONF=${NANO_MAKE_CONF_BUILD} DESTDIR=${NANO_WORLDDIR} make buildenv
 }
 
-NANO_MAKEFS="makefs -B big \
-	-o bsize=4096,fsize=512,density=8192,optimization=space"
+: ${NANO_ENDIAN:=big}	# make -V something to figure it out?
+NANO_MAKEFS="makefs -B ${NANO_ENDIAN} \
+	-o bsize=4096,fsize=512,density=8192,optimization=space,version=2"
 export NANO_MAKEFS
 
 CONF_BUILD="
