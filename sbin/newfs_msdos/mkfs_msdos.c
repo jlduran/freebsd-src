@@ -600,6 +600,7 @@ mkfs_msdos(const char *fname, const char *dtype, const struct msdos_options *op)
 	bpb.bpbHugeSectors = x1 + (cls + 1) * bpb.bpbSecPerClust - 1;
 	warnx("warning: FAT type limits file system to %u sectors",
 	      bpb.bpbHugeSectors);
+	goto done;
     }
     printf("%s: %u sector%s in %u FAT%u cluster%s "
 	   "(%u bytes/cluster)\n", fname, cls * bpb.bpbSecPerClust,
