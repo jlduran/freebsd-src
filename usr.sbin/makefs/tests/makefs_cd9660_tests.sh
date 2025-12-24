@@ -347,6 +347,8 @@ T_flag_dir_body()
 	atf_check_equal $st_atime $timestamp
 	atf_check_equal $st_mtime $timestamp
 	atf_check_equal $st_ctime $timestamp
+	# CD9660 does not have birth time
+	atf_check_equal $st_birthtime -1
 }
 
 T_flag_dir_cleanup()
@@ -371,7 +373,9 @@ T_flag_F_flag_body()
 	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
 	atf_check_equal $st_atime $timestamp_F
 	atf_check_equal $st_mtime $timestamp_F
-	# atf_check_equal $st_ctime $timestamp_F
+	# XXX atf_check_equal $st_ctime $timestamp_F
+	# CD9660 does not have birth time
+	atf_check_equal $st_birthtime -1
 }
 
 T_flag_F_flag_cleanup()
@@ -394,6 +398,8 @@ T_flag_mtree_body()
 	atf_check_equal $st_atime $timestamp
 	atf_check_equal $st_mtime $timestamp
 	atf_check_equal $st_ctime $timestamp
+	# CD9660 does not have birth time
+	atf_check_equal $st_birthtime -1
 }
 
 T_flag_mtree_cleanup()
