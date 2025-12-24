@@ -295,7 +295,7 @@ T_flag_F_flag_body()
 	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
 	atf_check_equal $st_atime $timestamp_F
 	atf_check_equal $st_mtime $timestamp_F
-	# XXX atf_check_equal $st_ctime $timestamp_F
+	atf_check_equal $st_ctime $timestamp_F
 	# FFS version 1 does not have birth time
 	atf_check_equal $st_birthtime -1
 }
@@ -323,8 +323,8 @@ T_flag_F_flag_v2_body()
 	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
 	atf_check_equal $st_atime $timestamp_F
 	atf_check_equal $st_mtime $timestamp_F
-	atf_check_equal $st_ctime $timestamp_T # XXX should be $timestamp_F
-	atf_check_equal $st_birthtime $timestamp_T # XXX should be $timestamp_F
+	atf_check_equal $st_ctime $timestamp_F
+	atf_check_equal $st_birthtime $timestamp_F
 }
 
 T_flag_F_flag_v2_cleanup()
@@ -381,6 +381,66 @@ T_flag_mtree_v2_cleanup()
 	common_cleanup
 }
 
+atf_test_case F_flag_mtree_no_time cleanup
+F_flag_mtree_no_time_body()
+{
+	MTREE_NO_TIME="mtree -k mode,gid,uid,size,link"
+
+	epoch_pre=$(date -j +%s)
+
+	create_test_dirs
+	mkdir -p $TEST_INPUTS_DIR/dir1
+
+	atf_check -o save:$TEST_SPEC_FILE $MTREE_NO_TIME -c -p $TEST_INPUTS_DIR
+	atf_check -o not-empty \
+	    $MAKEFS -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
+
+	epoch_post=$(date -j +%s)
+
+	mount_image
+	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
+	atf_check [ $epoch_pre -le $st_atime -a $epoch_post -ge $st_atime ]
+	atf_check [ $epoch_pre -le $st_mtime -a $epoch_post -ge $st_mtime ]
+	atf_check [ $epoch_pre -le $st_ctime -a $epoch_post -ge $st_ctime ]
+	# FFS version 1 does not have birth time
+	atf_check_equal $st_birthtime -1
+}
+
+F_flag_mtree_no_time_cleanup()
+{
+	common_cleanup
+}
+
+atf_test_case F_flag_mtree_no_time_v2 cleanup
+F_flag_mtree_no_time_v2_body()
+{
+	MTREE_NO_TIME="mtree -k mode,gid,uid,size,link"
+
+	epoch_pre=$(date -j +%s)
+
+	create_test_dirs
+	mkdir -p $TEST_INPUTS_DIR/dir1
+
+	atf_check -o save:$TEST_SPEC_FILE $MTREE_NO_TIME -c -p $TEST_INPUTS_DIR
+	atf_check -o not-empty \
+	    $MAKEFSv2 -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
+
+	epoch_post=$(date -j +%s)
+
+	mount_image
+	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
+	atf_check [ $epoch_pre -le $st_atime -a $epoch_post -ge $st_atime ]
+	atf_check [ $epoch_pre -le $st_mtime -a $epoch_post -ge $st_mtime ]
+	atf_check [ $epoch_pre -le $st_ctime -a $epoch_post -ge $st_ctime ]
+	atf_check [ $epoch_pre -le $st_birthtime -a \
+	    $epoch_post -ge $st_birthtime ]
+}
+
+F_flag_mtree_no_time_v2_cleanup()
+{
+	common_cleanup
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case autocalculate_image_size
@@ -400,4 +460,6 @@ atf_init_test_cases()
 	atf_add_test_case T_flag_F_flag_v2
 	atf_add_test_case T_flag_mtree
 	atf_add_test_case T_flag_mtree_v2
+	atf_add_test_case F_flag_mtree_no_time
+	atf_add_test_case F_flag_mtree_no_time_v2
 }

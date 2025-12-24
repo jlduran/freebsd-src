@@ -527,11 +527,17 @@ apply_specentry(const char *dir, NODE *specnode, fsnode *dirnode)
 		    (long)specnode->st_mtimespec.tv_sec);
 		dirnode->inode->st.st_mtime =		specnode->st_mtimespec.tv_sec;
 		dirnode->inode->st.st_atime =		specnode->st_mtimespec.tv_sec;
-		dirnode->inode->st.st_ctime =		start_time.tv_sec;
+		dirnode->inode->st.st_ctime =		specnode->st_mtimespec.tv_sec;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+		dirnode->inode->st.st_birthtime =	specnode->st_mtimespec.tv_sec;
+#endif
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 		dirnode->inode->st.st_mtimensec =	specnode->st_mtimespec.tv_nsec;
 		dirnode->inode->st.st_atimensec =	specnode->st_mtimespec.tv_nsec;
-		dirnode->inode->st.st_ctimensec =	start_time.tv_nsec;
+		dirnode->inode->st.st_ctimensec =	specnode->st_mtimespec.tv_nsec;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+		dirnode->inode->st.st_birthtimensec =	specnode->st_mtimespec.tv_nsec;
+#endif
 #endif
 	}
 	if (specnode->flags & (F_UID | F_UNAME)) {
