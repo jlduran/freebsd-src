@@ -44,6 +44,7 @@
 #include "nbtool_config.h"
 #else
 #define	HAVE_STRUCT_STAT_ST_FLAGS	1
+#define	HAVE_STRUCT_STAT_BIRTHTIME	1
 #endif
 
 #include <sys/stat.h>
