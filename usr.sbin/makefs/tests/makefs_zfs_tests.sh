@@ -991,7 +991,7 @@ T_flag_F_flag_body()
 	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
 	atf_check_equal $st_atime $timestamp_F
 	atf_check_equal $st_mtime $timestamp_F
-	# atf_check_equal $st_ctime $timestamp_F
+	atf_check_equal $st_ctime $timestamp_F
 }
 
 T_flag_F_flag_cleanup()
