@@ -75,26 +75,26 @@ autocalculate_image_size_cleanup()
 atf_test_case D_flag
 D_flag_body()
 {
-	atf_skip "makefs crashes with SIGBUS with dupe mtree entries; see FreeBSD bug # 192839"
+	#atf_skip "makefs crashes with SIGBUS with dupe mtree entries; see FreeBSD bug # 192839"
 	# Actually create a spec without type and it'll segfault.
-	# printf() is missing newline.
+	# mtree printf() is missing newline.
 
 	create_test_inputs
 
-	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    $MTREE -cp $TEST_INPUTS_DIR
+	$MTREE -cp $TEST_INPUTS_DIR | $MTREE -C > ${TEST_SPEC_FILE}.tmp
+	sed -i "" -e "s|^\.|\./inputs|g" ${TEST_SPEC_FILE}.tmp
+	echo ". type=dir uid=0 gid=0 mode=0777" > $TEST_SPEC_FILE
+	cat ${TEST_SPEC_FILE}.tmp >> $TEST_SPEC_FILE
 	atf_check -e empty -o not-empty -s exit:0 \
-	    $MAKEFS -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
+	    $MAKEFS -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_SPEC_FILE
 
-	atf_check -e empty -o empty -s exit:0 \
-	    cp $TEST_SPEC_FILE spec2.mtree
-	atf_check -e empty -o save:${TEST_SPEC_FILE}_dupe -s exit:0 \
-	    cat $TEST_SPEC_FILE spec2.mtree
+	cp $TEST_SPEC_FILE spec2.mtree
+	cat $TEST_SPEC_FILE spec2.mtree | sort > ${TEST_SPEC_FILE}_dupe
 
-	atf_check -e empty -o not-empty -s not-exit:0 \
-	    $MAKEFS -F ${TEST_SPEC_FILE}_dupe -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
-	atf_check -e empty -o not-empty -s exit:0 \
-	    $MAKEFS -D -F ${TEST_SPEC_FILE}_dupe -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
+	atf_check -e not-empty -o empty -s not-exit:0 \
+	    $MAKEFS -F ${TEST_SPEC_FILE}_dupe -M 1m $TEST_IMAGE ${TEST_SPEC_FILE}_dupe
+	atf_check -e not-empty -o not-empty -s exit:0 \
+	    $MAKEFS -D -F ${TEST_SPEC_FILE}_dupe -M 1m $TEST_IMAGE ${TEST_SPEC_FILE}_dupe
 }
 
 atf_test_case F_flag cleanup
