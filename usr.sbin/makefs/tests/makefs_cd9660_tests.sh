@@ -32,10 +32,11 @@
 #   here:
 #   http://www.ymi.com/ymi/sites/default/files/pdf/Rockridge.pdf
 
+. "$(dirname "$0")/makefs_tests_common.sh"
+
 MAKEFS="makefs -t cd9660"
 MOUNT="mount_cd9660"
-
-. "$(dirname "$0")/makefs_tests_common.sh"
+MTREE="mtree -k $DEFAULT_MTREE_KEYWORDS"
 
 common_cleanup()
 {
@@ -58,31 +59,29 @@ check_base_iso9660_image_contents()
 	atf_check -e empty -o empty -s exit:0 test -f $TEST_MOUNT_DIR/c
 }
 
-atf_test_case D_flag cleanup
+atf_test_case D_flag
 D_flag_body()
 {
-	atf_skip "makefs crashes with SIGBUS with dupe mtree entries; see FreeBSD bug # 192839"
+	#atf_skip "makefs crashes with SIGBUS with dupe mtree entries; see FreeBSD bug # 192839"
+	# Actually create a spec without type and it'll segfault.
+	# printf() is missing newline.
 
 	create_test_inputs
 
-	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -cp $TEST_INPUTS_DIR
-	atf_check -e empty -o not-empty -s exit:0 \
-	    $MAKEFS -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
-
+	$MTREE -cp $TEST_INPUTS_DIR | $MTREE -C > ${TEST_SPEC_FILE}.tmp
+	sed -i "" -e "s|^\.|\./inputs|g" ${TEST_SPEC_FILE}.tmp
+	echo ". type=dir uid=0 gid=0 mode=0777" > $TEST_SPEC_FILE
+	cat ${TEST_SPEC_FILE}.tmp >> $TEST_SPEC_FILE
 	atf_check -e empty -o empty -s exit:0 \
-	    cp $TEST_SPEC_FILE spec2.mtree
-	atf_check -e empty -o save:dupe_$TEST_SPEC_FILE -s exit:0 \
-	    cat $TEST_SPEC_FILE spec2.mtree
+	    $MAKEFS -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_SPEC_FILE
 
-	atf_check -e empty -o not-empty -s not-exit:0 \
-	    $MAKEFS -F dupe_$TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
-	atf_check -e empty -o not-empty -s exit:0 \
-	    $MAKEFS -D -F dupe_$TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
-}
-D_flag_cleanup()
-{
-	common_cleanup
+	cp $TEST_SPEC_FILE spec2.mtree
+	cat $TEST_SPEC_FILE spec2.mtree | sort > ${TEST_SPEC_FILE}_dupe
+
+	atf_check -e not-empty -o empty -s not-exit:0 \
+	    $MAKEFS -F ${TEST_SPEC_FILE}_dupe -M 1m $TEST_IMAGE ${TEST_SPEC_FILE}_dupe
+	atf_check -e not-empty -o empty -s exit:0 \
+	    $MAKEFS -D -F ${TEST_SPEC_FILE}_dupe -M 1m $TEST_IMAGE ${TEST_SPEC_FILE}_dupe
 }
 
 atf_test_case F_flag cleanup
@@ -91,7 +90,7 @@ F_flag_body()
 	create_test_inputs
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -cp $TEST_INPUTS_DIR
+	    $MTREE -cp $TEST_INPUTS_DIR
 
 	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS -F $TEST_SPEC_FILE -M 1m $TEST_IMAGE $TEST_INPUTS_DIR
@@ -110,7 +109,7 @@ from_mtree_spec_file_body()
 	create_test_inputs
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -c -k "$DEFAULT_MTREE_KEYWORDS" -p $TEST_INPUTS_DIR
+	    $MTREE -cp $TEST_INPUTS_DIR
 	cd $TEST_INPUTS_DIR
 	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS $TEST_IMAGE $TEST_SPEC_FILE
@@ -185,7 +184,7 @@ o_flag_allow_deep_trees_cleanup()
 atf_test_case o_flag_allow_max_name cleanup
 o_flag_allow_max_name_body()
 {
-	atf_expect_fail "-o allow-max-name doesn't appear to be implemented on FreeBSD's copy of makefs [yet]"
+	atf_skip "-o allow-max-name is not implemented"
 
 	create_test_inputs
 
@@ -208,7 +207,7 @@ o_flag_allow_max_name_cleanup()
 atf_test_case o_flag_isolevel_1 cleanup
 o_flag_isolevel_1_body()
 {
-	atf_expect_fail "this testcase needs work; the filenames generated seem incorrect/corrupt"
+	atf_skip "-o isolevel=1 is failing"
 
 	create_test_inputs
 
@@ -242,19 +241,19 @@ o_flag_isolevel_2_cleanup()
 atf_test_case o_flag_isolevel_3 cleanup
 o_flag_isolevel_3_body()
 {
+	# XXX: isolevel=3 isn't implemented yet. See FreeBSD bug # 203645
+	atf_check -e match:'makefs: ISO Level 3 is greater than 2\.' -o empty \
+	    -s not-exit:0 $MAKEFS -o isolevel=3 $TEST_IMAGE $TEST_INPUTS_DIR
+
+	atf_skip "-o isolevel=3 is not implemented"
+
 	create_test_inputs
 
-	# XXX: isolevel=3 isn't implemented yet. See FreeBSD bug # 203645
-	if true; then
-	atf_check -e match:'makefs: ISO Level 3 is greater than 2\.' -o empty -s not-exit:0 \
-	    $MAKEFS -o isolevel=3 $TEST_IMAGE $TEST_INPUTS_DIR
-	else
 	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS -o isolevel=3 $TEST_IMAGE $TEST_INPUTS_DIR
 
 	mount_image
 	check_base_iso9660_image_contents
-	fi
 }
 o_flag_isolevel_3_cleanup()
 {
@@ -363,8 +362,8 @@ T_flag_dir_body()
 {
 	timestamp=1742574909
 	create_test_dirs
-
 	mkdir -p $TEST_INPUTS_DIR/dir1
+
 	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS -T $timestamp -o rockridge $TEST_IMAGE $TEST_INPUTS_DIR
 
@@ -383,16 +382,15 @@ T_flag_dir_cleanup()
 atf_test_case T_flag_F_flag cleanup
 T_flag_F_flag_body()
 {
-	atf_expect_fail "-F doesn't take precedence over -T"
 	timestamp_F=1742574909
 	timestamp_T=1742574910
 	create_test_dirs
 	mkdir -p $TEST_INPUTS_DIR/dir1
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -c -k "type,time" -p $TEST_INPUTS_DIR
+	    mtree -k time -cp $TEST_INPUTS_DIR
 	change_mtree_timestamp $TEST_SPEC_FILE $timestamp_F
-	atf_check -e empty -o not-empty -s exit:0 \
+	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS -F $TEST_SPEC_FILE -T $timestamp_T -o rockridge $TEST_IMAGE $TEST_INPUTS_DIR
 
 	mount_image
@@ -415,7 +413,7 @@ T_flag_mtree_body()
 	mkdir -p $TEST_INPUTS_DIR/dir1
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -c -k "type" -p $TEST_INPUTS_DIR
+	    mtree -k time -cp $TEST_INPUTS_DIR
 	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS -T $timestamp -o rockridge $TEST_IMAGE $TEST_SPEC_FILE
 

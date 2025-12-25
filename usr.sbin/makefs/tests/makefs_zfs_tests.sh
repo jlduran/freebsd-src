@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 
+. "$(dirname "$0")/makefs_tests_common.sh"
+
 MAKEFS="makefs -t zfs -o verify-txgs=true -o poolguid=$$"
 ZFS_POOL_NAME="makefstest$$"
 TEST_ZFS_POOL_NAME="$TMPDIR/poolname"
-
-. "$(dirname "$0")/makefs_tests_common.sh"
 
 common_cleanup()
 {
@@ -936,7 +936,7 @@ perms_body()
 			    ${TEST_INPUTS_DIR}/$mode
 		fi
 		if [ $(($mode & 0001)) -eq 0 ]; then
-			atf_check -s not-exit:0 -e match:"Permission denied" \
+			atf_check -s not-exit:0 -e match:"permission denied" \
 			    su -m tests -c ${TEST_INPUTS_DIR}/$mode
 		fi
 	done
@@ -975,20 +975,19 @@ T_flag_dir_cleanup()
 atf_test_case T_flag_F_flag cleanup
 T_flag_F_flag_body()
 {
-	atf_expect_fail "-F doesn't take precedence over -T"
 	timestamp_F=1742574909
 	timestamp_T=1742574910
 	create_test_dirs
 	mkdir -p $TEST_INPUTS_DIR/dir1
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -c -k "type,time" -p $TEST_INPUTS_DIR
+	    mtree -k time -cp $TEST_INPUTS_DIR
 	change_mtree_timestamp $TEST_SPEC_FILE $timestamp_F
-	atf_check -e empty -o not-empty -s exit:0 \
+	atf_check -e empty -o empty -s exit:0 \
 	    $MAKEFS -F $TEST_SPEC_FILE -T $timestamp_T -s 10g -o rootpath=/ \
 	    -o poolname=$ZFS_POOL_NAME $TEST_IMAGE $TEST_INPUTS_DIR
 
-	mount_image
+	import_image
 	eval $(stat -s  $TEST_MOUNT_DIR/dir1)
 	atf_check_equal $st_atime $timestamp_F
 	atf_check_equal $st_mtime $timestamp_F
@@ -1008,7 +1007,7 @@ T_flag_mtree_body()
 	mkdir -p $TEST_INPUTS_DIR/dir1
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \
-	    mtree -c -k "type" -p $TEST_INPUTS_DIR
+	    mtree -k time -cp $TEST_INPUTS_DIR
 	atf_check $MAKEFS -T $timestamp -s 10g -o rootpath=/ -o poolname=$ZFS_POOL_NAME \
 	    $TEST_IMAGE $TEST_SPEC_FILE
 
