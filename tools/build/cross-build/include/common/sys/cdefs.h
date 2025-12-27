@@ -271,13 +271,6 @@
 #endif
 #endif
 
-/* Expose all declarations when using FreeBSD headers */
-#define	__POSIX_VISIBLE		200809
-#define	__XSI_VISIBLE		700
-#define	__BSD_VISIBLE		1
-#define	__ISO_C_VISIBLE		2011
-#define	__EXT1_VISIBLE		1
-
 /*
  * Macro to test if we're using a specific version of gcc or later.
  */
