@@ -952,7 +952,7 @@ perms_body()
 			    ${TEST_INPUTS_DIR}/$mode
 		fi
 		if [ $(($mode & 0001)) -eq 0 ]; then
-			atf_check -s not-exit:0 -e match:"Permission denied" \
+			atf_check -s not-exit:0 -e match:"[P|p]ermission denied" \
 			    su -m tests -c ${TEST_INPUTS_DIR}/$mode
 		fi
 	done
