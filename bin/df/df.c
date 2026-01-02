@@ -38,15 +38,18 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/sysctl.h>
+
 #include <getopt.h>
 #include <libutil.h>
 #include <locale.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
 #include <unistd.h>
+
 #include <libxo/xo.h>
 
 #define UNITS_SI	1
@@ -78,13 +81,8 @@ static size_t	  regetmntinfo(struct statfs **, long);
 static void	  update_maxwidths(struct maxwidths *, const struct statfs *);
 static void	  usage(void);
 
-static __inline int
-imax(int a, int b)
-{
-	return (a > b ? a : b);
-}
-
-static int	  aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Tflag;
+static bool	  aflag, cflag, iflag, kflag, lflag, nflag, Tflag;
+static int	  hflag;
 static int	  thousands;
 static int	  skipvfs_l, skipvfs_t;
 static const char **vfslist_l, **vfslist_t;
@@ -120,7 +118,7 @@ main(int argc, char *argv[])
 	    NULL)) != -1)
 		switch (ch) {
 		case 'a':
-			aflag = 1;
+			aflag = true;
 			break;
 		case 'b':
 				/* FALLTHROUGH */
@@ -137,7 +135,7 @@ main(int argc, char *argv[])
 			hflag = 0;
 			break;
 		case 'c':
-			cflag = 1;
+			cflag = true;
 			break;
 		case 'g':
 			setenv("BLOCKSIZE", "1g", 1);
@@ -150,10 +148,10 @@ main(int argc, char *argv[])
 			hflag = UNITS_2;
 			break;
 		case 'i':
-			iflag = 1;
+			iflag = true;
 			break;
 		case 'k':
-			kflag++;
+			kflag = true;
 			setenv("BLOCKSIZE", "1024", 1);
 			hflag = 0;
 			break;
@@ -162,14 +160,14 @@ main(int argc, char *argv[])
 			if (lflag)
 				break;
 			vfslist_l = makevfslist(makenetvfslist(), &skipvfs_l);
-			lflag = 1;
+			lflag = true;
 			break;
 		case 'm':
 			setenv("BLOCKSIZE", "1m", 1);
 			hflag = 0;
 			break;
 		case 'n':
-			nflag = 1;
+			nflag = true;
 			break;
 		case 't':
 			if (vfslist_t != NULL)
@@ -177,7 +175,7 @@ main(int argc, char *argv[])
 			vfslist_t = makevfslist(optarg, &skipvfs_t);
 			break;
 		case 'T':
-			Tflag = 1;
+			Tflag = true;
 			break;
 		case ',':
 			thousands = 1;
@@ -465,8 +463,8 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 	const char *format;
 
 	if (++timesthrough == 1) {
-		mwp->mntfrom = imax(mwp->mntfrom, (int)strlen("Filesystem"));
-		mwp->fstype = imax(mwp->fstype, (int)strlen("Type"));
+		mwp->mntfrom = MAX(mwp->mntfrom, (int)strlen("Filesystem"));
+		mwp->fstype = MAX(mwp->fstype, (int)strlen("Type"));
 		if (thousands) {		/* make space for commas */
 		    mwp->total += (mwp->total - 1) / 3;
 		    mwp->used  += (mwp->used - 1) / 3;
@@ -480,10 +478,10 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 			    (int)strlen(header);
 		} else {
 			header = getbsize(&headerlen, &blocksize);
-			mwp->total = imax(mwp->total, headerlen);
+			mwp->total = MAX(mwp->total, headerlen);
 		}
-		mwp->used = imax(mwp->used, (int)strlen("Used"));
-		mwp->avail = imax(mwp->avail, (int)strlen("Avail"));
+		mwp->used = MAX(mwp->used, (int)strlen("Used"));
+		mwp->avail = MAX(mwp->avail, (int)strlen("Avail"));
 
 		xo_emit("{T:/%-*s}", mwp->mntfrom, "Filesystem");
 		if (Tflag)
@@ -492,9 +490,9 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 			mwp->total, header,
 			mwp->used, "Used", mwp->avail, "Avail");
 		if (iflag) {
-			mwp->iused = imax(hflag ? 0 : mwp->iused,
+			mwp->iused = MAX(hflag ? 0 : mwp->iused,
 			    (int)strlen("  iused"));
-			mwp->ifree = imax(hflag ? 0 : mwp->ifree,
+			mwp->ifree = MAX(hflag ? 0 : mwp->ifree,
 			    (int)strlen("ifree"));
 			xo_emit(" {T:/%*s} {T:/%*s} {T:\%iused}",
 			    mwp->iused - 2, "iused", mwp->ifree, "ifree");
@@ -587,18 +585,18 @@ update_maxwidths(struct maxwidths *mwp, const struct statfs *sfsp)
 	if (blocksize == 0)
 		getbsize(&dummy, &blocksize);
 
-	mwp->mntfrom = imax(mwp->mntfrom, (int)strlen(sfsp->f_mntfromname));
-	mwp->fstype = imax(mwp->fstype, (int)strlen(sfsp->f_fstypename));
-	mwp->total = imax(mwp->total, int64width(
+	mwp->mntfrom = MAX(mwp->mntfrom, (int)strlen(sfsp->f_mntfromname));
+	mwp->fstype = MAX(mwp->fstype, (int)strlen(sfsp->f_fstypename));
+	mwp->total = MAX(mwp->total, int64width(
 	    fsbtoblk((int64_t)sfsp->f_blocks, sfsp->f_bsize, blocksize)));
-	mwp->used = imax(mwp->used,
+	mwp->used = MAX(mwp->used,
 	    int64width(fsbtoblk((int64_t)sfsp->f_blocks -
 	    (int64_t)sfsp->f_bfree, sfsp->f_bsize, blocksize)));
-	mwp->avail = imax(mwp->avail, int64width(fsbtoblk(sfsp->f_bavail,
+	mwp->avail = MAX(mwp->avail, int64width(fsbtoblk(sfsp->f_bavail,
 	    sfsp->f_bsize, blocksize)));
-	mwp->iused = imax(mwp->iused, int64width((int64_t)sfsp->f_files -
+	mwp->iused = MAX(mwp->iused, int64width((int64_t)sfsp->f_files -
 	    sfsp->f_ffree));
-	mwp->ifree = imax(mwp->ifree, int64width(sfsp->f_ffree));
+	mwp->ifree = MAX(mwp->ifree, int64width(sfsp->f_ffree));
 }
 
 /* Return the width in characters of the specified value. */
