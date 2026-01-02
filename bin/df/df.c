@@ -35,18 +35,21 @@
  */
 
 #include <sys/param.h>
-#include <sys/stat.h>
 #include <sys/mount.h>
+#include <sys/stat.h>
 #include <sys/sysctl.h>
+
 #include <getopt.h>
 #include <libutil.h>
 #include <locale.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sysexits.h>
 #include <unistd.h>
+
 #include <libxo/xo.h>
 
 #define UNITS_SI	1
@@ -54,39 +57,34 @@
 
 /* Maximum widths of various fields. */
 struct maxwidths {
-	int	mntfrom;
-	int	fstype;
-	int	total;
-	int	used;
-	int	avail;
-	int	iused;
-	int	ifree;
+	size_t	mntfrom;
+	size_t	fstype;
+	size_t	total;
+	size_t	used;
+	size_t	avail;
+	size_t	iused;
+	size_t	ifree;
 };
 
 static void	  addstat(struct statfs *, struct statfs *);
 static char	 *getmntpt(const char *);
-static const char **makevfslist(char *fslist, int *skip);
-static int	  checkvfsname(const char *vfsname, const char **vfslist, int skip);
-static int	  checkvfsselected(char *);
-static int	  int64width(int64_t);
+static const char **makevfslist(char *fslist, bool *skip);
+static bool	  checkvfsname(const char *vfsname, const char **vfslist, bool skip);
+static bool	  checkvfsselected(char *);
+static size_t	  int64width(int64_t);
 static char	 *makenetvfslist(void);
 static void	  prthuman(const struct statfs *, int64_t);
 static void	  prthumanval(const char *, int64_t);
 static intmax_t	  fsbtoblk(int64_t, uint64_t, u_long);
 static void	  prtstat(struct statfs *, struct maxwidths *);
-static size_t	  regetmntinfo(struct statfs **, long);
+static size_t	  regetmntinfo(struct statfs **, size_t);
 static void	  update_maxwidths(struct maxwidths *, const struct statfs *);
 static void	  usage(void);
 
-static __inline int
-imax(int a, int b)
-{
-	return (a > b ? a : b);
-}
-
-static int	  aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Tflag;
-static int	  thousands;
-static int	  skipvfs_l, skipvfs_t;
+static bool	  aflag, cflag, iflag, kflag, nflag, Tflag;
+static int	  hflag;
+static bool	  thousands;
+static bool	  skipvfs_l, skipvfs_t;
 static const char **vfslist_l, **vfslist_t;
 
 static const struct option long_options[] =
@@ -103,8 +101,8 @@ main(int argc, char *argv[])
 	struct maxwidths maxwidths;
 	struct statfs *mntbuf;
 	char *mntpt;
-	int i, mntsize;
 	int ch, rv;
+	size_t i, mntsize;
 
 	(void)setlocale(LC_ALL, "");
 	memset(&maxwidths, 0, sizeof(maxwidths));
@@ -120,7 +118,7 @@ main(int argc, char *argv[])
 	    NULL)) != -1)
 		switch (ch) {
 		case 'a':
-			aflag = 1;
+			aflag = true;
 			break;
 		case 'b':
 				/* FALLTHROUGH */
@@ -138,7 +136,7 @@ main(int argc, char *argv[])
 			hflag = 0;
 			break;
 		case 'c':
-			cflag = 1;
+			cflag = true;
 			break;
 		case 'g':
 			setenv("BLOCKSIZE", "1g", 1);
@@ -151,26 +149,25 @@ main(int argc, char *argv[])
 			hflag = UNITS_2;
 			break;
 		case 'i':
-			iflag = 1;
+			iflag = true;
 			break;
 		case 'k':
-			kflag++;
+			kflag = true;
 			setenv("BLOCKSIZE", "1k", 1);
 			hflag = 0;
 			break;
 		case 'l':
 			/* Ignore duplicate -l */
-			if (lflag)
+			if (vfslist_l != NULL)
 				break;
 			vfslist_l = makevfslist(makenetvfslist(), &skipvfs_l);
-			lflag = 1;
 			break;
 		case 'm':
 			setenv("BLOCKSIZE", "1m", 1);
 			hflag = 0;
 			break;
 		case 'n':
-			nflag = 1;
+			nflag = true;
 			break;
 		case 't':
 			if (vfslist_t != NULL)
@@ -178,10 +175,10 @@ main(int argc, char *argv[])
 			vfslist_t = makevfslist(optarg, &skipvfs_t);
 			break;
 		case 'T':
-			Tflag = 1;
+			Tflag = true;
 			break;
 		case ',':
-			thousands = 1;
+			thousands = true;
 			break;
 		case '?':
 		default:
@@ -242,7 +239,7 @@ main(int argc, char *argv[])
 		 * list a mount point that does not match the other args
 		 * we've been given (-l, -t, etc.).
 		 */
-		if (checkvfsselected(statfsbuf.f_fstypename) != 0) {
+		if (checkvfsselected(statfsbuf.f_fstypename) == true) {
 			rv = EXIT_FAILURE;
 			continue;
 		}
@@ -285,18 +282,18 @@ getmntpt(const char *name)
 
 	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
 	for (i = 0; i < mntsize; i++) {
-		if (!strcmp(mntbuf[i].f_mntfromname, name))
+		if (strcmp(mntbuf[i].f_mntfromname, name) == 0)
 			return (mntbuf[i].f_mntonname);
 	}
 	return (NULL);
 }
 
 static const char **
-makevfslist(char *fslist, int *skip)
+makevfslist(char *fslist, bool *skip)
 {
 	const char **av;
-	int i;
 	char *nextcp;
+	size_t i;
 
 	if (fslist == NULL)
 		return (NULL);
@@ -305,10 +302,10 @@ makevfslist(char *fslist, int *skip)
 		fslist += 2;
 		*skip = 1;
 	}
-	for (i = 0, nextcp = fslist; *nextcp; nextcp++)
+	for (i = 0, nextcp = fslist; *nextcp != '\0'; nextcp++)
 		if (*nextcp == ',')
 			i++;
-	if ((av = malloc((size_t)(i + 2) * sizeof(char *))) == NULL) {
+	if ((av = malloc((i + 2) * sizeof(char *))) == NULL) {
 		xo_warnx("malloc failed");
 		return (NULL);
 	}
@@ -323,12 +320,11 @@ makevfslist(char *fslist, int *skip)
 	return (av);
 }
 
-static int
-checkvfsname(const char *vfsname, const char **vfslist, int skip)
+static bool
+checkvfsname(const char *vfsname, const char **vfslist, bool skip)
 {
-
 	if (vfslist == NULL)
-		return (0);
+		return (false);
 	while (*vfslist != NULL) {
 		if (strcmp(vfsname, *vfslist) == 0)
 			return (skip);
@@ -343,10 +339,10 @@ checkvfsname(const char *vfsname, const char **vfslist, int skip)
  * A -t option modifies the selection by adding or removing further
  * file system types, based on the argument that is passed.
  */
-static int
+static bool
 checkvfsselected(char *fstypename)
 {
-	int result;
+	bool result;
 
 	if (vfslist_t) {
 		/* if -t option used then select passed types */
@@ -369,17 +365,18 @@ checkvfsselected(char *fstypename)
  * current (not cached) info.  Returns the new count of valid statfs bufs.
  */
 static size_t
-regetmntinfo(struct statfs **mntbufp, long mntsize)
+regetmntinfo(struct statfs **mntbufp, size_t mntsize)
 {
-	int error, i, j;
 	struct statfs *mntbuf;
+	int error;
+	size_t i, j;
 
 	if (vfslist_l == NULL && vfslist_t == NULL)
 		return (nflag ? mntsize : getmntinfo(mntbufp, MNT_WAIT));
 
 	mntbuf = *mntbufp;
 	for (j = 0, i = 0; i < mntsize; i++) {
-		if (checkvfsselected(mntbuf[i].f_fstypename) != 0)
+		if (checkvfsselected(mntbuf[i].f_fstypename) == true)
 			continue;
 		/*
 		 * XXX statfs(2) can fail for various reasons. It may be
@@ -403,7 +400,6 @@ regetmntinfo(struct statfs **mntbufp, long mntsize)
 static void
 prthuman(const struct statfs *sfsp, int64_t used)
 {
-
 	prthumanval("  {:blocks/%6s}", sfsp->f_blocks * sfsp->f_bsize);
 	prthumanval("  {:used/%6s}", used * sfsp->f_bsize);
 	prthumanval("  {:available/%6s}", sfsp->f_bavail * sfsp->f_bsize);
@@ -466,8 +462,8 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 	const char *format;
 
 	if (++timesthrough == 1) {
-		mwp->mntfrom = imax(mwp->mntfrom, (int)strlen("Filesystem"));
-		mwp->fstype = imax(mwp->fstype, (int)strlen("Type"));
+		mwp->mntfrom = MAX(mwp->mntfrom, strlen("Filesystem"));
+		mwp->fstype = MAX(mwp->fstype, strlen("Type"));
 		if (thousands) {		/* make space for commas */
 		    mwp->total += (mwp->total - 1) / 3;
 		    mwp->used  += (mwp->used - 1) / 3;
@@ -477,14 +473,13 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 		}
 		if (hflag) {
 			header = "   Size";
-			mwp->total = mwp->used = mwp->avail =
-			    (int)strlen(header);
+			mwp->total = mwp->used = mwp->avail = strlen(header);
 		} else {
 			header = getbsize(&headerlen, &blocksize);
-			mwp->total = imax(mwp->total, headerlen);
+			mwp->total = MAX(mwp->total, (size_t)headerlen);
 		}
-		mwp->used = imax(mwp->used, (int)strlen("Used"));
-		mwp->avail = imax(mwp->avail, (int)strlen("Avail"));
+		mwp->used = MAX(mwp->used, strlen("Used"));
+		mwp->avail = MAX(mwp->avail, strlen("Avail"));
 
 		xo_emit("{T:/%-*s}", mwp->mntfrom, "Filesystem");
 		if (Tflag)
@@ -493,10 +488,10 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 			mwp->total, header,
 			mwp->used, "Used", mwp->avail, "Avail");
 		if (iflag) {
-			mwp->iused = imax(hflag ? 0 : mwp->iused,
-			    (int)strlen("  iused"));
-			mwp->ifree = imax(hflag ? 0 : mwp->ifree,
-			    (int)strlen("ifree"));
+			mwp->iused = MAX(hflag ? 0 : mwp->iused,
+			    strlen("  iused"));
+			mwp->ifree = MAX(hflag ? 0 : mwp->ifree,
+			    strlen("ifree"));
 			xo_emit(" {T:/%*s} {T:/%*s} {T:\%iused}",
 			    mwp->iused - 2, "iused", mwp->ifree, "ifree");
 		}
@@ -588,27 +583,26 @@ update_maxwidths(struct maxwidths *mwp, const struct statfs *sfsp)
 	if (blocksize == 0)
 		getbsize(&dummy, &blocksize);
 
-	mwp->mntfrom = imax(mwp->mntfrom, (int)strlen(sfsp->f_mntfromname));
-	mwp->fstype = imax(mwp->fstype, (int)strlen(sfsp->f_fstypename));
-	mwp->total = imax(mwp->total, int64width(
+	mwp->mntfrom = MAX(mwp->mntfrom, strlen(sfsp->f_mntfromname));
+	mwp->fstype = MAX(mwp->fstype, strlen(sfsp->f_fstypename));
+	mwp->total = MAX(mwp->total, int64width(
 	    fsbtoblk((int64_t)sfsp->f_blocks, sfsp->f_bsize, blocksize)));
-	mwp->used = imax(mwp->used,
+	mwp->used = MAX(mwp->used,
 	    int64width(fsbtoblk((int64_t)sfsp->f_blocks -
 	    (int64_t)sfsp->f_bfree, sfsp->f_bsize, blocksize)));
-	mwp->avail = imax(mwp->avail, int64width(fsbtoblk(sfsp->f_bavail,
+	mwp->avail = MAX(mwp->avail, int64width(fsbtoblk(sfsp->f_bavail,
 	    sfsp->f_bsize, blocksize)));
-	mwp->iused = imax(mwp->iused, int64width((int64_t)sfsp->f_files -
+	mwp->iused = MAX(mwp->iused, int64width((int64_t)sfsp->f_files -
 	    sfsp->f_ffree));
-	mwp->ifree = imax(mwp->ifree, int64width(sfsp->f_ffree));
+	mwp->ifree = MAX(mwp->ifree, int64width(sfsp->f_ffree));
 }
 
 /* Return the width in characters of the specified value. */
-static int
+static size_t
 int64width(int64_t val)
 {
-	int len;
+	size_t len = 0;
 
-	len = 0;
 	/* Negative or zero values require one extra digit. */
 	if (val <= 0) {
 		val = -val;
@@ -625,9 +619,8 @@ int64width(int64_t val)
 static void
 usage(void)
 {
-
 	xo_error(
-"usage: df [-b | -g | -H | -h | -k | -m | -P] [-acilnT] [-t type] [-,]\n"
+"usage: df [--libxo] [-b | -g | -H | -h | -k | -m | -P] [-acilnT] [-t type] [-,]\n"
 "          [file | filesystem ...]\n");
 	exit(EX_USAGE);
 }
