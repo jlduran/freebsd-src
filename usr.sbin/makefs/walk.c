@@ -441,11 +441,18 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 			memset(&stbuf, 0, sizeof(stbuf));
 			stbuf.st_mode = nodetoino(curnode->type);
 			stbuf.st_nlink = 1;
-			stbuf.st_mtime = stbuf.st_atime =
-			    stbuf.st_ctime = start_time.tv_sec;
+			stbuf.st_mtime = stbuf.st_atime = stbuf.st_ctime =
+#if HAVE_STRUCT_STAT_BIRTHTIME
+			    stbuf.st_birthtime =
+#endif
+			    start_time.tv_sec;
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 			stbuf.st_mtimensec = stbuf.st_atimensec =
-			    stbuf.st_ctimensec = start_time.tv_nsec;
+			    stbuf.st_ctimensec =
+#if HAVE_STRUCT_STAT_BIRTHTIME
+			    stbuf.st_birthtimensec =
+#endif
+			    start_time.tv_nsec;
 #endif
 			curfsnode = create_fsnode(".", ".", curnode->name,
 			    &stbuf);
