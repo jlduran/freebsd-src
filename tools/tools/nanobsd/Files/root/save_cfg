@@ -43,7 +43,7 @@ do
 		# then check if this file is exactly the same as original file
 		# in nanobsd image
 		#
-		if ! cmp -s /etc/$filename /conf/base/etc/$filename 
+		if ! cmp -s /etc/$filename /conf/base/etc/$filename
 		then
 			file_path=`echo "$filename" | sed 's/\/[^/]*$//'`
 			if [ $file_path != $filename ]
@@ -97,7 +97,7 @@ for filename in "$@" `find * -type f`
 do
 	if [ -f /etc/$filename ]
 	then
-        	cmp -s /etc/$filename /cfg/$filename || cp -pfv /etc/$filename /cfg/$filename
+		cmp -s /etc/$filename /cfg/$filename || cp -pfv /etc/$filename /cfg/$filename
 	else
 
 		#
