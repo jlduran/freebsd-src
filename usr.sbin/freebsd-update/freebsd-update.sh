@@ -763,6 +763,7 @@ fetchupgrade_check_params () {
 	RELNUM=`uname -r |
 	    sed -E 's,-p[0-9]+,,' |
 	    sed -E 's,-SECURITY,-RELEASE,'`
+	PATCHSET=$(uname -r | awk -F'p' '{print $2}')
 	ARCH=`uname -m`
 	FETCHDIR=${RELNUM}/${ARCH}
 	PATCHDIR=${RELNUM}/${ARCH}/bp
@@ -784,6 +785,15 @@ fetchupgrade_check_params () {
 		exit 1
 		;;
 	esac
+
+	# Only allow upgrades from a supported patchset
+	if [ "${TARGETRELEASE}" = "15.0-RELEASE" ]; then
+		if [ "${RELNUM}" = "13.5-RELEASE" ] && [ "${PATCHSET}" -lt 5 ] ||
+		    [ "${RELNUM}" = "14.2-RELEASE" ] && [ "${PATCHSET}" -lt 7 ] ||
+		    [ "${RELNUM}" = "14.3-RELEASE" ] && [ "${PATCHSET}" -lt 4 ]; then
+			echo "$(basename "$0"): Please update first"
+			exit 1
+	fi
 
 	# Figure out what directory contains the running kernel
 	BOOTFILE=`sysctl -n kern.bootfile`
