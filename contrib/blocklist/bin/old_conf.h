@@ -1,4 +1,4 @@
-/*	$NetBSD: internal.c,v 1.2 2025/02/11 17:48:30 christos Exp $	*/
+/*	$NetBSD: conf.h,v 1.5 2015/01/21 19:24:03 christos Exp $	*/
 
 /*-
  * Copyright (c) 2015 The NetBSD Foundation, Inc.
@@ -28,23 +28,38 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef _OLD_CONF_H
+#define _OLD_CONF_H
 
-#ifdef HAVE_SYS_CDEFS_H
-#include <sys/cdefs.h>
-#endif
-__RCSID("$NetBSD: internal.c,v 1.2 2025/02/11 17:48:30 christos Exp $");
+#include <sys/socket.h>
 
-#include <stdio.h>
-#include <syslog.h>
-#include "old_conf.h"
-#include "old_internal.h"
+struct conf {
+	struct sockaddr_storage	c_ss;
+	int			c_lmask;
+	int			c_port;
+	int			c_proto;
+	int			c_family;
+	int			c_uid;
+	int			c_nfail;
+	char			c_name[128];
+	int			c_rmask;
+	int			c_duration;
+};
 
-int debug;
-const char *rulename = "blacklistd";
-const char *controlprog = _PATH_BLCONTROL;
-struct confset lconf, rconf;
-struct ifaddrs *ifas;
-void (*lfun)(int, const char *, ...) = syslog;
+struct confset {
+	struct conf *cs_c;
+	size_t cs_n;
+	size_t cs_m;
+};
+
+#define CONFNAMESZ sizeof(((struct conf *)0)->c_name)
+
+__BEGIN_DECLS
+const char *conf_print(char *, size_t, const char *, const char *,
+    const struct conf *);
+void conf_parse(const char *);
+const struct conf *conf_find(int, uid_t, const struct sockaddr_storage *,
+    struct conf *);
+__END_DECLS
+
+#endif /* _OLD_CONF_H */

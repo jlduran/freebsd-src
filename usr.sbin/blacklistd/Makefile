@@ -5,12 +5,12 @@ PACKAGE=	blocklist
 
 CONFS=	blacklistd.conf
 PROG=	blacklistd
-SRCS=	blacklistd.c conf.c run.c state.c support.c old_internal.c \
+SRCS=	blacklistd.c old_conf.c old_run.c old_state.c support.c old_internal.c \
 	sockaddr_snprintf.c pidfile.c strtoi.c popenve.c vsyslog_r.c
 MAN=	blacklistd.8 blacklistd.conf.5
 
 LDFLAGS+=-L${LIBBLACKLISTDIR}
-LIBADD+= blocklist util
+LIBADD+= blacklist util
 
 CFLAGS+=-I${BLOCKLIST_DIR}/include -I${BLOCKLIST_DIR}/port \
 	-D_PATH_BLCONF=\"/etc/blacklistd.conf\" \
