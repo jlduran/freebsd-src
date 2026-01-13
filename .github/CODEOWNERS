@@ -33,6 +33,7 @@
 
 /bin/sh		@jillest
 /contrib/atf		@ngie-eign
+/contrib/blocklist	@jlduran
 /contrib/capsicum-test	@ngie-eign
 /contrib/googletest	@ngie-eign
 /contrib/libcxxrt	@DimitryAndric @emaste
