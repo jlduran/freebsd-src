@@ -375,12 +375,14 @@ rdr_action_body()
 		"block quick inet6" \
 		"pass in log"
 
-	jexec ${j}gw tcpdump -n -e -ttt --immediate-mode -l -U -i pflog0 >> pflog.txt &
-	# Wait for tcpdump to start
-	wait_for_process -j ${j}gw tcpdump
+	jexec ${j}gw tcpdump -n -e -ttt --immediate-mode -l -U -i pflog0 >> ${PWD}/pflog.txt &
+	atf_check -r 10 test -f ${PWD}/pflog.txt # Wait for tcpdump to start
 
 	# send a SYN to catch in the log
 	jexec ${j}srv nc -N -w 0 198.51.100.2 1234
+
+	echo "Log"
+	cat ${PWD}/pflog.txt
 
 	# log line generated for rdr hit (pre-NAT)
 	atf_check -o match:".*.*rule 0/0\(match\): rdr in on ${epair_srv}b: 198.51.100.1.[0-9]* > 198.51.100.2.1234: Flags \[S\].*" \
