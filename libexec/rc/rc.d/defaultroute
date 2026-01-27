@@ -47,18 +47,18 @@ defaultroute_start()
 		defif=`get_default_if -inet`
 		if [ -n "${defif}" ]; then
 			if [ ${waited} -ne 0 ]; then
-				echo -n "($defif)"
+				startmsg -n "($defif)"
 				nl=1
 			fi
 			break
 		fi
 		if [ ${waited} -eq 0 ]; then
-			echo -n "Waiting ${defaultroute_delay}s for the default route interface: "
+			startmsg -n "Waiting ${defaultroute_delay}s for the default route interface: "
 		else
-			echo -n .
+			startmsg -n .
 		fi
 		if [ ${waited} -eq ${defaultroute_carrier_delay} ] && ! defaultroute_carrier; then
-			echo -n "(no carrier)"
+			startmsg -n "(no carrier)"
 			break
 		fi
 		nl=1
@@ -66,7 +66,7 @@ defaultroute_start()
 		waited=$(($waited + 1))
 	done
 
-	[ -n "$nl" ] && echo
+	[ -n "$nl" ] && startmsg
 }
 
 load_rc_config $name
