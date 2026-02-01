@@ -436,12 +436,11 @@ typical_embedded() {
 customize_cmd typical_embedded
 
 fix_pkg() (
+	tgt_dir pkg/cache pkg/db
+	tgt_dir pkg/tmp		# Needed for pkg bootstrap
+	tgt_dir usr/local/etc	# Will get moved to local/etc
+
 	chdir ${NANO_WORLDDIR}
-	mkdir -p pkg
-	mkdir -p pkg/db
-	mkdir -p pkg/cache
-	mkdir -p pkg/tmp		# Needed for pkg bootstrap
-	mkdir -p usr/local/etc		# Will get moved to local/etc
 	(
 	echo 'PKG_DBDIR = "/pkg/db";'
 	echo 'PKG_CACHEDIR = "/pkg/cache";'
@@ -449,12 +448,7 @@ fix_pkg() (
 	echo 'DEFAULT_ALWAYS_YES = true;'
 	echo 'ASSUME_ALWAYS_YES = true;'
 	) >> usr/local/etc/pkg.conf
-	[ -z ${NANO_NOPRIV_BUILD} ] || (
-	echo "./pkg type=dir uname=root gname=wheel mode=0755"
-	echo "./pkg/cache type=dir uname=root gname=wheel mode=0755"
-	echo "./pkg/db type=dir uname=root gname=wheel mode=0755"
-	echo "./pkg/tmp type=dir uname=root gname=wheel mode=0755"
-	) >> ${NANO_METALOG}
+	tgt_touch etc/local/pkg.conf
 )
 customize_cmd fix_pkg
 
