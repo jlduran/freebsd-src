@@ -271,7 +271,7 @@ create_diskimage_mbr() {
 
 	# Populate the / partition, and place it into a slice with a
 	# bsd label
-	[ -z ${NANO_NOPRIV_BUILD} ] || extra="-F ${NANO_METALOG}"
+	[ -z ${NANO_NOPRIV_BUILD} ] || extra="-F ${NANO_METALOG} -N ${NANO_WORLDDIR}/etc"
 	sz=${NANO_SLICE_ROOT_SIZE:+-s ${NANO_SLICE_ROOT_SIZE}}
 	eval "${NANO_MAKEFS_UFS}" ${extra} $sz "${NANO_LOG}/_.${NANO_ROOT}" \
 	    "${NANO_WORLDDIR}"
