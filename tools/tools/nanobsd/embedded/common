@@ -474,7 +474,7 @@ shrink_md_fbsize() {
 	# halves our space requirement by ~50% on /etc and /var on 8.x --
 	# and gives us more back on 9.x as the default block and frag size
 	# are 4 times larger).
-	sed -i '' -e 's,-S -i 4096,-S -i 4096 -b 4096 -f 512,' \
+	sed -i '' -e 's, -S , -S -b 4096 -f 512,' \
 	    ${NANO_WORLDDIR}/etc/rc.initdiskless
 }
 customize_cmd shrink_md_fbsize
