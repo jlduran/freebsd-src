@@ -245,6 +245,12 @@ create_diskimage_mbr() {
 			fat_scheme=fat16b
 		fi
 
+		# FAT partition, the final uid/gid is not really important
+		echo "/set uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME}" \
+		    > "${NANO_METALOG}.fat"
+		mtree -c -p "$NANO_FAT_DIR" | mtree -C \
+		    -R flags,gid,nlink,size,time,uid >> "${NANO_METALOG}.fat"
+
 		if [ -d ${NANO_FAT_DIR} ]; then
 			makefs -t msdos \
 			    -o fat_type="$fat_type" \
@@ -252,6 +258,8 @@ create_diskimage_mbr() {
 			    -o volume_label="$NANO_NAME" \
 			    -o OEM_string="" \
 			    -s "$NANO_SLICE_FAT_SIZE" \
+			    -F "${NANO_METALOG}.fat" -N "${NANO_WORLDDIR}/etc"\
+			    -T "$NANO_TIMESTAMP" \
 			    "${NANO_LOG}/_.${NANO_SLICE_FAT}" "$NANO_FAT_DIR"
 		fi
 	fi
