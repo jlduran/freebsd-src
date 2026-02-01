@@ -283,8 +283,8 @@ create_diskimage_mbr() {
 		eval $NANO_SLICE_ROOT=freebsd
 		;;
 	gpt)
-		eval $NANO_SLICE_CFG=freebsd-ufs
-		eval $NANO_SLICE_ROOT=freebsd-ufs
+		eval $NANO_SLICE_CFG=freebsd-ufs/cfg
+		eval $NANO_SLICE_ROOT=freebsd-ufs/rootfs
 		;;
 	esac
 
