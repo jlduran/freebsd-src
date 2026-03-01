@@ -196,7 +196,7 @@ main(int argc, char *argv[])
 		/* just the filesystems specified on the command line */
 		mntbuf = malloc(argc * sizeof(*mntbuf));
 		if (mntbuf == NULL)
-			xo_err(1, "malloc()");
+			xo_err(EXIT_FAILURE, "malloc()");
 		mntsize = 0;
 		/* continued in for loop below */
 	}
@@ -305,10 +305,8 @@ makevfslist(char *fslist, bool *skip)
 	for (i = 0, nextcp = fslist; *nextcp != '\0'; nextcp++)
 		if (*nextcp == ',')
 			i++;
-	if ((av = malloc((i + 2) * sizeof(char *))) == NULL) {
-		xo_warnx("malloc failed");
-		return (NULL);
-	}
+	if ((av = malloc((i + 2) * sizeof(char *))) == NULL)
+		xo_errx(EXIT_FAILURE, "malloc failed");
 	nextcp = fslist;
 	i = 0;
 	av[i++] = nextcp;
@@ -633,50 +631,36 @@ makenetvfslist(void)
 	size_t buflen;
 	int cnt, i, maxvfsconf;
 
-	if (sysctlbyname("vfs.conflist", NULL, &buflen, NULL, 0) < 0) {
-		xo_warn("sysctl(vfs.conflist)");
-		return (NULL);
-	}
+	if (sysctlbyname("vfs.conflist", NULL, &buflen, NULL, 0) < 0)
+		xo_err(EXIT_FAILURE, "sysctl(vfs.conflist)");
 	xvfsp = malloc(buflen);
-	if (xvfsp == NULL) {
-		xo_warnx("malloc failed");
-		return (NULL);
-	}
+	if (xvfsp == NULL)
+		xo_errx(EXIT_FAILURE, "malloc failed");
 	keep_xvfsp = xvfsp;
-	if (sysctlbyname("vfs.conflist", xvfsp, &buflen, NULL, 0) < 0) {
-		xo_warn("sysctl(vfs.conflist)");
-		free(keep_xvfsp);
-		return (NULL);
-	}
+	if (sysctlbyname("vfs.conflist", xvfsp, &buflen, NULL, 0) < 0)
+		xo_err(EXIT_FAILURE, "sysctl(vfs.conflist)");
 	maxvfsconf = buflen / sizeof(struct xvfsconf);
 
-	if ((listptr = malloc(sizeof(char*) * maxvfsconf)) == NULL) {
-		xo_warnx("malloc failed");
-		free(keep_xvfsp);
-		return (NULL);
-	}
+	if ((listptr = malloc(sizeof(char*) * maxvfsconf)) == NULL)
+		xo_errx(EXIT_FAILURE, "malloc failed");
 
 	for (cnt = 0, i = 0; i < maxvfsconf; i++) {
 		if (xvfsp->vfc_flags & VFCF_NETWORK) {
 			listptr[cnt++] = strdup(xvfsp->vfc_name);
-			if (listptr[cnt-1] == NULL) {
-				xo_warnx("malloc failed");
-				free(listptr);
-				free(keep_xvfsp);
-				return (NULL);
-			}
+			if (listptr[cnt-1] == NULL)
+				xo_errx(EXIT_FAILURE, "malloc failed");
 		}
 		xvfsp++;
 	}
 
-	if (cnt == 0 ||
-	    (str = malloc(sizeof(char) * (32 * cnt + cnt + 2))) == NULL) {
-		if (cnt > 0)
-			xo_warnx("malloc failed");
+	if (cnt == 0) {
 		free(listptr);
 		free(keep_xvfsp);
 		return (NULL);
 	}
+
+	if ((str = malloc(32 * cnt + cnt + 2)) == NULL)
+		xo_errx(EXIT_FAILURE, "malloc failed");
 
 	*str = 'n'; *(str + 1) = 'o';
 	for (i = 0, strptr = str + 2; i < cnt; i++, strptr++) {
