@@ -182,6 +182,16 @@ typically a comma or period.
 If no locale is set, or the locale does not have a non-monetary separator, this
 option has no effect.
 .El
+.Pp
+If more than one of
+.Fl b ,
+.Fl g ,
+.Fl H ,
+.Fl h ,
+.Fl k
+or
+.Fl m
+is given, the last of those specified is used.
 .Sh ENVIRONMENT
 .Bl -tag -width BLOCKSIZE
 .It Ev BLOCKSIZE
@@ -197,6 +207,15 @@ which allows units of bytes or numbers scaled with the letters
 (for gibibytes).
 The allowed range is 512 bytes to 1 GB.
 If the value is outside, it will be set to the appropriate limit.
+The value is ignored if one of the
+.Fl b ,
+.Fl g ,
+.Fl H ,
+.Fl h ,
+.Fl k
+or
+.Fl m
+options are specified.
 .El
 .Sh EXAMPLES
 Show human readable free disk space for all mount points including file system
