@@ -90,7 +90,15 @@ static const char **vfslist_l, **vfslist_t;
 
 static const struct option long_options[] =
 {
+	{ "all", no_argument, NULL, 'a' },
+	{ "human-readable", no_argument, NULL, 'h' },
+	{ "inodes", no_argument, NULL, 'i' },
+	{ "local", no_argument, NULL, 'l' },
+	{ "portability", no_argument, NULL, 'P' },
+	{ "print-type", no_argument, NULL, 'T' },
 	{ "si", no_argument, NULL, 'H' },
+	{ "total", no_argument, NULL, 'c' },
+	{ "type", required_argument, NULL, 't' },
 	{ NULL, no_argument, NULL, 0 },
 };
 
