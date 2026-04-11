@@ -17,6 +17,7 @@
 
 #include <stdarg.h> /* va_list */
 #include "ssherr.h" /* ssh_err() */
+#include "blocklist_client.h"
 
 /* Supported syslog facilities and levels. */
 typedef enum {
