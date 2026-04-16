@@ -256,8 +256,7 @@ create_diskimage() {
 	# Create Data slice, if any.
 	if [ -n "$NANO_SLICE_DATA" -a "$NANO_SLICE_CFG" = "$NANO_SLICE_DATA" -a \
 	   "$NANO_DATASIZE" -ne 0 ]; then
-		pprint 2 "NANO_SLICE_DATA is the same as NANO_SLICE_CFG, fix."
-		exit 2
+		err "NANO_SLICE_DATA is the same as NANO_SLICE_CFG, fix."
 	fi
 	if [ $NANO_DATASIZE -ne 0 -a -n "$NANO_SLICE_DATA" ] ; then
 		populate_data_slice /dev/${MD}${NANO_SLICE_DATA} "${NANO_DATADIR}" ${MNT} "${NANO_SLICE_DATA}"
@@ -334,8 +333,7 @@ _create_diskimage() {
 	if [ -n "${NANO_SLICE_DATA}" ] &&
 	    [ "${NANO_SLICE_CFG}" = "${NANO_SLICE_DATA}" ] &&
 	    [ "${NANO_DATASIZE}" -ne 0 ]; then
-		pprint 2 "NANO_SLICE_DATA is the same as NANO_SLICE_CFG, fix."
-		exit 2
+		err "NANO_SLICE_DATA is the same as NANO_SLICE_CFG, fix."
 	fi
 	if [ "${NANO_DATASIZE}" -ne 0 ] && [ -n "${NANO_SLICE_DATA}" ] ; then
 		_populate_data_part "${NANO_OBJ}/_.data.part" "${NANO_DATADIR}" \
