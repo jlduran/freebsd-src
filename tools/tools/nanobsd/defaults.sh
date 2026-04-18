@@ -221,6 +221,13 @@ NANO_REVISION=$(sed -n '/^REVISION=/{s,.*=,,;s,",,g;p;}' ${NANO_SRC}/sys/conf/ne
 # See bsdinstall(8) DISTRIBUTIONS for a reference
 NANO_DISTRIBUTIONS="base.txz kernel.txz"
 
+nano_distributions_contains() {
+	case " ${NANO_DISTRIBUTIONS} " in
+	*"$1"*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
 # Map NANO_BRANCH to the directory used by FreeBSD download URLs
 nano_distset_reldir() {
 	case ${NANO_BRANCH} in
@@ -242,7 +249,7 @@ nano_distset_arch() {
 }
 
 nano_distset_dir() {
-	echo "${NANO_OBJ}/_.cache/distset/$(nano_distset_reldir)/$(nano_distset_arch)/${NANO_REVISION}-${NANO_BRANCH}"
+	echo "${NANO_OBJ}/_.cache/$(nano_distset_reldir)/$(nano_distset_arch)/${NANO_REVISION}-${NANO_BRANCH}"
 }
 
 nano_distset_url() {
@@ -264,23 +271,19 @@ nano_fetch_distsets() {
 	pprint 2 "fetch distribution sets"
 	pprint 3 "log: ${NANO_LOG}/_.ds"
 
+	if [ ! -d "$NANO_LOG" ]; then
+		mkdir -p "$NANO_LOG"
+	fi
+
 	(
 	if [ -z "$NANO_DISTRIBUTIONS" ]; then
 		err "NANO_DISTRIBUTIONS variable is not set"
 	fi
-
-	case "$NANO_DISTRIBUTIONS" in
-	*base.txz*) : ;;
-	*) err "base.txz is mandatory" ;;
-	esac
-
-	case "$NANO_DISTRIBUTIONS" in
-	*kernel.txz*) : ;;
-	*) err "kernel.txz is mandatory" ;;
-	esac
+	nano_distributions_contains " base.txz " || err "base.txz is mandatory"
+	nano_distributions_contains " kernel.txz " || err "kernel.txz is mandatory"
 
 	if $do_clean; then
-		rm -rf "$(nano_distset_dir)"
+		rm -rf "${NANO_OBJ}/_.cache"
 	else
 		pprint 2 "Using existing distributions (as instructed)"
 	fi
@@ -366,29 +369,20 @@ patch_precompiled() {
 
 	# XXXJL This should be fixed in base.txz
 	# Remove debug files present in base.txz
-	case "$NANO_DISTRIBUTIONS" in
-	*-dbg.txz*) : ;;
-	*) rm -rf "${NANO_WORLDDIR}/usr/lib/debug" ;;
-	esac
+	! nano_distributions_contains "-dbg.txz " && rm -rf "${NANO_WORLDDIR}/usr/lib/debug"
 	# Remove lib32 files present in base.txz
-	case "$NANO_DISTRIBUTIONS" in
-	*lib32*) : ;;
-	*)
+	if ! nano_distributions_contains " lib32"; then
 		chflags -R noschg "${NANO_WORLDDIR}/libexec/ld-elf32.so.1"
 		rm -f "${NANO_WORLDDIR}/libexec/ld-elf32.so.1"
 		rm -f "${NANO_WORLDDIR}/usr/bin/ldd32"
 		rm -f "${NANO_WORLDDIR}/usr/libexec/ld-elf32.so.1"
-		;;
-	esac
+	fi
 	# Remove test files present in base.txz
-	case "$NANO_DISTRIBUTIONS" in
-	*tests.txz*) : ;;
-	*)
+	if ! nano_distributions_contains " tests.txz "; then
 		rm -rf "${NANO_WORLDDIR}"/usr/tests/*
 		rm -f "${NANO_WORLDDIR}/usr/lib/libxo/encoder/test.enc"
 		rm -f "${NANO_WORLDDIR}/usr/share/man/man7/tests.7.gz"
-		;;
-	esac
+	fi
 	) > "${NANO_LOG}/_.pds" 2>&1
 }
 
@@ -399,11 +393,45 @@ patch_precompiled() {
 # Use pkgbase.  If empty, pkgbase will be used
 NANO_NOPKGBASE=
 
-NANO_ABI=$(pkg config ABI) # XXXJL NANO_ARCH + NANO_OSVERSION?
+NANO_ABI=$(pkg config ABI)
 NANO_OSVERSION=$(pkg config OSVERSION)
 NANO_PKGBASE_DIR="base_latest"
 NANO_PORTS_DIR="latest"
-NANO_PKGBASE_SET="FreeBSD-set-base"
+NANO_PKGBASE_LIST="FreeBSD-set-base FreeBSD-kernel-generic"
+
+nano_pkgbase_list_contains() {
+	case " $NANO_PKGBASE_LIST " in
+	*"$1"*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+nano_pkgbase_world_list() {
+	local list
+
+	list="pkg" # Always install pkg
+	for package in $NANO_PKGBASE_LIST; do
+		case "$package" in
+		FreeBSD-kernel-*) continue ;;
+		*) list="${list} $package" ;;
+		esac
+	done
+
+	echo "$list"
+}
+
+nano_pkgbase_kernel_list() {
+	local list
+
+	for package in $NANO_PKGBASE_LIST; do
+		case "$package" in
+		FreeBSD-kernel-*) list="${list}${list:+ }$package" ;;
+		*) continue ;;
+		esac
+	done
+
+	echo "$list"
+}
 
 #
 # Update the sha256 value in the target pkg database.  All paths
@@ -422,15 +450,38 @@ tgt_pkg_update_sha256() {
 	fi
 }
 
-nano_pkg_cachedir() {
-	echo "${NANO_OBJ}/_.cache/pkgbase/${NANO_ABI}"
+# XXXJL Rename to tgt_pkg?
+# XXXJL NANO_ABI needs a sanity check? (NANO_ARCH + NANO_OSVERSION)
+# XXXJL passing both OSVERSION and IGNORE_OSVERSION is oxymoronic
+pkg_cmd() {
+	pkg --rootdir "$NANO_WORLDDIR" \
+	    --repo-conf-dir "$(nano_pkg_repos_dir)" \
+	    -o ABI="$NANO_ABI" \
+	    -o ASSUME_ALWAYS_YES=yes \
+	    -o IGNORE_OSVERSION=yes \
+	    -o OSVERSION="$NANO_OSVERSION" \
+	    -o PKG_CACHEDIR="$(nano_pkg_cachedir)" "$@"
 }
 
-nano_repo_conf_dir() {
+pkg_chroot_cmd() {
+	pkg --chroot "$NANO_WORLDDIR" \
+	    --repo-conf-dir "$(nano_pkg_repos_dir)" \
+	    -o ABI="$NANO_ABI" \
+	    -o ASSUME_ALWAYS_YES=yes \
+	    -o IGNORE_OSVERSION=yes \
+	    -o OSVERSION="$NANO_OSVERSION" \
+	    -o PKG_CACHEDIR="$(nano_pkg_cachedir)" "$@"
+}
+
+nano_pkg_cachedir() {
+	echo "${NANO_OBJ}/_.cache/${NANO_ABI}"
+}
+
+nano_pkg_repos_dir() {
 	echo "${NANO_OBJ}/_.pkg"
 }
 
-nano_repo_keys() {
+nano_freebsd_pkg_repo_keys() {
 	mkdir -p "${NANO_WORLDDIR}/usr/share/keys/pkg/trusted"
 	cat > "${NANO_WORLDDIR}/usr/share/keys/pkg/trusted/pkg.freebsd.org.2013102301" <<EOF
 function: "sha256"
@@ -438,11 +489,22 @@ fingerprint: "b0170035af3acc5f3f3ae1859dc717101b4e6c1d0a794ad554928ca0cbb2f438"
 EOF
 }
 
-nano_repo_conf() {
-	nano_repo_keys
+# XXXJL wait until we have the full picture to determine the best way to
+# programmatically configure the pkg repos.  They differ if they are for a
+# -RELEASE or -CURRENT (release pkg uses an AWS KMS signature with a backup
+# signing key).  Account for when our own packages, signed by us or unsigned,
+# are generated.
 
-	mkdir -p "$(nano_repo_conf_dir)"
-	cat > "$(nano_repo_conf_dir)/FreeBSD.conf" <<EOF
+#fingerprints: "/usr/share/keys/pkgbase-${VERSION_MAJOR}"
+# awskms-15
+#function: "sha256"
+#fingerprint: "1d7b45d20fa8d6ed26f9b4a13ac81a6b5df860b9fe644d07b87e92298ba72595"
+# backup-signing-15
+#function: "sha256"
+#fingerprint: "56a77bdcb6c3cf7984729c6138bd5617c24aa0d466b3b604c96205b2c5629f3c"
+nano_pkg_repo_conf() {
+	mkdir -p "$(nano_pkg_repos_dir)"
+	cat > "$(nano_pkg_repos_dir)/FreeBSD.conf" <<EOF
 FreeBSD-ports: {
   url: "pkg+https://pkg.freebsd.org/\${ABI}/${NANO_PORTS_DIR}",
   mirror_type: "srv",
@@ -460,25 +522,38 @@ FreeBSD-base: {
 EOF
 }
 
-# XXXJL passing both OSVERSION and IGNORE_OSVERSION is oxymoronic
-pkg_cmd() {
-	pkg --rootdir "$NANO_WORLDDIR" \
-	    --repo-conf-dir "$(nano_repo_conf_dir)" \
-	    -o ABI="$NANO_ABI" \
-	    -o ASSUME_ALWAYS_YES=yes \
-	    -o IGNORE_OSVERSION=yes \
-	    -o OSVERSION="$NANO_OSVERSION" \
-	    -o PKG_CACHEDIR="$(nano_pkg_cachedir)" "$@"
-}
+nano_configure_pkgbase_pkg() {
+	pprint 2 "configure pkg"
+	pprint 3 "log: ${NANO_LOG}/_.cp"
 
-pkg_chroot_cmd() {
-	pkg --chroot "$NANO_WORLDDIR" \
-	    --repo-conf-dir "$(nano_repo_conf_dir)" \
-	    -o ABI="$NANO_ABI" \
-	    -o ASSUME_ALWAYS_YES=yes \
-	    -o IGNORE_OSVERSION=yes \
-	    -o OSVERSION="$NANO_OSVERSION" \
-	    -o PKG_CACHEDIR="$(nano_pkg_cachedir)" "$@"
+	if [ ! -d "$NANO_LOG" ]; then
+		mkdir -p "$NANO_LOG"
+	fi
+
+	(
+	if [ -z "$NANO_PKGBASE_LIST" ]; then
+		err "NANO_PKGBASE_LIST variable is not set"
+	fi
+
+	nano_pkgbase_list_contains " FreeBSD-set-base " ||
+	    nano_pkgbase_list_contains " FreeBSD-set-minimal " ||
+	    err "FreeBSD-set-base or FreeBSD-set-minimal is mandatory"
+
+	nano_pkgbase_list_contains " FreeBSD-kernel-" ||
+	    err "A FreeBSD-kernel package is mandatory"
+
+	if $do_clean; then
+		rm -rf "${NANO_OBJ}/_.cache"
+	else
+		pprint 2 "Using existing packages (as instructed)"
+	fi
+
+	if [ ! -d "$(nano_pkg_cachedir)"  ]; then
+		mkdir -p "$(nano_pkg_cachedir)"
+	fi
+
+	nano_pkg_repo_conf
+	) > "${NANO_LOG}/_.cp" 2>&1
 }
 
 #######################################################################
@@ -723,13 +798,11 @@ install_precompiled_world() {
 	(
 	set -o xtrace
 	if [ -z "$NANO_NOPKGBASE" ]; then
-		# XXXJL nano_pkg_fetch?
-		mkdir -p "$(nano_pkg_cachedir)"
-		nano_repo_conf
-
+		nano_freebsd_pkg_repo_keys
 		pkg_cmd update
-		pkg_cmd install -U "$NANO_PKGBASE_SET" pkg	# XXXJL understand what '-U' is doing
-								# XXXJL NANO_PKGBASE_SET needs sanity checks
+		if [ -n "$(nano_pkgbase_world_list)" ]; then
+			pkg_cmd install -U -y $(nano_pkgbase_world_list)
+		fi
 		pkg_chroot_cmd triggers # XXXJL chroot?
 	else
 		for distset in $NANO_DISTRIBUTIONS; do
@@ -790,25 +863,19 @@ install_precompiled_kernel() {
 	(
 	set -o xtrace
 	if [ -z "$NANO_NOPKGBASE" ]; then
-		case "$NANO_ABI" in # XXXJL NANO_ABI needs a sanity check
-		*powepc64le*) pkg_cmd install -U FreeBSD-kernel-generic64le ;;
-		*powepc64*) pkg_cmd install -U FreeBSD-kernel-generic64 ;;
-		*) pkg_cmd install -U FreeBSD-kernel-generic ;;
-		esac
+		if [ -n "$(nano_pkgbase_kernel_list)" ]; then
+			pkg_cmd install -U -y $(nano_pkgbase_kernel_list)
+		fi
 	else
 		if [ -f "$(nano_distset_dir)/kernel.txz" ]; then
 			tar -xvf "$(nano_distset_dir)/kernel.txz" -C "${NANO_WORLDDIR}"
 		else
 			err "File $(nano_distset_dir)/kernel.txz not found"
 		fi
-		case "$NANO_DISTRIBUTIONS" in
-		*kernel-dbg.txz*)
-			if [ -f "$(nano_distset_dir)/kernel-dbg.txz" ]; then
-				tar -xvf "$(nano_distset_dir)/kernel-dbg.txz" -C "${NANO_WORLDDIR}"
-			fi
-			;;
-		*) : ;;
-		esac
+		if nano_distributions_contains " kernel-dbg.txz " &&
+		    [ -f "$(nano_distset_dir)/kernel-dbg.txz" ]; then
+			tar -xvf "$(nano_distset_dir)/kernel-dbg.txz" -C "${NANO_WORLDDIR}"
+		fi
 	fi
 	) > "${NANO_LOG}/_.ik" 2>&1
 }

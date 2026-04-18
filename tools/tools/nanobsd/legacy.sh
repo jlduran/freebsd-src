@@ -349,7 +349,6 @@ _create_diskimage() {
 	    ${cfgimage} \
 	    ${dataimage} \
 	    -o ${IMG}
-	exit
 
 	) > ${NANO_LOG}/_.di 2>&1
 }

@@ -203,7 +203,9 @@ else
 	pprint 2 "Skipping buildkernel (as instructed)"
 fi
 
-if $do_precompiled && [ -n "$NANO_NOPKGBASE" ]; then
+if $do_precompiled && [ -z "$NANO_NOPKGBASE" ]; then
+	nano_configure_pkgbase_pkg
+else
 	nano_fetch_distsets
 fi
 
