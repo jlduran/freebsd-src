@@ -59,6 +59,9 @@ NANO_PKG_META_BASE=/var/db
 # Use the time of the last commit as a timestamp when doing a NO_PRIV build.
 NANO_TIMESTAMP=$(git log -1 --format=%ct || true)
 
+NANO_GITBRANCH=$(git rev-parse --abbrev-ref HEAD | sed -e 's|[/^~]||g')
+NANO_GITREV=$(git rev-parse --verify --short HEAD)
+
 # Object tree directory
 # default is subdir of /usr/obj
 #NANO_OBJ=""
@@ -285,6 +288,7 @@ tgt_dir2symlink() (
 	cd "${NANO_WORLDDIR}"
 	rm -xrf "$dir"
 	ln -sf "$symlink" "$dir"
+	chmod "$mode" "$dir"
 	if [ -n "$NANO_METALOG" ]; then
 		echo "./${dir} type=link" \
 		    "uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME}" \
@@ -917,10 +921,11 @@ cust_pkgng() {
 
 	# Ensure pkg.conf points pkg to where the package meta data lives.
 	touch ${PKG_CONF}
-	if grep -Eiq '^PKG_DBDIR:.*' ${PKG_CONF}; then
-		sed -i -e "\|^PKG_DBDIR:.*|Is||PKG_DBDIR: "\"${NANO_PKG_META_BASE}/pkg\""|" ${PKG_CONF}
+	if grep -Eiq "PKG_DBDIR =.*" "$PKG_CONF"; then
+		sed -i "" -E "s|^#?PKG_DBDIR = .*|PKG_DBDIR = \"${NANO_PKG_META_BASE}/pkg\";|" \
+		    "$PKG_CONF"
 	else
-		echo "PKG_DBDIR: \"${NANO_PKG_META_BASE}/pkg\"" >> ${PKG_CONF}
+		echo "PKG_DBDIR = \"${NANO_PKG_META_BASE}/pkg\";" >> "$PKG_CONF"
 	fi
 
 	# If the package directory doesn't exist, we're done.
@@ -1089,6 +1094,8 @@ set_defaults_and_export() {
 	export_var NANO_CUSTOMIZE
 	export_var NANO_DATASIZE
 	export_var NANO_DRIVE
+	export_var NANO_GITBRANCH
+	export_var NANO_GITREV
 	export_var NANO_HEADS
 	export_var NANO_IMAGES
 	export_var NANO_IMGNAME
