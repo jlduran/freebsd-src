@@ -441,11 +441,18 @@ apply_specdir(const char *dir, NODE *specnode, fsnode *dirnode, int speconly)
 			memset(&stbuf, 0, sizeof(stbuf));
 			stbuf.st_mode = nodetoino(curnode->type);
 			stbuf.st_nlink = 1;
-			stbuf.st_mtime = stbuf.st_atime =
-			    stbuf.st_ctime = start_time.tv_sec;
+			stbuf.st_mtime = stbuf.st_atime = stbuf.st_ctime =
+#if HAVE_STRUCT_STAT_BIRTHTIME
+			    stbuf.st_birthtime =
+#endif
+			    start_time.tv_sec;
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 			stbuf.st_mtimensec = stbuf.st_atimensec =
-			    stbuf.st_ctimensec = start_time.tv_nsec;
+			    stbuf.st_ctimensec =
+#if HAVE_STRUCT_STAT_BIRTHTIME
+			    stbuf.st_birthtimensec =
+#endif
+			    start_time.tv_nsec;
 #endif
 			curfsnode = create_fsnode(".", ".", curnode->name,
 			    &stbuf);
@@ -527,11 +534,17 @@ apply_specentry(const char *dir, NODE *specnode, fsnode *dirnode)
 		    (long)specnode->st_mtimespec.tv_sec);
 		dirnode->inode->st.st_mtime =		specnode->st_mtimespec.tv_sec;
 		dirnode->inode->st.st_atime =		specnode->st_mtimespec.tv_sec;
-		dirnode->inode->st.st_ctime =		start_time.tv_sec;
+		dirnode->inode->st.st_ctime =		specnode->st_mtimespec.tv_sec;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+		dirnode->inode->st.st_birthtime =	specnode->st_mtimespec.tv_sec;
+#endif
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 		dirnode->inode->st.st_mtimensec =	specnode->st_mtimespec.tv_nsec;
 		dirnode->inode->st.st_atimensec =	specnode->st_mtimespec.tv_nsec;
-		dirnode->inode->st.st_ctimensec =	start_time.tv_nsec;
+		dirnode->inode->st.st_ctimensec =	specnode->st_mtimespec.tv_nsec;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+		dirnode->inode->st.st_birthtimensec =	specnode->st_mtimespec.tv_nsec;
+#endif
 #endif
 	}
 	if (specnode->flags & (F_UID | F_UNAME)) {
