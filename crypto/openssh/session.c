@@ -94,6 +94,7 @@
 #include "monitor_wrap.h"
 #include "sftp.h"
 #include "atomicio.h"
+#include "blocklist_client.h"
 
 #if defined(KRB5) && defined(USE_AFS)
 #include <kafs.h>
@@ -1297,6 +1298,8 @@ do_nologin(struct passwd *pw)
 		return;
 
 	/* /etc/nologin exists.  Print its contents if we can and exit. */
+	BLOCKLIST_NOTIFY(NULL, BLOCKLIST_AUTH_FAIL,
+	    "User not allowed because nologin exists");
 	logit("User %.100s not allowed because %s exists", pw->pw_name, nl);
 	if ((f = fopen(nl, "r")) != NULL) {
 		while (fgets(buf, sizeof(buf), f))
