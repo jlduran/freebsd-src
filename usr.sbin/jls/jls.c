@@ -51,7 +51,7 @@
 #define	JP_USER		0x01000000
 #define	JP_OPT		0x02000000
 
-#define JLS_XO_VERSION	"2"
+#define JLS_XO_VERSION	"3"
 
 #define	PRINT_DEFAULT	0x01
 #define	PRINT_HEADER	0x02
@@ -450,13 +450,13 @@ print_jail(int pflags, int jflags)
 #endif
 #ifdef INET
 		if (ip4_ok && !strcmp(params[n].jp_name, "ip4.addr")) {
-			emit_ip_addr_list(AF_INET, "ipv4_addrs", params + n);
+			emit_ip_addr_list(AF_INET, "ipv4-addrs", params + n);
 			n++;
 		}
 #endif
 #ifdef INET6
 		if (ip6_ok && !strcmp(params[n].jp_name, "ip6.addr")) {
-			emit_ip_addr_list(AF_INET6, "ipv6_addrs", params + n);
+			emit_ip_addr_list(AF_INET6, "ipv6-addrs", params + n);
 			n++;
 		}
 #endif
