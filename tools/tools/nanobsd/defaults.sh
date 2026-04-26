@@ -345,6 +345,16 @@ patch_precompiled() {
 	    -e 's,sysctl -n kern.bootfile,echo /boot/kernel/kernel,' \
 	    -e 's,service sshd restart,#service sshd restart,' \
 	    /usr/sbin/freebsd-update > "${fu_bin}"
+	if ! $do_root; then
+		# Patch freebsd-update(8) to avoid checking if the user is root
+		# and setting ownership/permissions on install(1)
+		# XXXJL try setting -U -M so we don't have to parse INDEX files?
+		sed -i "" \
+		    -e 's/\[ `id -u` != 0 \]/false/g' \
+		    -e 's/-o ${OWNER} -g ${group}//g' \
+		    -e 's/-m ${PERM} //g' \
+		    "${fu_bin}"
+	fi
 	FREEBSD_UPDATE="env PAGER=/bin/cat"
 	FREEBSD_UPDATE="${FREEBSD_UPDATE} /bin/sh ${fu_bin}"
 	fu_basedir="${NANO_WORLDDIR}"
@@ -356,6 +366,11 @@ patch_precompiled() {
 
 	if ${FREEBSD_UPDATE} fetch; then
 		yes | ${FREEBSD_UPDATE} install
+	fi
+
+	if ! $do_root; then
+		find "${NANO_WORLDDIR}/var/db/freebsd-update" \
+		    -name INDEX-NEW -exec cat {} + >> "$NANO_METALOG"
 	fi
 
 	set -o xtrace
