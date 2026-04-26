@@ -353,6 +353,7 @@ patch_precompiled() {
 		    -e 's/\[ `id -u` != 0 \]/false/g' \
 		    -e 's/-o ${OWNER} -g ${group}//g' \
 		    -e 's/-m ${PERM} //g' \
+		    -e 's/rm $1 $1.noflags $1.sorted $2 INDEX-NOTMATCHING//' \
 		    "${fu_bin}"
 	fi
 	FREEBSD_UPDATE="env PAGER=/bin/cat"
