@@ -348,7 +348,7 @@ patch_precompiled() {
 	if ! $do_root; then
 		# Patch freebsd-update(8) to avoid checking if the user is root
 		# and setting ownership/permissions on install(1)
-		# XXXJL try setting -U -M so we don't have to parse INDEX files?
+		# while keeping INDEX files.  Append this fact to the metalog
 		sed -i "" \
 		    -e 's/\[ `id -u` != 0 \]/false/g' \
 		    -e 's/-o ${OWNER} -g ${group}/-U/g' \
@@ -360,7 +360,8 @@ patch_precompiled() {
 	FREEBSD_UPDATE="${FREEBSD_UPDATE} /bin/sh ${fu_bin}"
 	fu_basedir="${NANO_WORLDDIR}"
 	FREEBSD_UPDATE="${FREEBSD_UPDATE} -b ${fu_basedir}"
-	fu_workdir="${NANO_WORLDDIR}/var/db/freebsd-update"
+	fu_workdir="${NANO_OBJ}/_.cache/freebsd-update"
+	mkdir -p "$fu_workdir"
 	FREEBSD_UPDATE="${FREEBSD_UPDATE} -d ${fu_workdir}"
 	FREEBSD_UPDATE="${FREEBSD_UPDATE} --currently-running ${NANO_REVISION}-${NANO_BRANCH}"
 	FREEBSD_UPDATE="${FREEBSD_UPDATE} -f ${NANO_WORLDDIR}/etc/freebsd-update.conf"
@@ -371,33 +372,37 @@ patch_precompiled() {
 
 	if ! $do_root; then
 		find "${NANO_WORLDDIR}/var/db/freebsd-update" \
-		    -name INDEX-NEW -exec cat {} + >> "$NANO_METALOG"
+		    -name INDEX-NEW -exec cat {} + > "${NANO_METALOG}.pds"
+		DISTRIBUTIONS="$NANO_DISTRIBUTIONS" \
+		    ${NANO_TOOLS}/freebsd-update-index-to-mtree.awk \
+		    "${NANO_METALOG}.pds" >> "$NANO_METALOG"
 	fi
 
 	set -o xtrace
 
 	# Remove old kernel
-	rm -rf "${NANO_WORLDDIR}/boot/kernel.old"
-	# Remove freebsd-update(8) database files
-	rm -rf "${NANO_WORLDDIR}"/var/db/freebsd-update/*
+	tgt_rm boot/kernel.old
 	# Remove etcupdate(8) database
-	rm -rf "${NANO_WORLDDIR}/var/db/etcupdate"
+	tgt_rm var/db/etcupdate
 
 	# XXXJL This should be fixed in base.txz
+	# XXX Extra directory in 15.0-RELEASE base.txz
+	tgt_rm usr/share/pkg
 	# Remove debug files present in base.txz
-	! nano_distributions_contains "-dbg.txz " && rm -rf "${NANO_WORLDDIR}/usr/lib/debug"
+	if ! nano_distributions_contains "-dbg.txz "; then
+		tgt_rm usr/lib/debug
+	fi
 	# Remove lib32 files present in base.txz
 	if ! nano_distributions_contains " lib32"; then
-		chflags -R noschg "${NANO_WORLDDIR}/libexec/ld-elf32.so.1"
-		rm -f "${NANO_WORLDDIR}/libexec/ld-elf32.so.1"
-		rm -f "${NANO_WORLDDIR}/usr/bin/ldd32"
-		rm -f "${NANO_WORLDDIR}/usr/libexec/ld-elf32.so.1"
+		tgt_rm libexec/ld-elf32.so.1
+		tgt_rm usr/bin/ldd32
+		tgt_rm usr/libexec/ld-elf32.so.1
 	fi
 	# Remove test files present in base.txz
 	if ! nano_distributions_contains " tests.txz "; then
-		rm -rf "${NANO_WORLDDIR}"/usr/tests/*
-		rm -f "${NANO_WORLDDIR}/usr/lib/libxo/encoder/test.enc"
-		rm -f "${NANO_WORLDDIR}/usr/share/man/man7/tests.7.gz"
+		tgt_rm usr/tests/*
+		tgt_rm usr/lib/libxo/encoder/test.enc
+		tgt_rm usr/share/man/man7/tests.7.gz
 	fi
 	) > "${NANO_LOG}/_.pds" 2>&1
 }
@@ -707,6 +712,21 @@ tgt_switch_root_fstab()
 	done
 }
 
+#
+# Remove files or directories in the target tree, and record the fact.
+# All paths are relative to NANO_WORLDDIR
+#
+tgt_rm() {
+	for i; do
+		chflags -Rf 0 "${NANO_WORLDDIR}/${i}" || true
+		rm -rf "${NANO_WORLDDIR:?}/${i}"
+
+		if [ -n "$NANO_METALOG" ]; then
+			sed -i "" -e "\|^\./${i}|d" "$NANO_METALOG"
+		fi
+	done
+}
+
 # run in the world chroot, errors fatal
 CR() {
 	chroot "${NANO_WORLDDIR}" /bin/sh -exc "$*"
@@ -837,6 +857,12 @@ install_precompiled_world() {
 		fi
 		pkg_chroot_cmd triggers # XXXJL chroot?
 	else
+		if ! $do_root; then
+			# We must start the METALOG with base.txz
+			tar -cf - --format=mtree @"$(nano_distset_dir)/base.txz" 2>/dev/null |
+			    # XXXJL account for a bug in libarchive, where the first entry is "/."
+			    sed '2s,^/\.,.,' > "$NANO_METALOG"
+		fi
 		for distset in $NANO_DISTRIBUTIONS; do
 			if [ "$distset" = "kernel.txz" ] || \
 			    [ "$distset" = "kernel-dbg.txz" ]; then
@@ -844,6 +870,12 @@ install_precompiled_world() {
 			fi
 			if [ -f "$(nano_distset_dir)/${distset}" ]; then
 				tar -xvf "$(nano_distset_dir)/${distset}" -C "${NANO_WORLDDIR}"
+
+				if ! $do_root; then
+					[ "$distset" = "base.txz" ] && continue
+					tar -cf - --format=mtree @"$(nano_distset_dir)/${distset}" \
+					    2>/dev/null >> "$NANO_METALOG"
+				fi
 			else
 				err "File $(nano_distset_dir)/${distset} not found"
 			fi
@@ -901,12 +933,20 @@ install_precompiled_kernel() {
 	else
 		if [ -f "$(nano_distset_dir)/kernel.txz" ]; then
 			tar -xvf "$(nano_distset_dir)/kernel.txz" -C "${NANO_WORLDDIR}"
+			if ! $do_root; then
+				tar -cf - --format=mtree @"$(nano_distset_dir)/kernel.txz" \
+				    2>/dev/null >> "$NANO_METALOG"
+			fi
 		else
 			err "File $(nano_distset_dir)/kernel.txz not found"
 		fi
 		if nano_distributions_contains " kernel-dbg.txz " &&
 		    [ -f "$(nano_distset_dir)/kernel-dbg.txz" ]; then
 			tar -xvf "$(nano_distset_dir)/kernel-dbg.txz" -C "${NANO_WORLDDIR}"
+			if ! $do_root; then
+				tar -cf - --format=mtree @"$(nano_distset_dir)/kernel-dbg.txz" \
+				    2>/dev/null >> "$NANO_METALOG"
+			fi
 		fi
 	fi
 	) > "${NANO_LOG}/_.ik" 2>&1
