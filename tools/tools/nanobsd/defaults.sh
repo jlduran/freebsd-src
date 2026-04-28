@@ -376,6 +376,7 @@ patch_precompiled() {
 		DISTRIBUTIONS="$NANO_DISTRIBUTIONS" \
 		    ${NANO_TOOLS}/freebsd-update-index-to-mtree.awk \
 		    "${NANO_METALOG}.pds" >> "$NANO_METALOG"
+		rm -f "${NANO_METALOG}.pds"
 	fi
 
 	set -o xtrace
