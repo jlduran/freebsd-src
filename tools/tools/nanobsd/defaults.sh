@@ -351,8 +351,8 @@ patch_precompiled() {
 		# XXXJL try setting -U -M so we don't have to parse INDEX files?
 		sed -i "" \
 		    -e 's/\[ `id -u` != 0 \]/false/g' \
-		    -e 's/-o ${OWNER} -g ${group}//g' \
-		    -e 's/-m ${PERM} //g' \
+		    -e 's/-o ${OWNER} -g ${group}/-U/g' \
+		    -e "s|-m "'${PERM}'"|-M ${NANO_METALOG}.pds|g" \
 		    -e 's/rm $1 $1.noflags $1.sorted $2 INDEX-NOTMATCHING//' \
 		    "${fu_bin}"
 	fi
