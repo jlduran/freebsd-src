@@ -495,15 +495,24 @@ tgt_pkg_update_config_files_content() {
 # XXXJL NANO_ABI needs a sanity check? (NANO_ARCH + NANO_OSVERSION)
 # XXXJL passing both OSVERSION and IGNORE_OSVERSION is oxymoronic
 pkg_cmd() {
+	local install_as_user
+
+	if ! $do_root; then
+		install_as_user="-o INSTALL_AS_USER=yes"
+	fi
+
 	pkg --rootdir "$NANO_WORLDDIR" \
 	    --repo-conf-dir "$(nano_pkg_repos_dir)" \
 	    -o ABI="$NANO_ABI" \
 	    -o ASSUME_ALWAYS_YES=yes \
 	    -o IGNORE_OSVERSION=yes \
 	    -o OSVERSION="$NANO_OSVERSION" \
-	    -o PKG_CACHEDIR="$(nano_pkg_cachedir)" "$@"
+	    -o PKG_CACHEDIR="$(nano_pkg_cachedir)" \
+	    ${install_as_user} "$@"
 }
 
+# XXXJL chroot?
+# pkg: chroot failed: Operation not permitted (security.bsd.unprivileged_chroot sysctl not enabled))
 pkg_chroot_cmd() {
 	pkg --chroot "$NANO_WORLDDIR" \
 	    --repo-conf-dir "$(nano_pkg_repos_dir)" \
@@ -856,7 +865,7 @@ install_precompiled_world() {
 		if [ -n "$(nano_pkgbase_world_list)" ]; then
 			pkg_cmd install -U -y $(nano_pkgbase_world_list)
 		fi
-		pkg_chroot_cmd triggers # XXXJL chroot?
+		pkg_chroot_cmd triggers
 	else
 		if ! $do_root; then
 			# We must start the METALOG with base.txz
