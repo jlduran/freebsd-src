@@ -1051,6 +1051,22 @@ fixup_before_diskimage() {
 	# The dedup tool's output must be sorted due to limitations in awk.
 	if [ -n "${NANO_METALOG}" ]; then
 		pprint 2 "Fixing metalog"
+
+		# XXXJL ideally there should be a way for pkg to output mtree/plist to a file when installing as non-root
+		# XXXJL this is ugly, refine using a dedicated function if we're keeping it
+		# XXXJL mtree: ./boot/dtb/arm: missing directory in specification
+		#       mtree: failed at line 76 of the specification
+		#       These directories are missing from BSD.root.dist, however I do not want them in the mtree
+		#       Rant about sys/conf/dtb.build.mk (ask ivy@ about her thoughts on this subject)
+		#       It also illustrates the fact that release can produce invalid METALOGs
+		if ! $do_root; then
+			echo ". uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME}" > "$NANO_METALOG"
+			pkg_cmd query ".%Sp type=dir uname=%Su gname=%Sg mode=%Sm flags=%Sf" >> "$NANO_METALOG"
+			pkg_cmd query ".%Fp type=file uname=%Fu gname=%Fg mode=%Fm flags=%Ff link=%Ft" >> "$NANO_METALOG"
+			sed -i "" -e 's/ flags=-//g' -e 's/ link=$//g' "$NANO_METALOG"
+			sed -i "" -e '/ link=/s/ type=file/type=link/g' "$NANO_METALOG"
+		fi
+
 		cp ${NANO_METALOG} ${NANO_METALOG}.pre
 		echo "/set uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME}" > ${NANO_METALOG}
 		cat ${NANO_METALOG}.pre | ${NANO_TOOLS}/mtree-dedup.awk | \
