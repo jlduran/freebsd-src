@@ -1657,7 +1657,7 @@ export_var() {
 	var=$1
 	# Lookup value of the variable.
 	eval val=\$$var
-	pprint 3 "Setting variable: $var=\"$val\""
+	pprint 2 "Setting variable: $var=\"$val\""
 	export $1
 }
 
@@ -1691,7 +1691,7 @@ set_defaults_and_export() {
 
 	NANO_STARTTIME=`date +%s`
 	: ${NANO_TIMESTAMP:=${NANO_STARTTIME}}
-	pprint 3 "Exporting NanoBSD variables"
+	pprint 1 "Exporting NanoBSD variables"
 	export_var MAKEOBJDIRPREFIX
 	export_var NANO_ARCH
 	export_var NANO_CODESIZE
