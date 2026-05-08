@@ -673,6 +673,20 @@ nano_pkg_metalog() {
 	sed -i "" -e '/ link=/s/ type=file/ type=link/g' "$NANO_METALOG"
 	echo "./tmp type=link uname=root gname=wheel mode=1777 link=var/tmp" >> "$NANO_METALOG"
 
+	# XXXJL pwd_mkdb
+	tgt_touch etc/passwd
+	tgt_touch etc/pwd.db
+	echo "./etc/spwd.db type=file uname=${NANO_DEF_UNAME} gname=${NANO_DEF_GNAME} mode=0600" >> "$NANO_METALOG"
+
+	# XXXJL cap_mkdb
+	tgt_touch etc/login.conf.db
+
+	# XXXJL services_mkdb
+	tgt_touch var/db/services.db
+
+	# XXXJL certctl rehash
+	tgt_touch etc/ssl/cert.pem
+
 	# XXXJL this is from setup_nanobsd(), when it runs, the NANO_METALOG has no entries yes
 	# so we must execute it again here without sorting, so the right mode/permissions stay last.
 	for d in var etc; do
