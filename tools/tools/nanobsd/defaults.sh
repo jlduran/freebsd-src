@@ -519,7 +519,7 @@ pkg_cmd() {
 	local install_as_user
 
 	if ! $do_root; then
-		install_as_user="-o INSTALL_AS_USER=yes"
+		install_as_user="-o INSTALL_AS_USER=yes -o METALOG=${NANO_METALOG}"
 	fi
 
 	pkg --rootdir "$NANO_WORLDDIR" \
