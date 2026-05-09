@@ -252,7 +252,9 @@ fi
 if $do_prep_image ; then
 	run_customize
 	setup_nanobsd
-	prune_usr
+	if [ "$do_root" = "true" ] || [ -n "$NANO_NOPKGBASE" ]; then
+		prune_usr
+	fi
 	run_late_customize
 	fixup_before_diskimage
 else

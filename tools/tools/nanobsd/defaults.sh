@@ -696,6 +696,10 @@ nano_pkg_metalog() {
 	cat "${NANO_METALOG}.conf" >> "${NANO_METALOG}"
 	rm -f "${NANO_METALOG}.conf"
 
+	# XXXJL Run prune_usr() for pkgbase here, otherwise It will remove some directories and
+	# attempt to remove nonexisting mtree entries.
+	prune_usr
+
 	# XXX This package needs to be regenerated (ask someone, but try locally first)
 	# (FreeBSD-bootloader-dev)
 	sed -i "" -e 's|\./usr/share/man/man3/libsa\.3\.gz type=file uname= gname= mode=0|\./usr/share/man/man3/libsa\.3\.gz type=file uname=root gname=wheel mode=444|g' "$NANO_METALOG"
