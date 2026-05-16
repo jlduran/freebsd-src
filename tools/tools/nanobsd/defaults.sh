@@ -1538,6 +1538,11 @@ cust_comconsole() {
 
 	# Tell loader to use serial console early.
 	echo "${NANO_BOOT2CFG}" > ${NANO_WORLDDIR}/boot.config
+
+	if $do_precompiled && [ -z "$NANO_NOPKGBASE" ]; then
+		tgt_pkg_update_file_sha256 etc/ttys
+		tgt_pkg_update_config_files_content etc/ttys
+	fi
 }
 
 #######################################################################
@@ -1546,6 +1551,11 @@ cust_comconsole() {
 cust_allow_ssh_root() {
 	sed -i "" -E 's/^#?PermitRootLogin.*/PermitRootLogin yes/' \
 	    ${NANO_WORLDDIR}/etc/ssh/sshd_config
+
+	if $do_precompiled && [ -z "$NANO_NOPKGBASE" ]; then
+		tgt_pkg_update_file_sha256 etc/ssh/sshd_config
+		tgt_pkg_update_config_files_content etc/ssh/sshd_config
+	fi
 }
 
 #######################################################################
