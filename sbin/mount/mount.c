@@ -464,7 +464,7 @@ ismounted(struct fstab *fs, struct statfs *mntbuf, int mntsize)
 		strlcpy(realfsfile, fs->fs_file, sizeof(realfsfile));
 	}
 
-	/* 
+	/*
 	 * Consider the filesystem to be mounted if:
 	 * It has the same mountpoint as a mounted filesystem, and
 	 * It has the same type as that same mounted filesystem, and
@@ -473,7 +473,7 @@ ismounted(struct fstab *fs, struct statfs *mntbuf, int mntsize)
 	 */
 	for (i = mntsize - 1; i >= 0; --i)
 		if (strcmp(realfsfile, mntbuf[i].f_mntonname) == 0 &&
-		    strcmp(fs->fs_vfstype, mntbuf[i].f_fstypename) == 0 && 
+		    strcmp(fs->fs_vfstype, mntbuf[i].f_fstypename) == 0 &&
 		    (!isremountable(fs->fs_vfstype) ||
 		     (strcmp(fs->fs_spec, mntbuf[i].f_mntfromname) == 0)))
 			return (1);
@@ -913,36 +913,53 @@ putfsent(struct statfs *ent)
 	}
 
 	l = strlen(mntfromname);
-	xo_emit("{:device}{P:/%s}{P:/%s}{P:/%s}",
-	    mntfromname,
-	    l < 8 ? "\t" : "",
-	    l < 16 ? "\t" : "",
-	    l < 24 ? "\t" : " ");
+	xo_emit("{:device}", mntfromname);
+
 	l = strlen(ent->f_mntonname);
-	xo_emit("{:mntpoint}{P:/%s}{P:/%s}{P:/%s}",
-	    ent->f_mntonname,
-	    l < 8 ? "\t" : "",
-	    l < 16 ? "\t" : "",
-	    l < 24 ? "\t" : " ");
-	xo_emit("{:fstype}{P:\t}", ent->f_fstypename);
-	l = strlen(opts);
-	xo_emit("{:opts}{P:/%s}", opts,
-	    l < 8 ? "\t" : " ");
+	while (l < 24) {
+		xo_emit("{P:\t}");
+		l = (l + 8) & ~7;
+	}
+
+	xo_emit("{:mntpoint}", ent->f_mntonname);
+	l += strlen(ent->f_mntonname);
+	while (l < 48) {
+		xo_emit("{P:\t}");
+		l = (l + 8) & ~7;
+	}
+
+	xo_emit("{:fstype}", ent->f_fstypename);
+	l += strlen(ent->f_fstypename);
+	while (l < 56) {
+		xo_emit("{P:\t}");
+		l = (l + 8) & ~7;
+	}
+
+	xo_emit("{:opts}", opts);
+	l += strlen(opts);
 	free(opts);
+	if (l >= 88 || (l % 8 == 0)) {
+		xo_emit("{P:\t}");
+		l = (l + 8) & ~7;
+	}
+	while (l < 88) {
+		xo_emit("{P:\t}");
+		l = (l + 8) & ~7;
+	}
 
 	if ((fst = getfsspec(mntfromname)))
-		xo_emit("{P:\t}{n:dump/%u}{P: }{n:pass/%u}\n",
+		xo_emit("{n:dump/%u}{P: }{n:pass/%u}\n",
 		    fst->fs_freq, fst->fs_passno);
 	else if ((fst = getfsfile(ent->f_mntonname)))
-		xo_emit("{P:\t}{n:dump/%u}{P: }{n:pass/%u}\n",
+		xo_emit("{n:dump/%u}{P: }{n:pass/%u}\n",
 		    fst->fs_freq, fst->fs_passno);
 	else if (strcmp(ent->f_fstypename, "ufs") == 0) {
 		if (strcmp(ent->f_mntonname, "/") == 0)
-			xo_emit("{P:\t}{n:dump/1}{P: }{n:pass/1}\n");
+			xo_emit("{n:dump/1}{P: }{n:pass/1}\n");
 		else
-			xo_emit("{P:\t}{n:dump/2}{P: }{n:pass/2}\n");
+			xo_emit("{n:dump/2}{P: }{n:pass/2}\n");
 	} else
-		xo_emit("{P:\t}{n:dump/0}{P: }{n:pass/0}\n");
+		xo_emit("{n:dump/0}{P: }{n:pass/0}\n");
 }
 
 
