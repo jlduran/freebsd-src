@@ -111,11 +111,12 @@ create_code_slice() {
 	IMG=${NANO_DISKIMGDIR}/${NANO_IMG1NAME}
 	MNT=${NANO_OBJ}/_.mnt
 	mkdir -p ${MNT}
+	MBR_SECTORS=$(head -n 1 ${NANO_LOG}/_.partitioning | awk '{ print $1 }')
 	CODE_SIZE=$(head -n 1 ${NANO_LOG}/_.partitioning | awk '{ print $2 }')
 
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
-		MD=$(mdconfig -a -t swap -s ${CODE_SIZE} -x ${NANO_SECTS} \
-		    -y ${NANO_HEADS})
+		MD=$(mdconfig -a -t swap -s $(( MBR_SECTORS + CODE_SIZE )) \
+		    -x ${NANO_SECTS} -y ${NANO_HEADS})
 	else
 		echo "Creating md backing file..."
 		rm -f ${IMG}
@@ -127,7 +128,9 @@ create_code_slice() {
 	trap "echo 'Running exit trap code' ; df -i ${MNT} ; nano_umount ${MNT} || true ; mdconfig -d -u $MD" 1 2 15 EXIT
 
 	gpart create -s bsd "${MD}"
-	gpart add -t freebsd-ufs -b 16 "${MD}"
+	METADATA_SECTORS=16
+	gpart add -t freebsd-ufs -b "${METADATA_SECTORS}" \
+	    -s "$(( CODE_SIZE - METADATA_SECTORS))" "${MD}"
 	if [ -f ${NANO_WORLDDIR}/boot/boot ]; then
 		echo "Making bootable partition"
 		gpart bootcode -b ${NANO_WORLDDIR}/boot/boot ${MD}
@@ -146,7 +149,7 @@ create_code_slice() {
 
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		echo "Writing out ${NANO_IMG1NAME}..."
-		dd conv=sparse if=/dev/${MD} of=${IMG} bs=64k
+		dd count=${CODE_SIZE} if=/dev/${MD} of=${IMG} bs=512
 	fi
 	mdconfig -d -u $MD
 
