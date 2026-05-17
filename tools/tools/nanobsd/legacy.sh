@@ -271,9 +271,6 @@ create_diskimage() {
 			echo "Writing out ${NANO_IMGNAME}..."
 			dd if=/dev/${MD} of=${IMG} bs=64k
 		fi
-
-		echo "Writing out ${NANO_IMGNAME}..."
-		dd conv=sparse if=/dev/${MD} of=${IMG} bs=64k
 	fi
 
 	mdconfig -d -u $MD
