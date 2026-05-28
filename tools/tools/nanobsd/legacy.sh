@@ -220,6 +220,7 @@ create_diskimage() {
 	# XXX: pick up cached boot* files, they may not be in image anymore.
 	if [ -f ${NANO_WORLDDIR}/${NANO_BOOTLOADER} ]; then
 		gpart bootcode -b ${NANO_WORLDDIR}/${NANO_BOOTLOADER} ${NANO_BOOTFLAGS} ${MD}
+		boot0cfg ${NANO_BOOT0CFG} ${MD}
 	fi
 
 	echo "Writing code image..."
@@ -288,6 +289,7 @@ _create_diskimage() {
 	IMG=${NANO_DISKIMGDIR}/${NANO_IMGNAME}
 
 	if [ -f "${NANO_WORLDDIR}/${NANO_BOOTLOADER}" ]; then
+		boot0cfg ${NANO_BOOT0CFG} ${NANO_WORLDDIR}/${NANO_BOOTLOADER}
 		bootloader="-b ${NANO_WORLDDIR}/${NANO_BOOTLOADER}"
 	else
 		echo "Image will not be bootable"
