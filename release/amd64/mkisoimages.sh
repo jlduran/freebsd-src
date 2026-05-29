@@ -29,20 +29,32 @@ scriptdir=$(dirname $(realpath $0))
 . ${scriptdir}/../../tools/boot/install-boot.sh
 
 if [ "$1" = "-b" ]; then
-	MAKEFSARG="$4"
+	BASEBITS="$4"
+	EXTRABITS="$5"
 else
-	MAKEFSARG="$3"
+	BASEBITS="$3"
+	EXTRABITS="$4"
 fi
 
-if [ -f ${MAKEFSARG} ]; then
-	BASEBITSDIR=`dirname ${MAKEFSARG}`
-	METALOG=${MAKEFSARG}
-elif [ -d ${MAKEFSARG} ]; then
-	BASEBITSDIR=${MAKEFSARG}
-	METALOG=
+if [ -f ${BASEBITS} ]; then
+	BASEBITSDIR=`dirname ${BASEBITS}`
+	BASEMETALOG=${BASEBITS}
+	MAKEFSARGS="-x"
+elif [ -d ${BASEBITS} ]; then
+	BASEBITSDIR=${BASEBITS}
+	BASEMETALOG=
+	MAKEFSARGS=
 else
-	echo "${MAKEFSARG} must exist"
+	echo "${BASEBITS} must exist"
 	exit 1
+fi
+
+if [ -f ${EXTRABITS} ]; then
+	EXTRABITSDIR=`dirname ${EXTRABITS}`
+	EXTRAMETALOG=${BASEBITS}
+elif [ -d ${EXTRABITS} ]; then
+	EXTRABITSDIR=${EXTRABITS}
+	EXTRAMETALOG=
 fi
 
 if [ "$1" = "-b" ]; then
@@ -71,18 +83,20 @@ fi
 
 LABEL=`echo "$1" | tr '[:lower:]' '[:upper:]'`; shift
 NAME="$1"; shift
-# MAKEFSARG extracted already
-shift
+# BASEBITSDIR and EXTRABITSDIR extracted already
 
 publisher="The FreeBSD Project.  https://www.FreeBSD.org/"
 echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > "$BASEBITSDIR/etc/fstab"
-if [ -n "${METALOG}" ]; then
+if [ -n "${BASEMETALOG}" ]; then
 	metalogfilename=$(mktemp /tmp/metalog.XXXXXX)
-	cat ${METALOG} > ${metalogfilename}
+	cat ${BASEMETALOG} > ${metalogfilename}
 	echo "./etc/fstab type=file uname=root gname=wheel mode=0644" >> ${metalogfilename}
-	MAKEFSARG=${metalogfilename}
+	if [ -n "${EXTRAMETALOG}" ]; then
+		cat "${EXTRAMETALOG}" >> ${metalogfilename}
+	fi
+	METALOG=${metalogfilename}
 fi
-$MAKEFS -D -N ${BASEBITSDIR}/etc -t cd9660 $bootable -o rockridge -o label="$LABEL" -o publisher="$publisher" "$NAME" "$MAKEFSARG" "$@"
+$MAKEFS -D ${MAKEFSARGS} -N ${BASEBITSDIR}/etc -t cd9660 $bootable -o rockridge -o label="$LABEL" -o publisher="$publisher" "$NAME" "$METALOG" "$BASEBITSDIR" "$EXTRABITSDIR"
 rm -f "$BASEBITSDIR/etc/fstab"
 rm -f ${espfilename}
 if [ -n "${METALOG}" ]; then
