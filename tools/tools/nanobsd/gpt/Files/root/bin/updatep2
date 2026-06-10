@@ -25,13 +25,36 @@
 # SUCH DAMAGE.
 #
 #
+# Script to update partition 2 on a NanoBSD system.
+#
+# usage:
+#	ssh somewhere cat image.s1 | sh updatep2
+#
 
 set -e
 
-passwd root
+. /etc/nanobsd.conf
 
-mount /cfg
-trap "umount /cfg" 1 2 15 EXIT
-cp /etc/master.passwd /etc/passwd /etc/pwd.db /etc/spwd.db /etc/group /cfg
-umount /cfg
-trap - 1 2 15 EXIT
+if mount | grep ${NANO_DRIVE}s2 > /dev/null ; then
+	echo "You are running partition 2 already"
+	echo "you probably want to use 'updatep1' instead"
+	exit 1
+fi
+
+# Blow away old system.
+dd if=/dev/zero of=/dev/${NANO_DRIVE}s2 bs=1m count=1 > /dev/null 2>&1
+
+# Copy in new system
+dd of=/dev/${NANO_DRIVE}s2 obs=64k
+
+# Check that it worked
+fsck_ffs -n /dev/${NANO_DRIVE}s2a
+
+# Update the /etc/fstab
+trap "umount /mnt" 1 2 15 EXIT
+mount /dev/${NANO_DRIVE}s2a /mnt
+sed -i "" "s/${NANO_DRIVE}s1/${NANO_DRIVE}s2/" /mnt/conf/base/etc/fstab
+sed -i "" "s/${NANO_DRIVE}s1/${NANO_DRIVE}s2/" /mnt/etc/fstab
+umount /mnt
+trap 1 2 15 EXIT
+gpart set -a active -i 2 ${NANO_DRIVE}

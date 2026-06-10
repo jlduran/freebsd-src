@@ -1,0 +1,120 @@
+#!/bin/sh
+#
+# Copyright (c) 2026 [XXX]
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# Script to update partition 1 on a NanoBSD system.
+#
+# usage:
+#	ssh somewhere cat image.s1 | sh updatep1
+#
+
+set -e
+
+# Source NanoBSD variables
+if [ ! -f /etc/nanobsd.conf ]; then
+	echo "/etc/nanobsd.conf missing." >&2
+	exit 1
+fi
+. /etc/nanobsd.conf
+
+# Verify all mandatory variables are loaded and non-empty
+if [ -z "$NANO_DRIVE" ] || [ -z "$NANO_ROOT" ] || [ -z "$NANO_ALTROOT" ]; then
+	echo "Configuration variables are missing from nanobsd.conf." >&2
+	exit 1
+fi
+
+# Ensure we aren't currently running on the partition we want to overwrite
+current_root=$(df -n / | tail -n1 | cut -d' ' -f1)
+if [ "$current_root" = "/dev/gpt/${NANO_ROOT}" ]; then
+	echo "You are running partition 1 already," >&2
+	echo "you probably want to use 'updatep2' instead." >&2
+	exit 1
+fi
+
+# Create a secure workspace for our named pipes
+WORK_DIR=$(mktemp -d /tmp/upgrade.XXXXXX)
+
+(
+	cd "$WORK_DIR"
+
+	# Create the pipes named EXACTLY like the files inside the tarball
+	# efiboot / ${NANO_LABEL}
+	mkfifo efiboot.img code.img
+
+	# Launch your background consumers reading from those exact files
+	dd if=efiboot.img of=/dev/gpt/efiboot1 bs=1m >/dev/null 2>&1 &
+	PID_EFI=$!
+
+	# XXXJL We need to do the ROOT/ALTROOT switch before consuming it
+	dd if=code.img of=/dev/gpt/${NANO_ALTROOT} bs=1m obs=64k >/dev/null 2>&1 &
+	PID_ROOT=$!
+
+	# Save PIDs for the parent scope
+	echo "$PID_EFI $PID_ROOT" > pids.internal
+
+	# Extract normally! tar thinks it is writing files to the disk,
+	# but it is actually streaming bytes directly into the pipes.
+	tar -xJf -
+
+	wait $PID_EFI
+	wait $PID_ROOT
+)
+
+# Clean up the virtual pipes
+rm -rf "$WORK_DIR"
+
+# Verify the code filesystem integrity
+fsck_ffs -n "/dev/gpt/${NANO_ALTROOT}"
+
+# Prepare for next boot
+boot_method=$(sysctl -n machdep.bootmethod)
+case "$boot_method" in
+"BIOS")
+	# Dynamically extract the exact index number backing our target GPT partition
+	# (e.g. searching for the string 'nanobsdb' inside the gpart table)
+	target_index=$(gpart show "$NANO_DRIVE" | grep "$NANO_ALTROOT" | awk '{print $3}' | head -n1)
+
+	if [ -z "$target_index" ]; then
+		echo "Could not locate a valid table index for ${NANO_ALTROOT}." >&2
+		exit 1
+	fi
+
+	echo "Setting partition slot ${target_index} to bootonce..."
+	gpart set -a bootonce -i "$target_index" "$NANO_DRIVE"
+	;;
+
+"UEFI")
+	# Dynamically find the hexadecimal BootXXXX slot associated with our target label
+	# by scanning the efibootmgr lookup index
+	target_hex=$(efibootmgr | grep -i "Secondary ESP" | head -n1 | cut -c 5-8)
+
+	if [ -z "$target_hex" ]; then
+		echo "Could not find a registered UEFI boot entry for ${NANO_ALTROOT}." >&2
+		exit 1
+	fi
+
+	# XXXJL:
+	# AMI Aptio V firmwares...
+	# When designing for a resilient UEFI upgrade strategy, we found
+	# ourselves wrestling with modern NVRAM quirks---a battle deeply
+	# reminiscent of twenty years ago, when NanoBSD fought a similar war
+	# against early, unpredictable solid-state storage.  Nietzsche's eternal
+	# return became a closed circle.  Our initial instinct was to step back
+	# and implement a simplified design.  However, we quickly realized that
+	# just as the solid-state market eventually stabilized, NVRAM behavior
+	# will inevitably normalize.  The smart move isn't just to build for the
+	# quirks of today, but to architect a path that seamlessly accounts for
+	# a standardized tomorrow.  These experiments are in the -saṃsāra branch.
+	echo "Configuring UEFI BootNext to target slot: Boot${target_hex}..."
+	efibootmgr -n -b "$target_hex"
+	;;
+
+*)
+	echo "Unknown boot method: '${boot_method}'." >&2
+	exit 1
+	;;
+esac
+
+echo "Upgrade successful! Reboot your system to initialize ${NANO_ALTROOT}."
