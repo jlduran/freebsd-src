@@ -4,12 +4,12 @@ BLOCKLIST_DIR=${SRCTOP}/contrib/blocklist
 PACKAGE=	blocklist
 
 PROG=	blacklistctl
-SRCS=	blacklistctl.c conf.c state.c support.c old_internal.c \
+SRCS=	blacklistctl.c old_conf.c old_state.c support.c old_internal.c \
 	sockaddr_snprintf.c pidfile.c strtoi.c popenve.c
 MAN=	blacklistctl.8
 
 LDFLAGS+=-L${LIBBLACKLISTDIR}
-LIBADD+= blocklist util
+LIBADD+= blacklist util
 
 CFLAGS+=-I${BLOCKLIST_DIR}/include -I${BLOCKLIST_DIR}/port \
 	-D_PATH_BLCONF=\"/etc/blacklistd.conf\" \

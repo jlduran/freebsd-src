@@ -55,7 +55,7 @@ If no such file is specified, then it only listens to the socket path
 specified by
 .Ar sockpath
 or if that is not specified to
-.Pa /var/run/blocklistd.sock .
+.Pa /var/run/blacklistd.sock .
 Each notification contains an (action, port, protocol, address, owner) tuple
 that identifies the remote connection and the action.
 This tuple is consulted against entries from the
@@ -206,7 +206,7 @@ The Berkeley DB file where
 .Nm
 stores its state.
 It defaults to
-.Pa /var/db/blocklistd.db .
+.Pa /var/db/blacklistd.db .
 .It Fl d
 Normally,
 .Nm
@@ -278,9 +278,9 @@ to decrease the internal debugging level by 1.
 Shell script invoked to interface with the packet filter.
 .It Pa /etc/blacklistd.conf
 Configuration file.
-.It Pa /var/db/blocklistd.db
+.It Pa /var/db/blacklistd.db
 Database of current connection entries.
-.It Pa /var/run/blocklistd.sock
+.It Pa /var/run/blacklistd.sock
 Socket to receive connection notifications.
 .El
 .Sh SEE ALSO

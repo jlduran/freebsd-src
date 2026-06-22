@@ -53,7 +53,7 @@ __RCSID("$NetBSD: blocklistctl.c,v 1.4 2025/02/11 17:48:30 christos Exp $");
 #include <unistd.h>
 #include <sys/socket.h>
 
-#include "conf.h"
+#include "old_conf.h"
 #include "state.h"
 #include "old_internal.h"
 #include "support.h"
