@@ -648,6 +648,9 @@ read_mtree_keywords(FILE *fp, fsnode *node)
 				st->st_atime = num;
 				st->st_ctime = num;
 				st->st_mtime = num;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+				st->st_birthtime = num;
+#endif
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 				if (p == NULL)
 					break;
@@ -658,6 +661,9 @@ read_mtree_keywords(FILE *fp, fsnode *node)
 				st->st_atimensec = num;
 				st->st_ctimensec = num;
 				st->st_mtimensec = num;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+				st->st_birthtimensec = num;
+#endif
 #endif
 			} else if (strcmp(keyword, "type") == 0) {
 				if (value == NULL) {
