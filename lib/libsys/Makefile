@@ -15,6 +15,7 @@ M=${MACHINE_ARCH:S/powerpc64le/powerpc64/}
 .if exists(${LIBC_SRCTOP}/${M})
 LIBC_ARCH=${M}
 .else
+MACHINE_CPUARCH=	${$TARGET} # XXX Linux clean (x86_64 -> amd64, aarch64 -> arm64)
 LIBC_ARCH=${MACHINE_CPUARCH}
 .endif
 
