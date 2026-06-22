@@ -94,6 +94,7 @@ my %callback = (
 	dtformat => \&callback_dtformat,
 	cbabmon => \&callback_abmon,
 	cbampm => \&callback_ampm,
+	intsepbyspace => \&callback_intsepbyspace,
 	data => undef,
 );
 
@@ -189,8 +190,8 @@ if ($TYPE eq "monetdef") {
 	    "n_sign_posn"		=> "i",
 	    "int_p_cs_precedes"		=> "i",
 	    "int_n_cs_precedes"		=> "i",
-	    "int_p_sep_by_space"	=> "i",
-	    "int_n_sep_by_space"	=> "i",
+	    "int_p_sep_by_space"	=> "<intsepbyspace<int_p_sep_by_space<i",
+	    "int_n_sep_by_space"	=> "<intsepbyspace<int_n_sep_by_space<i",
 	    "int_p_sign_posn"		=> "i",
 	    "int_n_sign_posn"		=> "i"
 	);
@@ -289,6 +290,22 @@ sub callback_dtformat {
 	$s =~ s/^"(%e %B )/"%A $1/;
 	return $s;
 };
+
+sub callback_intsepbyspace {
+	my $i = shift;
+	my $nl = $callback{data}{l} . "_" . $callback{data}{c};
+	my $enc = $callback{data}{e};
+
+	if ($nl eq 'en_IE' || $nl eq 'en_US') {
+		if ($enc eq 'UTF-8') {
+			$i = 1;
+		} else {
+			my  $converter = Text::Iconv->new("utf-8", "$enc");
+			$i = $converter->convert(1);
+		}
+	}
+	return $i;
+}
 
 sub callback_mdorder {
 	my $s = shift;
