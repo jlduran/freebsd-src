@@ -84,8 +84,10 @@ metalog_add_data() {
 		err "metalog_add_data: ${entry} not found"
 	fi
 	metalog=${3:-$NANO_METALOG}
-	printf "%s type=%s uname=%s gname=%s mode=%s\n" \
-	    "$entry" "$type" "$NANO_DEF_UNAME" "$NANO_DEF_GNAME" "$mode" >> "$metalog"
+	if [ -n "$NANO_METALOG" ]; then
+		printf "%s type=%s uname=%s gname=%s mode=%s\n" \
+		    "$entry" "$type" "$NANO_DEF_UNAME" "$NANO_DEF_GNAME" "$mode" >> "$metalog"
+	fi
 }
 
 #
@@ -247,17 +249,13 @@ _xxx_add_sys_symlink() {
 # pkg: Failed to create /triggers:Bad file descriptor
 #
 _xxx_tgt_pkg_triggers() {
-	if ! $do_root; then
-		# Repopulate mandoc dbs and add to metalog
-		for mandir in usr/share/man usr/share/openssl/man; do
-			[ -d "${NANO_WORLDDIR}/${mandir}" ] || continue
-			makewhatis "${NANO_WORLDDIR}/${mandir}" 2>/dev/null || true
-			metalog_add_data "./${mandir}/mandoc.db"
-		done
-		rm -f "${NANO_WORLDDIR}/var/db/triggers/*"
-	else
-		tgt_pkg_chroot triggers
-	fi
+	# Repopulate mandoc dbs and add to metalog
+	for mandir in usr/share/man usr/share/openssl/man; do
+		[ -d "${NANO_WORLDDIR}/${mandir}" ] || continue
+		makewhatis "${NANO_WORLDDIR}/${mandir}" 2>/dev/null || true
+		metalog_add_data "./${mandir}/mandoc.db"
+	done
+	rm -f "${NANO_WORLDDIR}/var/db/pkg/triggers/*"
 }
 
 #
