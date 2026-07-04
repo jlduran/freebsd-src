@@ -1403,6 +1403,7 @@ EOF
 
 	if [ "$NANO_PLAN" = "default" ]; then
 		tgt_patch_gptboot
+		tgt_patch_adduser
 	fi
 
 	tgt_write_fstab
