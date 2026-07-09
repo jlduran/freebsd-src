@@ -673,7 +673,8 @@ nano_pkg_disable_repos() {
 	(
 	cd "$NANO_WORLDDIR"
 
-	# XXXJL is it better to just rewrite the entire file?
+	rm -rf var/db/pkg/repos/FreeBSD-local
+
 	sed -i "" -E \
 	    -e "s/([[:space:]]*enabled[[:space:]]*:[[:space:]]*)(yes|true|on)/\1no/" \
 	    -e "s/To disable a repository/To enable a repository/" \
