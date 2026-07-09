@@ -59,8 +59,8 @@ fi
 
 NANO_BOOTLOADER="boot/gptboot"
 
-NANO_CUST_FILESDIR="${NANO_TOOLS}/gpt/Files"
-NANO_CUST_FILES_MTREE="${NANO_TOOLS}/gpt/Files.mtree"
+NANO_CUST_FILESDIR="${NANO_TOOLS}/defaults/Files"
+NANO_CUST_FILES_MTREE="${NANO_TOOLS}/defaults/Files.mtree"
 
 # Create the /etc/fstab file
 tgt_write_fstab() {
