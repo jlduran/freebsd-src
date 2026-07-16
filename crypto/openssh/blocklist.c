@@ -95,3 +95,46 @@ blocklist_notify(struct ssh *ssh, int action, const char *msg)
 		(void)blocklist_r(blstate, action,
 		ssh_packet_get_connection_in(ssh), msg);
 }
+
+void
+blocklist_notify_safe(struct ssh *ssh, int action, const char *msg)
+{
+	int s;
+	int fd;
+	struct sockaddr_un addr;
+	struct {
+		int db_action;
+		int db_fd;
+		char db_msg[128];
+	} bl_msg;
+
+	if (ssh == NULL)
+		return;
+
+	/* Extract the file descriptor safely */
+	fd = ssh_packet_get_connection_in(ssh);
+	if (fd < 0)
+		return;
+
+	/* Open the local domain socket */
+	s = socket(PF_LOCAL, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (s == -1)
+		return;
+
+	/* Configure target socket path */
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_LOCAL;
+	strlcpy(addr.sun_path, _PATH_BLSOCK, sizeof(addr.sun_path));
+
+	/* Connect and send binary payload */
+	if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+		memset(&bl_msg, 0, sizeof(bl_msg));
+		bl_msg.db_action = action;
+		bl_msg.db_fd = fd;
+		strlcpy(bl_msg.db_msg, msg, sizeof(bl_msg.db_msg));
+
+		(void)write(s, &bl_msg, sizeof(bl_msg));
+	}
+
+	(void)close(s);
+}

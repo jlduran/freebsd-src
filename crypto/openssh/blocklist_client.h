@@ -46,14 +46,17 @@ enum {
 #ifdef USE_BLOCKLIST
 void blocklist_init(void);
 void blocklist_notify(struct ssh *, int, const char *);
+void blocklist_notify_safe(struct ssh *, int, const char *);
 
 #define BLOCKLIST_INIT() blocklist_init()
 #define BLOCKLIST_NOTIFY(ssh,x,msg) blocklist_notify(ssh,x,msg)
+#define BLOCKLIST_NOTIFY_SAFE(ssh,x,msg) blocklist_notify_safe(ssh,x,msg)
 
 #else
 
 #define BLOCKLIST_INIT()
 #define BLOCKLIST_NOTIFY(ssh,x,msg)
+#define BLOCKLIST_NOTIFY_SAFE(ssh,x,msg)
 
 #endif
 

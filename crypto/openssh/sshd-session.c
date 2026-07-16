@@ -204,6 +204,8 @@ mm_is_monitor(void)
 static void
 grace_alarm_handler(int sig)
 {
+	BLOCKLIST_NOTIFY_SAFE(the_active_state, BLOCKLIST_AUTH_FAIL,
+	    "Grace timeout expired");
 	/*
 	 * Try to kill any processes that we have spawned, E.g. authorized
 	 * keys command helpers or privsep children.
