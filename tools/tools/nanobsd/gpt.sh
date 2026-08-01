@@ -182,7 +182,7 @@ make_esp_partition() {
 	makefs -t msdos \
 	    -o fat_type="$fat_type" \
 	    -o sectors_per_cluster=1 \
-	    -o volume_label="efiboot0" \
+	    -o volume_label="EFI" \
 	    -o OEM_string="" \
 	    -s "${esp_sects}b" \
 	    -T "$NANO_TIMESTAMP" \
@@ -218,7 +218,7 @@ make_cidata_partition() {
 	makefs -t msdos \
 	    -o fat_type="$fat_type" \
 	    -o sectors_per_cluster=1 \
-	    -o volume_label="cidata" \
+	    -o volume_label="CIDATA" \
 	    -o OEM_string="" \
 	    -s "${cidata_sects}b" \
 	    -T "$NANO_TIMESTAMP" \
