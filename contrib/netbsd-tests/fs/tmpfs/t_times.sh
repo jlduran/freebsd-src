@@ -1,4 +1,4 @@
-# $NetBSD: t_times.sh,v 1.5 2010/11/07 17:51:18 jmmv Exp $
+# $NetBSD: t_times.sh,v 1.8 2024/04/28 07:27:41 rillig Exp $
 #
 # Copyright (c) 2005, 2006, 2007, 2008 The NetBSD Foundation, Inc.
 # All rights reserved.
@@ -38,55 +38,72 @@ empty_head() {
 empty_body() {
 	test_mount
 
-	atf_check -s eq:0 -o empty -e empty touch a
+	atf_check -s exit:0 -o empty -e empty touch a
 	eval $(stat -s a | sed -e 's|st_|ost_|g') || atf_fail "stat failed"
-	[ ${ost_birthtime} -eq ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${ost_birthtime} -eq ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${ost_birthtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${ost_birthtime} -eq ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${ost_birthtime} != ${ost_atime}"
+	[ ${ost_birthtime} -eq ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${ost_birthtime} != ${ost_ctime}"
+	[ ${ost_birthtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${ost_birthtime} != ${ost_mtime}"
 
 	sleep 1
-	atf_check -s eq:0 -o empty -e empty cat a
+	atf_check -s exit:0 -o empty -e empty cat a
 	eval $(stat -s a) || atf_fail "stat failed"
-	[ ${st_atime} -gt ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${st_ctime} -eq ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${st_mtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${st_atime} -gt ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} <= ${ost_atime}"
+	[ ${st_ctime} -eq ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${st_ctime} != ${ost_ctime}"
+	[ ${st_mtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${st_mtime} != ${ost_mtime}"
 
 	sleep 1
 	ost_atime=${st_atime}
 	echo foo >a || atf_fail "Write failed"
 	eval $(stat -s a) || atf_fail "stat failed"
-	[ ${st_atime} -gt ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${st_ctime} -gt ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${st_mtime} -gt ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${st_atime} -gt ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} <= ${ost_atime}"
+	[ ${st_ctime} -gt ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${st_ctime} <= ${ost_ctime}"
+	[ ${st_mtime} -gt ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${st_mtime} <= ${ost_mtime}"
 
 	test_unmount
 }
 
+# begin FreeBSD
 atf_test_case holey
 holey_head() {
 	atf_set "descr" "Tests that creating a file consisting entirely" \
-		        "of a hole and later" \
+	                "of a hole and later" \
 	                "manipulating it updates times correctly"
 	atf_set "require.user" "root"
 }
 holey_body() {
 	test_mount
 
-	atf_check -s eq:0 -o empty -e empty truncate -s 8k a
+	atf_check -s exit:0 -o empty -e empty truncate -s 8k a
 	eval $(stat -s a | sed -e 's|st_|ost_|g') || atf_fail "stat failed"
-	[ ${ost_birthtime} -eq ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${ost_birthtime} -eq ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${ost_birthtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${ost_birthtime} -eq ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${ost_birthtime} != ${ost_atime}"
+	[ ${ost_birthtime} -eq ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${ost_birthtime} != ${ost_ctime}"
+	[ ${ost_birthtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${ost_birthtime} != ${ost_mtime}"
 
 	sleep 1
-	atf_check -s eq:0 -o ignore -e empty cat a
+	atf_check -s exit:0 -o ignore -e empty cat a
 	eval $(stat -s a) || atf_fail "stat failed"
-	[ ${st_atime} -gt ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${st_ctime} -eq ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${st_mtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${st_atime} -gt ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} <= ${ost_atime}"
+	[ ${st_ctime} -eq ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${st_ctime} != ${ost_ctime}"
+	[ ${st_mtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${st_mtime} != ${ost_mtime}"
 
 	test_unmount
 }
+# end FreeBSD
 
 atf_test_case non_empty
 non_empty_head() {
@@ -101,11 +118,14 @@ non_empty_body() {
 	eval $(stat -s b | sed -e 's|st_|ost_|g') || atf_fail "stat failed"
 
 	sleep 1
-	atf_check -s eq:0 -o inline:"foo\n" -e empty cat b
+	atf_check -s exit:0 -o inline:"foo\n" -e empty cat b
 	eval $(stat -s b) || atf_fail "stat failed"
-	[ ${st_atime} -gt ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${st_ctime} -eq ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${st_mtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${st_atime} -gt ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} <= ${ost_atime}"
+	[ ${st_ctime} -eq ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${st_ctime} != ${ost_ctime}"
+	[ ${st_mtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${st_mtime} != ${ost_mtime}"
 
 	test_unmount
 }
@@ -123,11 +143,14 @@ link_body() {
 	eval $(stat -s c | sed -e 's|st_|ost_|g') || atf_fail "stat failed"
 
 	sleep 1
-	atf_check -s eq:0 -o empty -e empty ln c d
+	atf_check -s exit:0 -o empty -e empty ln c d
 	eval $(stat -s c) || atf_fail "stat failed"
-	[ ${st_atime} -eq ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${st_ctime} -gt ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${st_mtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${st_atime} -eq ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} != ${ost_atime}"
+	[ ${st_ctime} -gt ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${st_ctime} <= ${ost_ctime}"
+	[ ${st_mtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${st_mtime} != ${ost_mtime}"
 
 	test_unmount
 }
@@ -141,18 +164,22 @@ rename_head() {
 rename_body() {
 	test_mount
 
-	atf_check -s eq:0 -o empty -e empty mkdir e
+	atf_check -s exit:0 -o empty -e empty mkdir e
 	echo foo >e/a || atf_fail "Creation failed"
 	eval $(stat -s e | sed -e 's|st_|dost_|g') || atf_fail "stat failed"
 	eval $(stat -s e/a | sed -e 's|st_|ost_|g') || atf_fail "stat failed"
 	sleep 1
-	atf_check -s eq:0 -o empty -e empty mv e/a e/b
+	atf_check -s exit:0 -o empty -e empty mv e/a e/b
 	eval $(stat -s e | sed -e 's|st_|dst_|g') || atf_fail "stat failed"
 	eval $(stat -s e/b) || atf_fail "stat failed"
-	[ ${st_atime} -eq ${ost_atime} ] || atf_fail "Incorrect atime"
-	[ ${st_ctime} -gt ${ost_ctime} ] || atf_fail "Incorrect ctime"
-	[ ${st_mtime} -eq ${ost_mtime} ] || atf_fail "Incorrect mtime"
-	[ ${dst_mtime} -gt ${dost_mtime} ] || atf_fail "Incorrect mtime"
+	[ ${st_atime} -eq ${ost_atime} ] || \
+	    atf_fail "Incorrect atime: ${st_atime} != ${ost_atime}"
+	[ ${st_ctime} -gt ${ost_ctime} ] || \
+	    atf_fail "Incorrect ctime: ${st_ctime} <= ${ost_ctime}"
+	[ ${st_mtime} -eq ${ost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${st_mtime} != ${ost_mtime}"
+	[ ${dst_mtime} -gt ${dost_mtime} ] || \
+	    atf_fail "Incorrect mtime: ${dst_mtime} <= ${dost_mtime}"
 
 	test_unmount
 }
