@@ -57,9 +57,8 @@ typedef struct {
 
 #define bi_cred bi_u._bi_cred
 
-/* We want the new name */
 #ifndef _PATH_BLSOCK
-#define _PATH_BLSOCK "/var/run/blocklistd.sock"
+#define _PATH_BLSOCK "/var/run/blacklistd.sock"
 #endif
 
 __BEGIN_DECLS

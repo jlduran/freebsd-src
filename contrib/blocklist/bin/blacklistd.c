@@ -69,7 +69,7 @@ __RCSID("$NetBSD: blocklistd.c,v 1.15 2026/02/07 14:32:04 christos Exp $");
 
 #include "old_bl.h"
 #include "old_internal.h"
-#include "conf.h"
+#include "old_conf.h"
 #include "run.h"
 #include "state.h"
 #include "support.h"
