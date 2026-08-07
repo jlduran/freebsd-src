@@ -442,14 +442,16 @@ set_tstamp(fsnode *cur)
 	cur->inode->st.st_atime = stampst.st_atime;
 	cur->inode->st.st_mtime = stampst.st_mtime;
 	cur->inode->st.st_ctime = stampst.st_ctime;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+	cur->inode->st.st_birthtime = stampst.st_birthtime;
+#endif
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 	cur->inode->st.st_atimensec = stampst.st_atimensec;
 	cur->inode->st.st_mtimensec = stampst.st_mtimensec;
 	cur->inode->st.st_ctimensec = stampst.st_ctimensec;
-#endif
 #if HAVE_STRUCT_STAT_BIRTHTIME
-	cur->inode->st.st_birthtime = stampst.st_birthtime;
 	cur->inode->st.st_birthtimensec = stampst.st_birthtimensec;
+#endif
 #endif
 }
 
