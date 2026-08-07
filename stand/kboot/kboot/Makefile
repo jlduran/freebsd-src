@@ -13,6 +13,7 @@ LOADER_BZIP2_SUPPORT?=	no
 .include <bsd.init.mk>
 
 PROG=		loader.kboot
+MACHINE_ARCH=	${TARGET_ARCH} # XXX macOS clean (arm64 -> aarch64)
 NEWVERSWHAT=	"kboot loader" ${MACHINE_ARCH}
 INSTALLFLAGS=	-b
 
