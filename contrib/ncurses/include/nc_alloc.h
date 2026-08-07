@@ -134,7 +134,7 @@ extern NCURSES_EXPORT(void) _nc_leaks_tinfo(void);
 #if HAVE_ALLOCA_H
 #include <alloca.h>
 #elif HAVE_MALLOC_H
-#include <malloc.h>
+#include <stdlib.h>
 #endif
 #define MakeArray(name,type,count) type *name = (type*) alloca(sizeof(type) * (size_t) (count))
 #endif
