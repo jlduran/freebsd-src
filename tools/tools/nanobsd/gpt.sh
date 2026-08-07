@@ -75,7 +75,7 @@ tgt_write_fstab() {
 
 	printf_fstab "# Device" Mountpoint FStype Options Dump "Pass#"
 	if [ "$NANO_CIDATA_SIZE" -gt 0 ]; then
-		printf_fstab "/dev/msdosfs/CIDATA" /boot/cidata msdosfs rw,noauto 2 2
+		printf_fstab "/dev/msdosfs/CIDATA" /boot/msdos msdosfs rw,noauto 2 2
 	fi
 	if is_boot_type UEFI; then
 		printf_fstab "/dev/gpt/efiboot0" /boot/efi msdosfs rw,noauto 2 2
@@ -182,7 +182,7 @@ make_esp_partition() {
 	makefs -t msdos \
 	    -o fat_type="$fat_type" \
 	    -o sectors_per_cluster=1 \
-	    -o volume_label="efiboot0" \
+	    -o volume_label="EFI" \
 	    -o OEM_string="" \
 	    -s "${esp_sects}b" \
 	    -T "$NANO_TIMESTAMP" \
@@ -210,15 +210,11 @@ make_cidata_partition() {
 	cidatadir="${NANO_OBJ}/_.cidata"
 	rm -rf "$cidatadir"
 	mkdir -p "$cidatadir"
-	# XXXJL where should we mount /boot/msdos?
-	# XXXJL this mkdir -p operation has to be performed earlier than create_code_partition
-	# XXXJL can we normalize the naming? create_esp_partition, create_cidata_partition, etc.
-	mkdir -p "${NANO_WORLDDIR}/boot/cidata"
 
 	makefs -t msdos \
 	    -o fat_type="$fat_type" \
 	    -o sectors_per_cluster=1 \
-	    -o volume_label="cidata" \
+	    -o volume_label="CIDATA" \
 	    -o OEM_string="" \
 	    -s "${cidata_sects}b" \
 	    -T "$NANO_TIMESTAMP" \
@@ -394,6 +390,11 @@ create_code_partition() {
 
 	(
 	local IMG code_sects code_size
+
+	# XXXJL can we normalize the naming? create_esp_partition, create_cidata_partition, etc.
+	if [ "$NANO_CIDATA_SIZE" -gt 0 ]; then
+		mkdir -p "${NANO_WORLDDIR}/boot/msdos"
+	fi
 
 	IMG=${NANO_DISKIMGDIR}/${NANO_IMG1NAME}
 	code_sects=$(awk -v label="$NANO_ROOT" '$5 == label {print $4}' "${NANO_LOG}/_.partitioning")
