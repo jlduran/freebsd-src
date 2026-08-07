@@ -852,15 +852,15 @@ conf_print(char *buf, size_t len, const char *pref, const char *delim,
 	sp = *delim == '\t' ? 20 : -1;
 	hb[0] = '\0';
 	if (*delim)
-		snprintf(buf, len, "%s%*.*s%s%s%s" "%s%s%s%s"
+		snprintf(buf, len, "%s%*.*s%s%s%s%s" "%s%s%s%s%s"
 		    "%s%s" "%s%s%s",
-		    pref, sp, sp, ha, delim, N(0, c->c_proto), delim,
-		    N(1, c->c_family), delim, N(2, c->c_uid), delim,
+		    pref, sp, sp, c->c_name, delim, ha, delim, N(0, c->c_proto),
+		    delim, N(1, c->c_family), delim, N(2, c->c_uid), delim,
 		    conf_namemask(hb, sizeof(hb), c), delim,
 		    N(3, c->c_nfail), delim, N(4, c->c_duration));
 	else
-		snprintf(buf, len, "%starget:%s, proto:%s, family:%s, "
-		    "uid:%s, name:%s, nfail:%s, duration:%s", pref,
+		snprintf(buf, len, "%srulename:%s, target:%s, proto:%s, family:%s, "
+		    "uid:%s, name:%s, nfail:%s, duration:%s", pref, c->c_name,
 		    ha, N(0, c->c_proto), N(1, c->c_family), N(2, c->c_uid),
 		    conf_namemask(hb, sizeof(hb), c),
 		    N(3, c->c_nfail), N(4, c->c_duration));
