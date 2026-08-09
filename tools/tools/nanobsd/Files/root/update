@@ -40,4 +40,3 @@ if mount | grep ${NANO_DRIVE}s1 > /dev/null ; then
 else
 	exec sh /root/updatep1
 fi
-
