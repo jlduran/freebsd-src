@@ -83,6 +83,7 @@ static gid_t gid;
 static uid_t uid;
 static mode_t mode;
 static u_long flags;
+static bool padded = false;
 
 static void	output(FILE *, int, int *, const char *, ...)
     __printflike(4, 5);
@@ -232,9 +233,6 @@ statf(FILE *fp, int indent, FTSENT *p)
 
 	if (offset > (INDENTNAMELEN + indent))
 		offset = MAXLINELEN;
-	else
-		offset += fprintf(fp, "%*s",
-		    (INDENTNAMELEN + indent) - offset, "");
 
 	if (!S_ISREG(p->fts_statp->st_mode) && (flavor == F_NETBSD6 || !dflag))
 		output(fp, indent, &offset, "type=%s",
@@ -309,6 +307,7 @@ statf(FILE *fp, int indent, FTSENT *p)
 	}
 #endif
 	putchar('\n');
+	padded = false;
 }
 
 /* XXX
@@ -395,16 +394,20 @@ statd(FILE *fp, FTS *t, FTSENT *parent, uid_t *puid, gid_t *pgid, mode_t *pmode,
 	 * output a new one.  So first we check to see if anything changed.
 	 * Note that we always output a /set record for the first directory.
 	 */
-	if (((keys & (F_UNAME | F_UID)) && (*puid != saveuid)) ||
+	if ((keys & F_TYPE) ||
+	    ((keys & (F_UNAME | F_UID)) && (*puid != saveuid)) ||
 	    ((keys & (F_GNAME | F_GID)) && (*pgid != savegid)) ||
-	    ((keys & F_MODE) && (*pmode != savemode)) || 
+	    ((keys & F_MODE) && (*pmode != savemode)) ||
 	    ((keys & F_FLAGS) && (*pflags != saveflags)) ||
 	    first) {
 		first = 0;
-		if (flavor != F_NETBSD6 && dflag)
-			fprintf(fp, "/set type=dir");
-		else
-			fprintf(fp, "/set type=file");
+		fprintf(fp, "/set");
+		if (keys & F_TYPE) {
+			if (flavor != F_NETBSD6 && dflag)
+				fprintf(fp, " type=dir");
+			else
+				fprintf(fp, " type=file");
+		}
 		if (keys & (F_UID | F_UNAME)) {
 			if (keys & F_UNAME &&
 			    (name = user_from_uid(saveuid, 1)) != NULL)
@@ -451,5 +454,12 @@ output(FILE *fp, int indent, int *offset, const char *fmt, ...)
 		fprintf(fp, " \\\n%*s", INDENTNAMELEN + indent, "");
 		*offset = INDENTNAMELEN + indent;
 	}
+
+	if (!padded) {
+		*offset += fprintf(fp, "%*s",
+		    (INDENTNAMELEN + indent) - *offset, "");
+		padded = true;
+	}
+
 	*offset += fprintf(fp, " %s", buf) + 1;
 }
